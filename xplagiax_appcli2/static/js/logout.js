@@ -24,10 +24,10 @@ function confirmarLogout() {
     logoutBtnText.textContent = 'Cerrando...';
     logoutBtnSpinner.style.display = 'block';
 
-    // Simular un pequeño delay para mejor UX
+    // Llamar al logout REAL del servidor (invalida la sesión y redirige a /login).
+    // Ruta relativa → se queda en el mismo dominio (app.xplagiax.ca), no 127.0.0.1.
     setTimeout(() => {
-        // Aquí iría tu URL de Flask
-        window.location.href = "/login"; // Cambia por: "{{ url_for('x_auth.logout') }}"
+        window.location.href = "/auth_bp/logout";
     }, 800);
 }
 

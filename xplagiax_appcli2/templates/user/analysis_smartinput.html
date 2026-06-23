@@ -937,7 +937,6 @@ body.xp-file-preview .mode-switch-container {
         </div>
 
         <!-- Contextual options (managed by showOptions/hideOptions) -->
-        <div class="options-panel" id="optionsPanel" aria-label="Processing options"></div>
 
         <!-- Status messages -->
         <div class="status-message" id="statusMessage" role="alert" aria-live="polite"></div>
@@ -4028,7 +4027,7 @@ body.xp-file-preview .mode-switch-container {
             // Handle analysis button visibility
             this.updateAnalysisButtonVisibility();
 
-            this.elements.optionsPanel.classList.add('active');
+            if (this.elements.optionsPanel) this.elements.optionsPanel.classList.add('active');
         }
 
         updateAnalysisButtonVisibility() {
@@ -4043,7 +4042,7 @@ body.xp-file-preview .mode-switch-container {
         //    this.elements.optionsPanel.classList.remove('active');
         //}
         hideOptions() {
-            this.elements.optionsPanel.classList.remove('active');
+            if (this.elements.optionsPanel) this.elements.optionsPanel.classList.remove('active');
             this.updateAnalysisButtonVisibility();
         }
 

@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# Detrás de nginx (TLS terminado): honrar X-Forwarded-Proto/For para que
+# url_for(_external=True) genere https://app.xplagiax.ca/... y no http://127.0.0.1.
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
 env = os.environ.get('FLASK_ENV', 'development')
 app.config.from_object(Config[env])
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB
