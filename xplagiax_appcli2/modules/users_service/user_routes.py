@@ -174,10 +174,9 @@ def analysis_original():
         return redirect(url_for('x_apps.login'))
 
 @x_users.route('/analysiss')
-@block_starter
 @login_required
 def analysis():
-    """Ruta analysis mejorada"""
+    """Ruta analysis mejorada (accesible para todos los planes, incl. Starter)"""
     #if not verify_user_authenticated():
     #    return redirect(url_for('x_apps.login'))
     
