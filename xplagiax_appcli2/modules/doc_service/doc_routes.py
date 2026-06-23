@@ -3696,22 +3696,36 @@ def get_folder_tree():
     })
 
 
-# Endpoint y credenciales del servicio de detección de IA (configurables por entorno).
-AI_TEXT_SERVICE_URL = os.environ.get(
-    'AI_TEXT_SERVICE_URL', 'http://localhost:5006/analyze_document_async'
+# Servicio de detección de IA (xota:5006). Igual que xplagiax_marktrack:
+# es ASÍNCRONO → POST /analyze_document_async devuelve {task_id}, y se consulta
+# GET /analyze_status/{task_id} hasta status == 'ok'.
+AI_TEXT_SERVICE_URL = (
+    os.environ.get('AI_TEXT_SERVICE_URL')
+    or os.environ.get('XPLAGIAX_URL')
+    or 'http://localhost:5006/analyze_document_async'
 )
 AI_TEXT_SERVICE_API_KEY = os.environ.get(
     'AI_TEXT_SERVICE_API_KEY', '7d9a2c4f8e1b3d5a6f7c9e2b4a1d8c3f'
 )
+AI_POLL_INTERVAL = float(os.environ.get('AI_POLL_INTERVAL', '1.5'))
+AI_POLL_TIMEOUT = float(os.environ.get('AI_POLL_TIMEOUT', '120'))
+
+
+def _ai_async_urls():
+    """Devuelve (submit_url, base_url) del servicio de IA, normalizado a async."""
+    submit_url = AI_TEXT_SERVICE_URL
+    if submit_url.endswith('/analyze_document'):
+        submit_url = submit_url.replace('/analyze_document', '/analyze_document_async')
+    return submit_url, submit_url.rsplit('/', 1)[0]
 
 
 @x_doc.route('/analyze_text', methods=['POST'])
 @login_required
 def analyze_text():
-    """Proxy hacia el servicio de detección de IA para análisis de texto (Text mode).
+    """Encola el análisis de IA (xota:5006) y devuelve task_id de inmediato.
 
-    Evita problemas de CORS y mantiene el API key fuera del navegador: el front
-    llama a esta ruta y el servidor reenvía la petición a AI_TEXT_SERVICE_URL.
+    NO bloquea el worker: el navegador consulta /x_doc/analyze_status/<task_id>.
+    Así un servicio lento no puede agotar los workers ni congelar la app.
     """
     data = request.get_json(silent=True) or {}
     text = (data.get('text') or '').strip()
@@ -3719,38 +3733,71 @@ def analyze_text():
         return jsonify({'error': 'Please enter at least 10 words to analyze.'}), 400
 
     plugins = data.get('plugins') or ['ai_detection']
+    submit_url, _ = _ai_async_urls()
+    headers = {'Content-Type': 'application/json', 'X-API-Key': AI_TEXT_SERVICE_API_KEY}
 
     try:
-        upstream = session_pool.post(
-            AI_TEXT_SERVICE_URL,
-            headers={
-                'Content-Type': 'application/json',
-                'X-API-Key': AI_TEXT_SERVICE_API_KEY,
-            },
-            json={'text': text, 'plugins': plugins},
-            timeout=120,
+        submit = session_pool.post(
+            submit_url, headers=headers,
+            json={'text': text, 'plugins': plugins, 'max_tokens': 150},
+            timeout=(5, 20),
         )
     except requests.exceptions.RequestException as exc:
-        logger.error('AI text service request failed: %s', exc)
+        logger.error('AI submit failed: %s', exc)
         return jsonify({'error': 'Could not reach the analysis service.'}), 502
-
-    if not upstream.ok:
-        logger.error('AI text service returned %s: %s', upstream.status_code, upstream.text[:500])
-        return jsonify({'error': f'Analysis service error ({upstream.status_code}).'}), 502
+    if not submit.ok:
+        logger.error('AI submit returned %s: %s', submit.status_code, submit.text[:300])
+        return jsonify({'error': f'Analysis service error ({submit.status_code}).'}), 502
 
     try:
-        return jsonify(upstream.json()), 200
+        sd = submit.json()
     except ValueError:
-        logger.error('AI text service returned non-JSON response.')
+        return jsonify({'error': 'Invalid response from analysis service.'}), 502
+
+    # Si el servicio ya respondió síncrono con el resultado, devolverlo.
+    if sd.get('results'):
+        return jsonify({'done': True, 'result': sd}), 200
+
+    task_id = sd.get('task_id') or sd.get('job_id') or sd.get('id')
+    if not task_id:
+        logger.error('AI submit missing task_id: %s', str(sd)[:300])
+        return jsonify({'error': 'Analysis service did not return a task id.'}), 502
+
+    return jsonify({'done': False, 'task_id': task_id}), 202
+
+
+@x_doc.route('/analyze_status/<task_id>', methods=['GET'])
+@login_required
+def analyze_status(task_id):
+    """Proxy rápido del estado del análisis de IA (no bloquea el worker)."""
+    _, base_url = _ai_async_urls()
+    headers = {'Content-Type': 'application/json', 'X-API-Key': AI_TEXT_SERVICE_API_KEY}
+    try:
+        poll = session_pool.get(
+            f'{base_url}/analyze_status/{task_id}', headers=headers, timeout=(5, 25)
+        )
+    except requests.exceptions.RequestException as exc:
+        logger.error('AI poll failed: %s', exc)
+        return jsonify({'error': 'Could not reach the analysis service.'}), 502
+    if not poll.ok:
+        logger.error('AI poll returned %s: %s', poll.status_code, poll.text[:300])
+        return jsonify({'error': f'Analysis service error ({poll.status_code}).'}), 502
+    try:
+        return jsonify(poll.json()), 200
+    except ValueError:
         return jsonify({'error': 'Invalid response from analysis service.'}), 502
 
 
 # ── FinderX: servicio de búsqueda de fuentes / plagio académico ──────────────
-FINDERX_SERVICE_BASE = os.environ.get(
-    'FINDERX_SERVICE_BASE', 'http://localhost:8000'
+FINDERX_SERVICE_BASE = (
+    os.environ.get('FINDERX_SERVICE_BASE')
+    or os.environ.get('FINDERX_URL')
+    or 'http://localhost:8000'
 )
-FINDERX_SERVICE_API_KEY = os.environ.get(
-    'FINDERX_SERVICE_API_KEY', 'xpx-3Td8C2oecnAXRT0-VioypUjMWTtSTQVj3k2kE8Q-5tc'
+FINDERX_SERVICE_API_KEY = (
+    os.environ.get('FINDERX_SERVICE_API_KEY')
+    or os.environ.get('FINDERX_API_KEY')
+    or 'xpx-3Td8C2oecnAXRT0-VioypUjMWTtSTQVj3k2kE8Q-5tc'
 )
 # Polling: cada cuánto y por cuánto tiempo esperar a que el job termine.
 FINDERX_POLL_INTERVAL = float(os.environ.get('FINDERX_POLL_INTERVAL', '1.5'))
@@ -3760,81 +3807,64 @@ FINDERX_POLL_TIMEOUT = float(os.environ.get('FINDERX_POLL_TIMEOUT', '90'))
 @x_doc.route('/finderx_check', methods=['POST'])
 @login_required
 def finderx_check():
-    """Proxy hacia FinderX (búsqueda de fuentes/plagio) para Text mode.
+    """Encola el análisis en FinderX (:8000) y devuelve job_id de inmediato.
 
-    FinderX es asíncrono: se encola el análisis (202 → job_id) y luego se
-    consulta el reporte por polling. Este endpoint encapsula ambos pasos y
-    devuelve el reporte final al navegador (sin exponer CORS ni el API key).
+    NO bloquea el worker: el navegador consulta /x_doc/finderx_report/<job_id>.
     """
     data = request.get_json(silent=True) or {}
     text = (data.get('text') or '').strip()
     if not text or len(text.split()) < 10:
         return jsonify({'error': 'Please enter at least 10 words to analyze.'}), 400
 
-    priority = data.get('priority') or 'high'
-    headers = {
-        'Content-Type': 'application/json',
-        'X-API-Key': FINDERX_SERVICE_API_KEY,
-    }
+    priority = data.get('priority') or 'default'
+    headers = {'Content-Type': 'application/json', 'X-API-Key': FINDERX_SERVICE_API_KEY}
 
-    # 1) Encolar el análisis.
     try:
         submit = session_pool.post(
-            f'{FINDERX_SERVICE_BASE}/api/v1/academic-check',
+            f'{FINDERX_SERVICE_BASE}/api/v1/analyze',
             headers=headers,
-            json={'text': text, 'priority': priority},
-            timeout=30,
+            json={'text': text[:50000], 'priority': priority},
+            timeout=(5, 20),
         )
     except requests.exceptions.RequestException as exc:
         logger.error('FinderX submit failed: %s', exc)
         return jsonify({'error': 'Could not reach the FinderX service.'}), 502
-
     if not submit.ok:
-        logger.error('FinderX submit returned %s: %s', submit.status_code, submit.text[:500])
+        logger.error('FinderX submit returned %s: %s', submit.status_code, submit.text[:300])
         return jsonify({'error': f'FinderX service error ({submit.status_code}).'}), 502
 
     try:
-        submit_data = submit.json()
+        sd = submit.json()
     except ValueError:
-        logger.error('FinderX submit returned non-JSON response.')
         return jsonify({'error': 'Invalid response from FinderX service.'}), 502
 
-    job_id = submit_data.get('job_id')
+    # La API envuelve bajo 'data'; el campo es 'task_id' (o job_id/id/taskId).
+    inner = sd.get('data', sd)
+    job_id = (inner.get('task_id') or inner.get('job_id')
+              or inner.get('id') or inner.get('taskId'))
     if not job_id:
-        logger.error('FinderX submit response missing job_id: %s', submit_data)
+        logger.error('FinderX submit missing task_id: %s', str(sd)[:300])
         return jsonify({'error': 'FinderX did not return a job id.'}), 502
 
-    # 2) Polling del reporte hasta que termine (o se agote el tiempo).
-    deadline = time.monotonic() + FINDERX_POLL_TIMEOUT
-    while time.monotonic() < deadline:
-        try:
-            report = session_pool.get(
-                f'{FINDERX_SERVICE_BASE}/api/v1/report/{job_id}',
-                headers=headers,
-                timeout=30,
-            )
-        except requests.exceptions.RequestException as exc:
-            logger.error('FinderX report poll failed: %s', exc)
-            return jsonify({'error': 'Could not reach the FinderX service.'}), 502
+    return jsonify({'done': False, 'job_id': job_id, 'status': inner.get('status')}), 202
 
-        if not report.ok:
-            logger.error('FinderX report returned %s: %s', report.status_code, report.text[:500])
-            return jsonify({'error': f'FinderX service error ({report.status_code}).'}), 502
 
-        try:
-            report_data = report.json()
-        except ValueError:
-            logger.error('FinderX report returned non-JSON response.')
-            return jsonify({'error': 'Invalid response from FinderX service.'}), 502
-
-        status = report_data.get('status')
-        if status == 'completed':
-            return jsonify(report_data), 200
-        if status in ('failed', 'error'):
-            logger.error('FinderX job %s failed: %s', job_id, report_data)
-            return jsonify({'error': 'FinderX analysis failed.'}), 502
-
-        time.sleep(FINDERX_POLL_INTERVAL)
-
-    logger.error('FinderX job %s timed out after %ss', job_id, FINDERX_POLL_TIMEOUT)
-    return jsonify({'error': 'FinderX analysis timed out. Please try again.'}), 504
+@x_doc.route('/finderx_report/<job_id>', methods=['GET'])
+@login_required
+def finderx_report(job_id):
+    """Proxy rápido del reporte de FinderX (no bloquea el worker)."""
+    headers = {'Content-Type': 'application/json', 'X-API-Key': FINDERX_SERVICE_API_KEY}
+    try:
+        report = session_pool.get(
+            f'{FINDERX_SERVICE_BASE}/api/v1/report/{job_id}', headers=headers, timeout=(5, 25)
+        )
+    except requests.exceptions.RequestException as exc:
+        logger.error('FinderX report failed: %s', exc)
+        return jsonify({'error': 'Could not reach the FinderX service.'}), 502
+    if not report.ok:
+        logger.error('FinderX report returned %s: %s', report.status_code, report.text[:300])
+        return jsonify({'error': f'FinderX service error ({report.status_code}).'}), 502
+    try:
+        return jsonify(report.json()), 200
+    except ValueError:
+        return jsonify({'error': 'Invalid response from FinderX service.'}), 502

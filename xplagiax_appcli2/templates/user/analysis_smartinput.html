@@ -2394,20 +2394,59 @@ body.xp-file-preview .mode-switch-container {
             });
         }
 
-        // Calls the AI-detection proxy and returns the mapped result (throws on error).
+        // Reads an error message from a fetch Response (best-effort, never throws).
+        async _errMsg(response) {
+            let msg = `HTTP ${response.status}`;
+            try { const e = await response.json(); if (e && e.error) msg = e.error; } catch (_) {}
+            return msg;
+        }
+
+        // Generic client-side poller. Hits `url` every `interval` ms until `isDone`
+        // returns true (→ returns the data) or `isError` returns true (→ throws),
+        // bounded by `timeout`. All network failures are surfaced as Error.
+        async _pollJson(url, isDone, isError, { interval = 2000, timeout = 130000 } = {}) {
+            const deadline = Date.now() + timeout;
+            while (Date.now() < deadline) {
+                let resp;
+                try {
+                    resp = await fetch(url, { method: 'GET' });
+                } catch (_) {
+                    throw new Error('Network error while checking analysis status.');
+                }
+                if (!resp.ok) throw new Error(await this._errMsg(resp));
+                let data;
+                try { data = await resp.json(); } catch (_) { throw new Error('Invalid response from server.'); }
+                if (isError(data)) throw new Error(data.error || 'Analysis failed.');
+                if (isDone(data)) return data;
+                await new Promise(r => setTimeout(r, interval));
+            }
+            throw new Error('Analysis timed out. Please try again.');
+        }
+
+        // Submits AI detection (async) and polls until done; returns the mapped result.
         async _fetchAiResult(text) {
             const response = await fetch('/x_doc/analyze_text', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: text, plugins: ['ai_detection'] })
             });
-            if (!response.ok) {
-                let msg = `HTTP ${response.status}`;
-                try { const e = await response.json(); if (e && e.error) msg = e.error; } catch (_) {}
-                throw new Error(msg);
+            if (!response.ok) throw new Error(await this._errMsg(response));
+
+            const submitData = await response.json();
+            let aiJson;
+            if (submitData.done && submitData.result) {
+                aiJson = submitData.result;              // servicio respondió síncrono
+            } else {
+                const taskId = submitData.task_id;
+                if (!taskId) throw new Error('Analysis service did not return a task id.');
+                aiJson = await this._pollJson(
+                    `/x_doc/analyze_status/${encodeURIComponent(taskId)}`,
+                    d => d.status === 'ok',
+                    d => d.status === 'error' || d.status === 'failed',
+                    { interval: 2000, timeout: 130000 }
+                );
             }
-            const apiData = await response.json();
-            return this._mapApiResponse(apiData, text);
+            return this._mapApiResponse(aiJson, text);
         }
 
         // Core orchestrator: runs the selected text services (AI detection / FinderX)
@@ -2520,20 +2559,26 @@ body.xp-file-preview .mode-switch-container {
         }
 
         // ─── FinderX (source / plagiarism search) ──────────────────────────────────
-        // Calls the FinderX proxy and returns the report result (throws on error).
+        // Submits FinderX (async) and polls the report until completed.
         async _fetchSourceResult(text) {
             const response = await fetch('/x_doc/finderx_check', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, priority: 'high' })
+                body: JSON.stringify({ text: text, priority: 'default' })
             });
-            if (!response.ok) {
-                let msg = `HTTP ${response.status}`;
-                try { const e = await response.json(); if (e && e.error) msg = e.error; } catch (_) {}
-                throw new Error(msg);
-            }
-            const apiData = await response.json();
-            const result = (apiData && apiData.result) ? apiData.result : null;
+            if (!response.ok) throw new Error(await this._errMsg(response));
+
+            const submitData = await response.json();
+            const jobId = submitData.job_id;
+            if (!jobId) throw new Error('FinderX did not return a job id.');
+
+            const report = await this._pollJson(
+                `/x_doc/finderx_report/${encodeURIComponent(jobId)}`,
+                d => d.status === 'completed',
+                d => d.status === 'failed' || d.status === 'error',
+                { interval: 2000, timeout: 130000 }
+            );
+            const result = report && report.result ? report.result : null;
             if (!result) throw new Error('Unexpected response from FinderX service.');
             return result;
         }
