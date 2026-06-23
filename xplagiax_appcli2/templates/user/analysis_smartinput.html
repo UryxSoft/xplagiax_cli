@@ -2427,7 +2427,7 @@ body.xp-file-preview .mode-switch-container {
             const response = await fetch('/x_doc/analyze_text', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, plugins: ['ai_detection'] })
+                body: JSON.stringify({ text: text, plugins: ['ai_detection', 'citation_check', 'stylometric_analysis'] })
             });
             if (!response.ok) throw new Error(await this._errMsg(response));
 

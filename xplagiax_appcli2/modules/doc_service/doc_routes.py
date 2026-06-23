@@ -3711,11 +3711,26 @@ AI_POLL_INTERVAL = float(os.environ.get('AI_POLL_INTERVAL', '1.5'))
 AI_POLL_TIMEOUT = float(os.environ.get('AI_POLL_TIMEOUT', '120'))
 
 
+# Modo del servicio de IA: 'async' usa /analyze_document_async (como marktrack:
+# requiere worker Celery + polling); 'sync' usa /analyze_document (inline, sin worker).
+# Default 'async' para replicar EXACTAMENTE la llamada que funciona en marktrack.
+AI_SERVICE_MODE = os.environ.get('AI_SERVICE_MODE', 'async').strip().lower()
+
+# Plugins por defecto: idénticos a marktrack (el resultado de ai_detection se usa igual).
+AI_DEFAULT_PLUGINS = ['ai_detection', 'citation_check', 'stylometric_analysis']
+
+
 def _ai_async_urls():
-    """Devuelve (submit_url, base_url) del servicio de IA, normalizado a async."""
+    """Devuelve (submit_url, base_url) del servicio de IA según AI_SERVICE_MODE."""
     submit_url = AI_TEXT_SERVICE_URL
-    if submit_url.endswith('/analyze_document'):
-        submit_url = submit_url.replace('/analyze_document', '/analyze_document_async')
+    if AI_SERVICE_MODE == 'sync':
+        # Forzar endpoint síncrono (no requiere worker).
+        if submit_url.endswith('/analyze_document_async'):
+            submit_url = submit_url[:-len('_async')]
+    else:
+        # Forzar endpoint async.
+        if submit_url.endswith('/analyze_document'):
+            submit_url = submit_url + '_async'
     return submit_url, submit_url.rsplit('/', 1)[0]
 
 
@@ -3732,7 +3747,7 @@ def analyze_text():
     if not text or len(text.split()) < 10:
         return jsonify({'error': 'Please enter at least 10 words to analyze.'}), 400
 
-    plugins = data.get('plugins') or ['ai_detection']
+    plugins = data.get('plugins') or AI_DEFAULT_PLUGINS
     submit_url, _ = _ai_async_urls()
     headers = {'Content-Type': 'application/json', 'X-API-Key': AI_TEXT_SERVICE_API_KEY}
 
@@ -3740,7 +3755,8 @@ def analyze_text():
         submit = session_pool.post(
             submit_url, headers=headers,
             json={'text': text, 'plugins': plugins, 'max_tokens': 150},
-            timeout=(5, 20),
+            # Modo sync procesa inline (tarda unos segundos) → read timeout amplio.
+            timeout=(5, 90),
         )
     except requests.exceptions.RequestException as exc:
         logger.error('AI submit failed: %s', exc)
