@@ -1,0 +1,82 @@
+# ════════════════════════════════════════════════════════════════════════════
+#  .dockerignore — todo lo que NO debe entrar al build context / la imagen
+# ════════════════════════════════════════════════════════════════════════════
+
+# ── Git ──────────────────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+
+# ── Python: bytecode y artefactos ────────────────────────────────────────────
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# ── Entornos virtuales ───────────────────────────────────────────────────────
+venv/
+venv_*/
+.venv/
+env/
+
+# ── Secretos / entorno ───────────────────────────────────────────────────────
+.env
+.env.*
+*.local.env
+secrets.*
+credentials*.json
+*.pem
+*.key
+
+# ── Modelos ML / binarios pesados (no van en la imagen) ──────────────────────
+ai_detector_models/
+trained_models/
+*.bin
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.dylib
+*.so
+
+# ── Datos de runtime (se recrean vacíos en el Dockerfile) ────────────────────
+modules/doc_service/uploads/
+uploads/
+*.sqlite
+*.sqlite3
+*.db
+*.log
+logs/
+
+# ── Caches de herramientas ───────────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+node_modules/
+
+# ── Tests / desarrollo / docs (no necesarios en producción) ──────────────────
+tests/
+test_*.py
+*_test.py
+*.md
+documentacion/
+documentations/
+claude_chat_interface*.html
+
+# ── Editores / SO ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ── Docker ───────────────────────────────────────────────────────────────────
+Dockerfile
+.dockerignore
+docker-compose*.yml

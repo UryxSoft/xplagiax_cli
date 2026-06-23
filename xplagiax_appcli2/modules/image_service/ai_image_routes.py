@@ -37,8 +37,8 @@ x_image = Blueprint('x_image', __name__)
 # -------------------
 # Configuración Qdrant
 # -------------------
-QDRANT_HOST = "localhost"
-QDRANT_PORT = 6333
+QDRANT_HOST = os.environ.get("QDRANT_HOST", "localhost")
+QDRANT_PORT = int(os.environ.get("QDRANT_PORT", 6333))
 COLLECTION = "xplagiax_images_documents"
 VECTOR_SIZE = 512  # dimensión histórica de la colección (CLIP ViT-B/32)
 

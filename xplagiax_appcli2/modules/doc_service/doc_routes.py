@@ -810,8 +810,8 @@ def qdrant_search_fulltext(full_text: str, search_type: str = 'semantic', top_k:
     """
     _log = logging.getLogger('qdrant_search_fulltext')
 
-    QDRANT_HOST = 'localhost'
-    QDRANT_PORT = 6333
+    QDRANT_HOST = os.environ.get('QDRANT_HOST', 'localhost')
+    QDRANT_PORT = int(os.environ.get('QDRANT_PORT', 6333))
     COLLECTION  = 'essays_index'
 
     # Map findex_subcheck values to Qdrant named vectors

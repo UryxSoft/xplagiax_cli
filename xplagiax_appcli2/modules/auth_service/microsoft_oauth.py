@@ -11,10 +11,10 @@ class MicrosoftOAuth:
     
     def __init__(self):
         # Configuración OAuth - considera mover a variables de entorno
-        self.client_id =  "35f3700d-cfc1-42df-bde5-2f03206dbf82" #"5ac5c931-f1fa-4b40-8d96-9830e17fdc7a"
-        self.client_secret =  "uv~8Q~nwt.OD0611lMKDiFW58GhNDeaIiueGnbln"
-        self.tenant_id =  "common"  # 'common' permite cuentas personales y organizacionales
-        self.redirect_uri =  "http://localhost:5000/auth_bp/microsoft/callback"
+        self.client_id =  os.environ.get("MICROSOFT_CLIENT_ID", "35f3700d-cfc1-42df-bde5-2f03206dbf82")
+        self.client_secret =  os.environ.get("MICROSOFT_CLIENT_SECRET", "uv~8Q~nwt.OD0611lMKDiFW58GhNDeaIiueGnbln")
+        self.tenant_id =  os.environ.get("MICROSOFT_TENANT_ID", "common")  # 'common' permite cuentas personales y organizacionales
+        self.redirect_uri =  os.environ.get("MICROSOFT_REDIRECT_URI", "http://localhost:5000/auth_bp/microsoft/callback")
         
         # URLs de Microsoft OAuth
         self.auth_url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/authorize"

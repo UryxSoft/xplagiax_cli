@@ -1,6 +1,7 @@
 """
 Copyright (c) 2024 - present URYX TECHNOLOGIES SRL
 """
+import os
 from flask import Blueprint, render_template, redirect, url_for, session, jsonify, flash, request, make_response
 from flask_login import current_user, login_required
 from settings.utilities import verify_token
@@ -22,9 +23,9 @@ logger = logging.getLogger('x_users')
 from modules.bucket_service.seaweedfs_storage import SeaweedFSClient
 
 # Configuración SeaweedFS
-SEAWEEDFS_FILER_URL = 'http://localhost:8333'  # URL del Filer (Docker port 8333:8333)
-SEAWEEDFS_MASTER_URL = 'http://localhost:8333'  # URL del Master
-SEAWEEDFS_BUCKET = 'xplagiax-users-documents'
+SEAWEEDFS_FILER_URL = os.environ.get('SEAWEEDFS_FILER_URL', 'http://localhost:8333')
+SEAWEEDFS_MASTER_URL = os.environ.get('SEAWEEDFS_MASTER_URL', 'http://localhost:8333')
+SEAWEEDFS_BUCKET = os.environ.get('SEAWEEDFS_BUCKET', 'xplagiax-users-documents')
 
 # Crear instancia de SeaweedFSClient
 minio_client = SeaweedFSClient(
