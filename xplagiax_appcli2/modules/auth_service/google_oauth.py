@@ -28,7 +28,9 @@ class GoogleOAuth:
         # Generar estado único para seguridad CSRF
         state = secrets.token_urlsafe(32)
         session['oauth_state'] = state
-        
+        session.permanent = True  # asegurar que la cookie persista el ida-y-vuelta
+        current_app.logger.info("[google-oauth] authorize: state set, redirect_uri=%s", self.redirect_uri)
+
         params = {
             'client_id': self.client_id,
             'redirect_uri': self.redirect_uri,
@@ -48,7 +50,12 @@ class GoogleOAuth:
         try:
             # Verificar estado para prevenir CSRF
             stored_state = session.pop('oauth_state', None)
-            if not stored_state or state != stored_state:
+            current_app.logger.info(
+                "[google-oauth] state check: stored=%s received=%s session_keys=%s",
+                bool(stored_state), bool(state), list(session.keys()))
+            if not stored_state:
+                return None, "Sesión expirada (no se guardó el estado OAuth). Reintenta el login."
+            if state != stored_state:
                 return None, "Estado OAuth inválido - posible ataque CSRF"
 
             # Intercambiar código por token
@@ -59,10 +66,13 @@ class GoogleOAuth:
                 'grant_type': 'authorization_code',
                 'redirect_uri': self.redirect_uri
             }
-            
+
             # Obtener token de acceso
             token_response = requests.post(self.token_url, data=token_data, timeout=10)
             if not token_response.ok:
+                current_app.logger.error(
+                    "[google-oauth] token exchange failed %s: %s (redirect_uri=%s)",
+                    token_response.status_code, token_response.text[:300], self.redirect_uri)
                 return None, f"Error obteniendo token: {token_response.status_code}"
             
             token_info = token_response.json()
