@@ -3711,10 +3711,11 @@ AI_POLL_INTERVAL = float(os.environ.get('AI_POLL_INTERVAL', '1.5'))
 AI_POLL_TIMEOUT = float(os.environ.get('AI_POLL_TIMEOUT', '120'))
 
 
-# Modo del servicio de IA: 'async' usa /analyze_document_async (como marktrack:
-# requiere worker Celery + polling); 'sync' usa /analyze_document (inline, sin worker).
-# Default 'async' para replicar EXACTAMENTE la llamada que funciona en marktrack.
-AI_SERVICE_MODE = os.environ.get('AI_SERVICE_MODE', 'async').strip().lower()
+# Modo del servicio de IA: 'sync' usa /analyze_document (inline, SIN worker Celery);
+# 'async' usa /analyze_document_async (requiere worker + polling).
+# Default 'sync': en este despliegue xota NO tiene worker Celery → el async queda
+# 'pending' para siempre. El síncrono procesa en la misma petición.
+AI_SERVICE_MODE = os.environ.get('AI_SERVICE_MODE', 'sync').strip().lower()
 
 # Plugins por defecto: idénticos a marktrack (el resultado de ai_detection se usa igual).
 AI_DEFAULT_PLUGINS = ['ai_detection', 'citation_check', 'stylometric_analysis']
@@ -3890,5 +3891,18 @@ def finderx_report(job_id):
         rdata = report.json()
     except ValueError:
         return jsonify({'error': 'Invalid response from FinderX service.'}), 502
-    logger.info('FinderX report %s → status=%r keys=%s', job_id, rdata.get('status'), list(rdata.keys()))
-    return jsonify(rdata), 200
+
+    # FinderX envuelve todo bajo 'data'. Desenvolver para que el front vea status/result.
+    inner = rdata.get('data') if isinstance(rdata.get('data'), dict) else rdata
+    # El resultado puede estar como inner['result'] o ser inner mismo (con scores).
+    result = inner.get('result') if isinstance(inner.get('result'), dict) else (
+        inner if (isinstance(inner, dict) and 'scores' in inner) else None)
+    out = {
+        'status': inner.get('status'),
+        'result': result,
+        'success': rdata.get('success', True),
+    }
+    logger.info('FinderX report %s → status=%r inner_keys=%s has_result=%s',
+                job_id, out['status'], list(inner.keys()) if isinstance(inner, dict) else None,
+                bool(result))
+    return jsonify(out), 200
