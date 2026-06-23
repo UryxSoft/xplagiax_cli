@@ -1,0 +1,23 @@
+{% extends "error_base.html" %}
+{% block content %}
+    <div class="error-container">
+        <div class="error-card" id="errorCard">
+            <div class="ai-icon" id="errorIcon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="66" height="66" fill="currentColor" class="bi bi-ban" viewBox="0 0 16 16">
+                   <path d="M15 8a6.97 6.97 0 0 0-1.71-4.584l-9.874 9.875A7 7 0 0 0 15 8M2.71 12.584l9.874-9.875a7 7 0 0 0-9.874 9.874ZM16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0"/>
+                </svg>
+            </div>
+            <div class="error-code" id="errorCode">400</div>
+            <h1 class="error-title" id="errorTitle">Solicitud Incorrecta</h1>
+            <p class="error-message" id="errorMessage">
+                Nuestro sistema de IA detectó un problema con tu solicitud. 
+                Por favor, verifica los datos y vuelve a intentarlo.
+            </p>
+            <div class="btn-container">
+                <button class="btn" onclick="goHome()">🏠 Volver al Inicio</button>
+                <button class="btn" onclick="tryAgain()">🔄 Intentar de Nuevo</button>
+                <button class="btn" onclick="contact()">💬 Soporte</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,694 @@
+{% extends "base/adm_base.html" %}
+{% block content %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSH Terminal Enhanced</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/document1.css') }}">
+    
+    <!-- XTerm.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/xterm@5.3.0/css/xterm.css">
+    
+    <style>
+        /* Estilos mejorados para el terminal */
+        #terminalLayout {
+            display: flex;
+            height: calc(100vh - 120px);
+            margin-top: 20px;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        #terminalSidebar {
+            width: 300px;
+            background: #fff;
+            border-right: 1px solid #e9ecef;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        #terminalMain {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+            position: relative;
+        }
+        
+        #terminalHeader {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #2c2c2c, #404040);
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #444;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        #terminalTitle {
+            font-size: 16px;
+            font-weight: 500;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse-red 2s infinite;
+        }
+        
+        .status-indicator.connected {
+            background: #10b981;
+            animation: pulse-green 2s infinite;
+        }
+        
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        #terminalControls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .terminal-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #3b82f6;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .terminal-btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        
+        .terminal-btn.danger {
+            background: #ef4444;
+        }
+        
+        .terminal-btn.danger:hover {
+            background: #dc2626;
+        }
+        
+        .terminal-btn.secondary {
+            background: #6b7280;
+        }
+        
+        .terminal-btn.secondary:hover {
+            background: #4b5563;
+        }
+        
+        #terminalContainer {
+            flex: 1;
+            padding: 10px;
+            position: relative;
+        }
+        
+        /* Panel lateral de herramientas */
+        #terminalToolbar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 6px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 1000;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        #terminalToolbar:hover {
+            opacity: 1;
+        }
+        
+        .tool-btn {
+            background: transparent;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .tool-btn:hover {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+        
+        /* Panel de historial de comandos */
+        #commandHistory {
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            padding: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-item:hover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+        
+        .history-time {
+            color: #6b7280;
+            font-size: 10px;
+        }
+        
+        /* Panel de transferencia de archivos */
+        #fileTransfer {
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            padding: 12px;
+            display: none;
+        }
+        
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        /* Búsqueda mejorada */
+        #terminalSearch {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 12px;
+            border-radius: 6px;
+            display: none;
+            z-index: 1001;
+            min-width: 300px;
+        }
+        
+        #terminalSearch input {
+            width: 100%;
+            padding: 8px 12px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        
+        .search-controls {
+            display: flex;
+            gap: 4px;
+            justify-content: space-between;
+        }
+        
+        .search-btn {
+            background: #444;
+            color: #fff;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .search-btn:hover {
+            background: #555;
+        }
+        
+        /* Panel de configuración */
+        #terminalSettings {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .setting-group {
+            margin-bottom: 16px;
+        }
+        
+        .setting-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+            display: block;
+        }
+        
+        .setting-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .setting-range {
+            width: 100%;
+        }
+        
+        /* Notificaciones mejoradas */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .notification.error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        
+        .notification.warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        
+        /* Session items */
+        .session-item {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .session-item:hover {
+            background: #f8f9fa;
+            border-color: #3b82f6;
+        }
+        
+        .session-name {
+            font-weight: 500;
+            color: #1f2937;
+        }
+        
+        .session-info {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        
+        /* Stats cards */
+        .stat-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        
+        .stat-title {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            #terminalLayout {
+                flex-direction: column;
+                height: calc(100vh - 100px);
+            }
+            
+            #terminalSidebar {
+                width: 100%;
+                max-height: 200px;
+            }
+            
+            #terminalToolbar {
+                flex-direction: row;
+                top: auto;
+                bottom: 10px;
+                right: 50%;
+                transform: translateX(50%);
+            }
+        }
+        
+        /* Fullscreen mode */
+        .fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 9999 !important;
+            background: #000 !important;
+        }
+        
+        .fullscreen #terminalSidebar {
+            display: none !important;
+        }
+        
+        /* Error display */
+        .error-display {
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px;
+            color: #c33;
+            text-align: center;
+        }
+    </style>
+
+    <div class="main-content" id="mainContent">
+        <div class="page-header">
+            <h1 class="page-title">
+                <i class="fas fa-terminal"></i> SSH Terminal Enhanced
+            </h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="openSessionManager()">
+                    <i class="fas fa-server"></i> Administrar Sesiones
+                </button>
+                <button class="btn btn-primary" onclick="showTerminalSettings()">
+                    <i class="fas fa-cog"></i> Configuración
+                </button>
+            </div>
+        </div>
+
+        <div id="terminalLayout">
+            <div id="terminalSidebar">
+                <div class="sidebar-header">
+                    <h2><i class="fas fa-server"></i> Sesiones SSH</h2>
+                </div>
+                <div id="sessionsList">
+                    <!-- Las sesiones se cargarán dinámicamente -->
+                </div>
+                
+                <div id="currentSessionInfo">
+                    <h3><i class="fas fa-plug"></i> Sesión Actual</h3>
+                    <div id="sessionDetails">
+                        <div><strong>Estado:</strong> <span id="connectionStatus">Desconectado</span></div>
+                        <div><strong>Nombre:</strong> <span id="sessionName">-</span></div>
+                        <div><strong>Servidor:</strong> <span id="sessionServer">-</span></div>
+                        <div><strong>Usuario:</strong> <span id="sessionUser">-</span></div>
+                        <div><strong>Uptime:</strong> <span id="sessionUptime">-</span></div>
+                    </div>
+                </div>
+                
+                <div id="terminalStats">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">CPU</div>
+                        </div>
+                        <div class="stat-value" id="cpuUsage">0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Memoria</div>
+                        </div>
+                        <div class="stat-value" id="memoryUsage">0 MB</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-title">Sesiones</div>
+                        </div>
+                        <div class="stat-value" id="activeSessionsCount">0</div>
+                    </div>
+                </div>
+
+                <!-- Panel de Configuración -->
+                <div id="terminalSettings">
+                    <h3><i class="fas fa-palette"></i> Configuración</h3>
+                    
+                    <div class="setting-group">
+                        <label class="setting-label">Tema</label>
+                        <select class="setting-input" id="themeSelect">
+                            <option value="dark">Oscuro</option>
+                            <option value="light">Claro</option>
+                            <option value="matrix">Matrix</option>
+                            <option value="cyberpunk">Cyberpunk</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label class="setting-label">Tamaño de Fuente: <span id="fontSizeValue">14px</span></label>
+                        <input type="range" class="setting-range" id="fontSizeRange" 
+                               min="10" max="24" value="14">
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label class="setting-label">Transparencia: <span id="opacityValue">100%</span></label>
+                        <input type="range" class="setting-range" id="opacityRange" 
+                               min="70" max="100" value="100">
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            <input type="checkbox" id="cursorBlinkCheck" checked> Cursor parpadeante
+                        </label>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <label class="setting-label">
+                            <input type="checkbox" id="soundCheck"> Sonidos del terminal
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="terminalMain">
+                <div id="terminalHeader">
+                    <h1 id="terminalTitle">
+                        <span class="status-indicator" id="statusIndicator"></span>
+                        SSH Terminal - <span id="headerSessionName">No conectado</span>
+                    </h1>
+                    <div id="terminalControls">
+                        <button class="terminal-btn" id="connectBtn" onclick="connectToSession()">
+                            <i class="fas fa-play"></i> Conectar
+                        </button>
+                        <button class="terminal-btn danger" id="disconnectBtn" style="display:none;" onclick="disconnectSession()">
+                            <i class="fas fa-stop"></i> Desconectar
+                        </button>
+                        <button class="terminal-btn secondary" onclick="clearTerminal()">
+                            <i class="fas fa-broom"></i> Limpiar
+                        </button>
+                        <button class="terminal-btn secondary" onclick="toggleSearch()">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                        <button class="terminal-btn secondary" onclick="toggleFileTransfer()">
+                            <i class="fas fa-upload"></i> Archivos
+                        </button>
+                        <button class="terminal-btn secondary" onclick="toggleHistory()">
+                            <i class="fas fa-history"></i> Historial
+                        </button>
+                        <button class="terminal-btn secondary" onclick="takeScreenshot()">
+                            <i class="fas fa-camera"></i> Captura
+                        </button>
+                        <button class="terminal-btn secondary" onclick="toggleFullscreen()">
+                            <i class="fas fa-expand"></i> Pantalla Completa
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Toolbar flotante -->
+                <div id="terminalToolbar">
+                    <button class="tool-btn" onclick="sendCtrlC()" title="Ctrl+C">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <button class="tool-btn" onclick="sendCtrlZ()" title="Ctrl+Z">
+                        <i class="fas fa-pause"></i>
+                    </button>
+                    <button class="tool-btn" onclick="sendCtrlL()" title="Ctrl+L">
+                        <i class="fas fa-broom"></i>
+                    </button>
+                    <button class="tool-btn" onclick="copySelection()" title="Copiar">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                    <button class="tool-btn" onclick="pasteFromClipboard()" title="Pegar">
+                        <i class="fas fa-paste"></i>
+                    </button>
+                </div>
+                
+                <div id="terminalContainer"></div>
+                
+                <!-- Panel de historial de comandos -->
+                <div id="commandHistory" style="display: none;">
+                    <h4><i class="fas fa-history"></i> Historial de Comandos</h4>
+                    <div id="historyList"></div>
+                </div>
+                
+                <!-- Panel de transferencia de archivos -->
+                <div id="fileTransfer">
+                    <h4><i class="fas fa-upload"></i> Transferencia de Archivos</h4>
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-2x"></i>
+                        <p>Arrastra archivos aquí o haz clic para seleccionar</p>
+                        <input type="file" id="fileInput" multiple style="display: none;">
+                    </div>
+                    <div id="fileProgress" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <span id="progressText">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay mejorado -->
+        <div id="loadingOverlay" style="display: none;">
+            <div class="loading-content">
+                <div id="loadingSpinner"></div>
+                <div id="loadingMessage">Conectando...</div>
+                <div class="loading-details" id="loadingDetails"></div>
+            </div>
+        </div>
+
+        <!-- Búsqueda mejorada -->
+        <div id="terminalSearch">
+            <input type="text" id="searchInput" placeholder="Buscar en terminal...">
+            <div class="search-controls">
+                <div>
+                    <button class="search-btn" onclick="searchPrevious()">▲</button>
+                    <button class="search-btn" onclick="searchNext()">▼</button>
+                </div>
+                <div>
+                    <label><input type="checkbox" id="searchCaseSensitive"> Case</label>
+                    <label><input type="checkbox" id="searchRegex"> Regex</label>
+                    <button class="search-btn" onclick="toggleSearch()">✕</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts principales -->
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    
+    <!-- XTerm.js principal -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    
+    <!-- Addons de XTerm.js usando jsDelivr -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-search@0.13.0/lib/xterm-addon-search.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-serialize@0.11.0/lib/xterm-addon-serialize.js"></script>
+    
+    <!-- Script principal del terminal -->
+    <script>
+        // Verificar que todas las dependencias estén cargadas
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Verificando dependencias...');
+            
+            const dependencies = {
+                'Terminal': typeof Terminal !== 'undefined',
+                'FitAddon': typeof FitAddon !== 'undefined',
+                'SearchAddon': typeof SearchAddon !== 'undefined',
+                'WebLinksAddon': typeof WebLinksAddon !== 'undefined',
+                'SerializeAddon': typeof SerializeAddon !== 'undefined',
+                'Socket.IO': typeof io !== 'undefined'
+            };
+            
+            const missing = Object.entries(dependencies)
+                .filter(([name, available]) => !available)
+                .map(([name]) => name);
+            
+            if (missing.length > 0) {
+                console.warn('⚠️ Dependencias faltantes:', missing);
+                document.getElementById('terminalContainer').innerHTML = `
+                    <div class="error-display">
+                        <h3>⚠️ Dependencias faltantes</h3>
+                        <p>No se pudieron cargar: ${missing.join(', ')}</p>
+                        <p>El terminal funcionará con funcionalidad limitada.</p>
+                    </div>
+                `;
+            } else {
+                console.log('✅ Todas las dependencias cargadas correctamente');
+            }
+            
+            // Cargar el script principal
+            const script = document.createElement('script');
+            script.src = "{{ url_for('static', filename='js/terminal_enhanced.js')}}";
+            script.onload = () => console.log('🚀 Terminal script loaded');
+            script.onerror = () => {
+                console.error('❌ Failed to load terminal script');
+                document.getElementById('terminalContainer').innerHTML = `
+                    <div class="error-display">
+                        <h3>❌ Error al cargar el terminal</h3>
+                        <p>No se pudo cargar terminal_enhanced.js</p>
+                        <p>Verifica la ruta del archivo.</p>
+                    </div>
+                `;
+            };
+            document.head.appendChild(script);
+        });
+    </script>
+        <script src="{{ url_for('static', filename='js/terminal_enhanced_fixed.js')}}"></script>
+{% endblock %}

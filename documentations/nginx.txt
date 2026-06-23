@@ -1,0 +1,490 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name xplagiax.ca;
+    return 301 https://$server_name$request_uri;
+}
+
+# Redirigir HTTP a HTTPS para adm.xplagiax.ca
+server {
+    listen 80;
+    listen [::]:80;
+    server_name adm.xplagiax.ca;
+    return 301 https://$server_name$request_uri;
+}
+
+# Redirigir HTTP a HTTPS para app.xplagiax.ca
+server {
+    listen 80;
+    listen [::]:80;
+    server_name app.xplagiax.ca;
+    return 301 https://$server_name$request_uri;
+
+    proxy_read_timeout 300s;    # Timeout de 5 minutos
+    proxy_send_timeout 300s;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.xplagiax.ca;
+    return 301 https://$server_name$request_uri;
+}
+
+# Servidor HTTPS para xplagiax.ca (sitio principal) - MODIFICADO PARA DOCKER
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name xplagiax.ca;
+
+    client_max_body_size 100M;
+    # Certificados SSL
+    ssl_certificate /etc/letsencrypt/live/xplagiax.ca/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/xplagiax.ca/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Redireccionar /adm a nuevo subdominio
+    location /adm {
+        return 301 https://adm.xplagiax.ca$request_uri;
+
+    }
+
+    location /adm/ {
+        return 301 https://adm.xplagiax.ca$request_uri;
+    }
+
+    # API interna - AGREGADO AQUÍ
+    location /x_aitestpro/api/ {
+        proxy_pass http://localhost:5002/x_aitestpro/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Headers específicos para API
+        proxy_set_header Accept-Encoding "";
+
+        # Timeouts más largos para API
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 600s;
+
+        # CORS headers si es necesario
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTI>
+        add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization'>
+
+        # Handle preflight requests
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '*';
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, >
+            add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorizat>
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+    }
+    # Proxy para SocketIO (si tu aplicación lo usa)
+    location /socket.io/ {
+        proxy_pass http://localhost:5000/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Proxy para archivos estáticos
+    location /static/ {
+        proxy_pass http://localhost:5000/static/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Headers para caching
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+
+        # Configuración para archivos estáticos
+        proxy_buffering on;
+        proxy_cache_valid 200 1y;
+    }
+
+    location /assets/ {
+        proxy_pass http://localhost:5000/assets/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # Headers para caching
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+
+        # Configuración para archivos estáticos
+        proxy_buffering on;
+        proxy_cache_valid 200 1y;
+    }
+
+    # Proxy principal para la aplicación Docker
+    location / {
+        proxy_pass http://localhost:5000/;
+        proxy_ssl_verify off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_buffering off;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+
+        # Configuración para SocketIO
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Reescribir redirects
+        proxy_redirect http://localhost:5000/ /;
+        proxy_redirect http://$host/ /;
+        proxy_redirect https://$host/ /;
+    }
+
+    # Denegar acceso a archivos .htaccess
+    location ~ /\.ht {
+        deny all;
+    }
+}
+               
+# Servidor HTTPS para adm.xplagiax.ca (aplicación de administración)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name adm.xplagiax.ca;
+
+    # Certificados SSL (necesitarás generar certificados para el subdominio)
+    ssl_certificate /etc/letsencrypt/live/adm.xplagiax.ca/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/adm.xplagiax.ca/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # API interna - AGREGADO AQUÍ TAMBIÉN
+    location /x_aitestpro/api/ {
+        proxy_pass http://localhost:5002/x_aitestpro/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Headers específicos para API
+        proxy_set_header Accept-Encoding "";
+
+        # Timeouts más largos para API
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 600s;
+
+        # CORS headers si es necesario
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTI>
+        add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization'>
+
+        # Handle preflight requests
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '*';
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, >
+            add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorizat>
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+    }
+
+    # Proxy para SocketIO
+    location /socket.io/ {
+        proxy_pass http://localhost:5001/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Proxy para archivos estáticos
+    location /static/ {
+        proxy_pass http://localhost:5001/static/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+
+        # Configuración para archivos estáticos
+        proxy_buffering on;
+        proxy_cache_valid 200 1y;
+    }
+
+    location /assets/ {
+        proxy_pass http://localhost:5001/assets/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Headers para caching
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+
+        # Configuración para archivos estáticos
+        proxy_buffering on;
+        proxy_cache_valid 200 1y;
+    }
+
+    # Proxy principal para la aplicación
+    location / {
+        proxy_pass http://localhost:5001/;
+        proxy_ssl_verify off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_buffering off;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+
+        # Configuración para SocketIO
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Reescribir redirects de Flask
+        proxy_redirect http://localhost:5001/ /;
+        proxy_redirect http://$host/ /;
+        proxy_redirect https://$host/ /;
+    }
+
+    # Denegar acceso a archivos .htaccess
+    location ~ /\.ht {
+        deny all;
+    }
+}
+
+# Servidor HTTPS para app.xplagiax.ca (aplicación CLI)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name app.xplagiax.ca;
+
+    client_max_body_size 100M;
+    # Certificados SSL (necesitarás generar certificados para el subdominio)
+    ssl_certificate /etc/letsencrypt/live/app.xplagiax.ca/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.xplagiax.ca/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # API interna (si tu aplicación CLI la necesita)
+    location /x_aitestpro/api/ {
+        proxy_pass http://localhost:5002/x_aitestpro/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Accept-Encoding "";
+
+        # Timeouts más largos para API
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 600s;
+
+        # CORS headers
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTI>
+        add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization'>
+
+        # Handle preflight requests
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '*';
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, >
+            add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorizat>
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+    }
+
+    # Proxy para SocketIO (si tu aplicación lo usa)
+    location /socket.io/ {
+        proxy_pass http://localhost:5003/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Proxy para archivos estáticos
+    location /static/ {
+        proxy_pass http://localhost:5003/static/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Headers para caching
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        proxy_buffering on;
+        proxy_cache_valid 200 1y;
+    }
+
+    location /assets/ {
+        proxy_pass http://localhost:5003/assets/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Headers para caching
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        proxy_buffering on;
+        proxy_cache_valid 200 1y;
+    }
+
+    # Proxy principal para la aplicación CLI Docker
+    location / {
+        proxy_pass http://localhost:5003/;
+        proxy_ssl_verify off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_buffering off;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+
+        # Configuración para SocketIO
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Reescribir redirects
+        proxy_redirect http://localhost:5003/ /;
+        proxy_redirect http://$host/ /;
+        proxy_redirect https://$host/ /;
+    }
+
+    # Denegar acceso a archivos .htaccess
+    location ~ /\.ht {
+        deny all;
+    }
+}
+
+# xplagiax AI Image Service — Detección, Similitud y Plagio
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name api.xplagiax.ca;
+
+    # Imágenes hasta 20MB
+    client_max_body_size 25M;
+
+    # Certificado SSL (genera con: certbot --nginx -d api.xplagiax.ca)
+    ssl_certificate /etc/letsencrypt/live/api.xplagiax.ca/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.xplagiax.ca/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Health probes — sin autenticación, sin rate limit
+    location = /healthz {
+        proxy_pass http://localhost:5010/healthz;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        access_log off;
+    }
+
+    location = /readyz {
+        proxy_pass http://localhost:5010/readyz;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        access_log off;
+    }
+
+    # API principal — todos los endpoints /api/v1/...
+    location /api/ {
+        proxy_pass http://localhost:5010/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-ID $request_id;
+
+        # Pasar el API key sin modificar
+        proxy_set_header X-API-Key $http_x_api_key;
+
+        # Uploads de imágenes y timeouts para inferencia ML
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 120s;
+        proxy_read_timeout 120s;
+
+        # No buffering — uploads de imágenes grandes
+        proxy_request_buffering off;
+        proxy_buffering off;
+
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        # CORS
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, DELETE, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization, X-API-Key' always;
+
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' '*';
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, DELETE, OPTIONS';
+            add_header 'Access-Control-Allow-Headers' 'Content-Type, Authorization, X-API-Key';
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+    }
+
+    # Denegar todo lo demás
+    location / {
+        return 404 '{"error":"Not found"}';
+        add_header Content-Type application/json;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/user/Documents/xplagiax_marktrack -name \"*.html\" -path \"*/templates/*\" | head -20 && ls /Users/user/Documents/xplagiax_marktrack/ 2>/dev/null || find /Users/user/Documents -name \"xplagiax_marktrack\" -type d | head -5)",
+      "Read(//Users/user/Documents/**)",
+      "Bash(git -C /Users/user/Documents/xplagiax log --oneline -3)",
+      "Bash(git -C /Users/user/Documents/xplagiax show HEAD:xplagiax_appcli2/static/css/app_style_1.css)"
+    ]
+  }
+}

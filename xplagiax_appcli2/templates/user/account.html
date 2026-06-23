@@ -1,0 +1,1489 @@
+{% extends "user/embed_base.html" if request.args.get('embed') else "user/user_base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/settings_modal.css') }}">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<div class="sm-root" id="smRoot">
+
+  <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+  <aside class="sm-sidebar" id="smSidebar">
+
+    <div class="sm-sidebar-head">
+      <div class="sm-sidebar-title">Settings</div>
+      <div class="sm-search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search settings…" id="smSearchInput" autocomplete="off">
+      </div>
+    </div>
+
+    <nav class="sm-nav" id="smNav">
+
+      <!-- Account group -->
+      <div class="sm-nav-section">
+        <div class="sm-nav-label">Account</div>
+
+        <button class="sm-nav-item active" data-panel="general" data-label="General">
+          <span class="sm-nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </span>
+          General
+        </button>
+
+        <button class="sm-nav-item" data-panel="profile" data-label="Profile">
+          <span class="sm-nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          Profile
+        </button>
+
+        <button class="sm-nav-item" data-panel="billing" data-label="Billing &amp; Plan">
+          <span class="sm-nav-icon">
+            <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          </span>
+          Billing &amp; Plan
+        </button>
+
+      </div>
+
+      <div class="sm-nav-divider"></div>
+
+      <!-- Security group -->
+      <div class="sm-nav-section">
+        <div class="sm-nav-label">Security</div>
+
+        <button class="sm-nav-item" data-panel="security" data-label="Security">
+          <span class="sm-nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </span>
+          Security
+        </button>
+
+        <button class="sm-nav-item" data-panel="privacy" data-label="Privacy">
+          <span class="sm-nav-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </span>
+          Privacy
+        </button>
+
+      </div>
+
+      <div class="sm-nav-divider"></div>
+
+      <!-- Platform group -->
+      <div class="sm-nav-section">
+        <div class="sm-nav-label">Platform</div>
+
+        <button class="sm-nav-item" data-panel="integrations" data-label="Integrations">
+          <span class="sm-nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </span>
+          Integrations
+        </button>
+
+        <button class="sm-nav-item" data-panel="advanced" data-label="Advanced">
+          <span class="sm-nav-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          </span>
+          Advanced
+        </button>
+
+      </div>
+
+    </nav><!-- /sm-nav -->
+
+    <!-- User chip -->
+    <div class="sm-sidebar-foot">
+      <div class="sm-user-chip">
+        <div class="sm-user-avatar" id="smUserAvatar">
+          {% if user_data.avatar %}
+            <img src="{{ user_data.avatar }}" alt="Avatar">
+          {% else %}
+            {{ user_data.get('name','')[:1] }}{{ user_data.get('lastname','')[:1] }}
+          {% endif %}
+        </div>
+        <div class="sm-user-info">
+          <div class="sm-user-name">{{ user_data.name }} {{ user_data.lastname or '' }}</div>
+          <div class="sm-user-plan">
+            <span class="sm-plan-pill">{{ user_data.user_type }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </aside><!-- /sm-sidebar -->
+
+
+  <!-- ═══════════════════ MAIN PANEL ═══════════════════ -->
+  <main class="sm-main">
+
+    <!-- Head -->
+    <div class="sm-main-head">
+      <div class="sm-breadcrumb">
+        Settings <span>›</span> <span id="smBreadcrumb">General</span>
+      </div>
+      <div class="sm-page-title" id="smPageTitle">General</div>
+      <div class="sm-page-desc" id="smPageDesc">Manage your workspace preferences and defaults.</div>
+    </div>
+
+    <!-- Body (panels) -->
+    <div class="sm-main-body">
+
+      <!-- ── PANEL: General ──────────────────────────── -->
+      <div class="sm-panel active" id="panel-general">
+
+        <!-- Account info card -->
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </span>
+              Account Information
+            </div>
+            <span class="sm-badge sm-badge-active">
+              <span class="sm-badge-dot"></span>
+              Active
+            </span>
+          </div>
+          <div class="sm-card-body">
+            <div class="sm-form-grid">
+              <div class="sm-field">
+                <label class="sm-label">First Name</label>
+                <input class="sm-input" type="text" value="{{ user_data.name }}" readonly>
+              </div>
+              <div class="sm-field">
+                <label class="sm-label">Last Name</label>
+                <input class="sm-input" type="text" value="{{ user_data.lastname or '' }}" readonly>
+              </div>
+              <div class="sm-field" style="grid-column: 1/-1">
+                <label class="sm-label">Email Address</label>
+                <input class="sm-input" type="email" value="{{ user_data.email }}" readonly>
+              </div>
+              <div class="sm-field">
+                <label class="sm-label">Country</label>
+                <input class="sm-input" type="text" value="{{ user_data.country or '—' }}" readonly>
+              </div>
+              <div class="sm-field">
+                <label class="sm-label">Institution</label>
+                <input class="sm-input" type="text" value="{{ user_data.institute or '—' }}" readonly>
+              </div>
+              <div class="sm-field">
+                <label class="sm-label">User Type</label>
+                <input class="sm-input" type="text" value="{{ user_data.user_type }}" readonly>
+              </div>
+            </div>
+          </div>
+          <div class="sm-card-foot">
+            <button class="sm-btn sm-btn-ghost" onclick="smToast('Contact support to update account info.', 'info')">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              How to edit?
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats KV -->
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </span>
+              Usage Overview
+            </div>
+          </div>
+          <div class="sm-kv-grid" id="smKvGrid">
+            <div class="sm-kv">
+              <div class="sm-kv-label">Plan</div>
+              <div class="sm-kv-value" id="kvPlan">{{ user_data.user_type }}</div>
+            </div>
+            <div class="sm-kv">
+              <div class="sm-kv-label">Provider</div>
+              <div class="sm-kv-value" id="kvProvider">—</div>
+            </div>
+            <div class="sm-kv">
+              <div class="sm-kv-label">Status</div>
+              <div class="sm-kv-value" id="kvStatus">—</div>
+            </div>
+            <div class="sm-kv">
+              <div class="sm-kv-label">Renews</div>
+              <div class="sm-kv-value" id="kvRenews">—</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /panel-general -->
+
+
+      <!-- ── PANEL: Profile ──────────────────────────── -->
+      <div class="sm-panel" id="panel-profile">
+
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </span>
+              Public Profile
+            </div>
+          </div>
+          <div class="sm-card-body">
+            <!-- Avatar section -->
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Avatar</div>
+                <div class="sm-row-desc">Your profile photo across XplagiaX.</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div class="sm-user-avatar" style="width:44px;height:44px;font-size:16px;">
+                  {% if user_data.avatar %}
+                    <img src="{{ user_data.avatar }}" alt="Avatar">
+                  {% else %}
+                    {{ user_data.get('name','')[:1] }}{{ user_data.get('lastname','')[:1] }}
+                  {% endif %}
+                </div>
+                <button class="sm-btn sm-btn-secondary" onclick="smToast('Avatar upload coming soon.', 'info')">Change</button>
+              </div>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-form-grid">
+              <div class="sm-field">
+                <label class="sm-label">Display Name</label>
+                <input class="sm-input" type="text" value="{{ user_data.name }} {{ user_data.lastname or '' }}" readonly>
+              </div>
+              <div class="sm-field">
+                <label class="sm-label">Email</label>
+                <input class="sm-input" type="email" value="{{ user_data.email }}" readonly>
+              </div>
+              <div class="sm-field">
+                <label class="sm-label">Institution</label>
+                <input class="sm-input" type="text" value="{{ user_data.institute or '' }}" readonly>
+              </div>
+              <div class="sm-field">
+                <label class="sm-label">Country</label>
+                <input class="sm-input" type="text" value="{{ user_data.country or '' }}" readonly>
+              </div>
+            </div>
+          </div>
+          <div class="sm-card-foot">
+            <button class="sm-btn sm-btn-ghost">
+              <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Contact Support
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /panel-profile -->
+
+
+      <!-- ── PANEL: Billing ──────────────────────────── -->
+      <!-- ── PANEL: Billing ──────────────────────────── -->
+      <div class="sm-panel" id="panel-billing">
+
+        {% set paid_plans = ['Individual','Research Essentials','Scholar Suite','Institutes'] %}
+        {% set is_paid = user_data.user_type in paid_plans %}
+        {% set is_starter = user_data.user_type == 'Starter' or not user_data.user_type %}
+
+        {% if not is_starter %}
+        <!-- ── Subscription card ──────────────────── -->
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              </span>
+              Subscription
+            </div>
+            <span class="sm-badge sm-badge-sync" id="subBadge" style="min-width:70px;">
+              <span class="sm-badge-dot"></span>Loading…
+            </span>
+          </div>
+          <div class="sm-kv-grid">
+            <div class="sm-kv">
+              <div class="sm-kv-label">Plan</div>
+              <div class="sm-kv-value">{{ user_data.user_type }}</div>
+            </div>
+            <div class="sm-kv">
+              <div class="sm-kv-label">Status</div>
+              <div class="sm-kv-value" id="subStatus">—</div>
+            </div>
+            <div class="sm-kv">
+              <div class="sm-kv-label">Billing cycle</div>
+              <div class="sm-kv-value" id="subType">—</div>
+            </div>
+            <div class="sm-kv">
+              <div class="sm-kv-label">{% if is_on_trial %}Trial ends{% else %}Next renewal{% endif %}</div>
+              <div class="sm-kv-value" id="subEnds">—</div>
+            </div>
+          </div>
+          <div class="sm-card-foot">
+            <button class="sm-btn sm-btn-secondary" onclick="(window.top||window).location.href='/pricing'">
+              <svg viewBox="0 0 24 24"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              Change Plan
+            </button>
+            {% if is_paid %}
+            <button class="sm-btn sm-btn-danger" id="cancelSubBtn" onclick="showCancelModal()">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              Cancel Subscription
+            </button>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- ── Storage card ───────────────────────── -->
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+              </span>
+              Storage
+            </div>
+            <span class="sm-badge sm-badge-sync" id="storageLabel">—</span>
+          </div>
+          <div style="padding:16px 20px;">
+            <div class="sm-progress-wrap">
+              <div class="sm-progress-bar" id="storageBar" style="width:0%"></div>
+            </div>
+            <div class="sm-progress-info" style="margin-top:6px;">
+              <span id="storageUsed" style="color:var(--sm-t2)">Loading…</span>
+              <span id="storageTotal" style="color:var(--sm-t3)"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Trial Status card — solo para cuentas en trial —— -->
+        {% if is_on_trial %}
+        <div class="sm-card" id="trialStatusContainer">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </span>
+              Trial Status
+            </div>
+            <span class="sm-badge" id="trialDaysBadge"
+              style="background:rgba(6,76,219,.10);color:#064CDB;">Loading…</span>
+          </div>
+          <div style="padding:16px 20px;">
+            <div class="sm-progress-wrap" style="height:8px;">
+              <div class="sm-progress-bar" id="trialBar"
+                style="width:100%;background:linear-gradient(90deg,#064CDB,#3b82f6);transition:width .6s ease;"></div>
+            </div>
+            <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+              <span style="font-size:12px;color:var(--sm-t3);" id="trialText">Calculating…</span>
+              <button class="sm-btn sm-btn-primary" style="flex-shrink:0;"
+                onclick="(window.top||window).location.href='/pricing'">
+                <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Upgrade Now
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- ── Starter — upgrade prompt ——————— -->
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </span>
+              Upgrade Your Plan
+            </div>
+          </div>
+          <div style="padding:20px;text-align:center;">
+            <p style="color:var(--sm-t3);font-size:13px;margin-bottom:16px;line-height:1.7;">
+              You are on the <strong style="color:var(--sm-t1)">Starter</strong> plan.
+              Upgrade to unlock advanced analysis, document storage, history, and more.
+            </p>
+            <button class="sm-btn sm-btn-primary" style="margin:0 auto;"
+              onclick="(window.top||window).location.href='/pricing'">
+              <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              View Plans
+            </button>
+          </div>
+        </div>
+        {% endif %}
+
+      </div><!-- /panel-billing -->
+
+
+      <!-- ── PANEL: Appearance ───────────────────────── -->
+      <div class="sm-panel" id="panel-appearance">
+
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+              </span>
+              Interface Theme
+            </div>
+          </div>
+          <div class="sm-card-body">
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Theme Mode</div>
+                <div class="sm-row-desc">Choose how XplagiaX looks to you.</div>
+              </div>
+              <select class="sm-select" style="width:160px" onchange="smToast('Theme saved.','success')">
+                <option selected>Dark</option>
+                <option>Light</option>
+                <option>System</option>
+              </select>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Accent Color</div>
+                <div class="sm-row-desc">Customize your UI accent color.</div>
+              </div>
+              <div class="sm-theme-grid" style="padding:0">
+                <div class="sm-theme-swatch active" style="background:#1621ff" title="Indigo" onclick="smThemePick(this)"></div>
+                <div class="sm-theme-swatch" style="background:#007AFF" title="Blue"   onclick="smThemePick(this)"></div>
+                <div class="sm-theme-swatch" style="background:#10b981" title="Green"  onclick="smThemePick(this)"></div>
+                <div class="sm-theme-swatch" style="background:#f59e0b" title="Amber"  onclick="smThemePick(this)"></div>
+                <div class="sm-theme-swatch" style="background:#f43f5e" title="Rose"   onclick="smThemePick(this)"></div>
+                <div class="sm-theme-swatch" style="background:#8b5cf6" title="Purple" onclick="smThemePick(this)"></div>
+              </div>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Compact Mode</div>
+                <div class="sm-row-desc">Reduce spacing for a denser layout.</div>
+              </div>
+              <label class="sm-switch" aria-label="Compact mode">
+                <input type="checkbox" onchange="smToast('Layout preference saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Animations</div>
+                <div class="sm-row-desc">Smooth transitions and micro-interactions.</div>
+              </div>
+              <label class="sm-switch" aria-label="Animations">
+                <input type="checkbox" checked onchange="smToast('Animation preference saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+              </span>
+              Typography
+            </div>
+          </div>
+          <div class="sm-card-body">
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Font Size</div>
+                <div class="sm-row-desc">Base font size for the interface.</div>
+              </div>
+              <select class="sm-select" style="width:130px" onchange="smToast('Font preference saved.','success')">
+                <option>Small (13px)</option>
+                <option selected>Default (14px)</option>
+                <option>Large (16px)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /panel-appearance -->
+
+
+      <!-- ── PANEL: Notifications ────────────────────── -->
+      <div class="sm-panel" id="panel-notifications">
+
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              </span>
+              Email Notifications
+            </div>
+          </div>
+          <div class="sm-card-body">
+            {% for label, desc in [
+              ('Analysis Complete', 'Notify me when an analysis finishes.'),
+              ('Weekly Digest', 'Summary of your activity every Monday.'),
+              ('Plan Expiry Reminders', 'Alerts 7 and 1 day before plan expiry.'),
+              ('Promotional Emails', 'Updates on new features and offers.')
+            ] %}
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">{{ label }}</div>
+                <div class="sm-row-desc">{{ desc }}</div>
+              </div>
+              <label class="sm-switch" aria-label="{{ label }}">
+                <input type="checkbox" {% if loop.index < 3 %}checked{% endif %} onchange="smToast('Notification preference updated.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            {% if not loop.last %}<div class="sm-divider"></div>{% endif %}
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </span>
+              In-App Alerts
+            </div>
+          </div>
+          <div class="sm-card-body">
+            {% for label, desc in [
+              ('Quota Warnings', 'Show alerts when daily quota is low.'),
+              ('System Status', 'Notify about platform maintenance.'),
+              ('Document Sharing', 'When someone shares a doc with you.')
+            ] %}
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">{{ label }}</div>
+                <div class="sm-row-desc">{{ desc }}</div>
+              </div>
+              <label class="sm-switch" aria-label="{{ label }}">
+                <input type="checkbox" checked onchange="smToast('Alert preference updated.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            {% if not loop.last %}<div class="sm-divider"></div>{% endif %}
+            {% endfor %}
+          </div>
+        </div>
+
+      </div><!-- /panel-notifications -->
+
+
+      <!-- ── PANEL: Security ─────────────────────────── -->
+      <div class="sm-panel" id="panel-security">
+
+        <!-- Password change -->
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </span>
+              Password &amp; Authentication
+            </div>
+          </div>
+          <div class="sm-card-body">
+            <div class="sm-row" style="align-items:flex-start;flex-direction:column;gap:12px">
+              <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+                <div class="sm-row-left">
+                  <div class="sm-row-label">Password</div>
+                  <div class="sm-row-desc">Change your current account password.</div>
+                </div>
+                <button class="sm-btn sm-btn-secondary" id="secPwToggleBtn" onclick="secTogglePwForm()">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  Change Password
+                </button>
+              </div>
+              <!-- inline password form (hidden by default) -->
+              <div id="secPwForm" style="display:none;width:100%;background:var(--sm-bg2);border-radius:10px;padding:16px;flex-direction:column;gap:10px">
+                <input id="secPwCurrent" type="password" placeholder="Current password"
+                  style="width:100%;padding:9px 12px;border:1px solid var(--sm-border);border-radius:7px;font-size:13px;background:var(--sm-bg);color:var(--sm-t1);outline:none;box-sizing:border-box">
+                <input id="secPwNew" type="password" placeholder="New password (min 8 chars)"
+                  style="width:100%;padding:9px 12px;border:1px solid var(--sm-border);border-radius:7px;font-size:13px;background:var(--sm-bg);color:var(--sm-t1);outline:none;box-sizing:border-box">
+                <input id="secPwConfirm" type="password" placeholder="Confirm new password"
+                  style="width:100%;padding:9px 12px;border:1px solid var(--sm-border);border-radius:7px;font-size:13px;background:var(--sm-bg);color:var(--sm-t1);outline:none;box-sizing:border-box">
+                <div style="display:flex;gap:8px;justify-content:flex-end">
+                  <button class="sm-btn sm-btn-ghost" style="font-size:12px;padding:6px 14px" onclick="secTogglePwForm()">Cancel</button>
+                  <button class="sm-btn sm-btn-primary" style="font-size:12px;padding:6px 14px" onclick="secSubmitPwChange()">Update Password</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent sessions -->
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </span>
+              Recent Sessions
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button class="sm-btn sm-btn-ghost" style="font-size:11px;padding:3px 8px;min-height:24px" onclick="secChangePage(-1)">&larr;</button>
+              <span id="secSessionPageInfo" style="font-size:11px;color:#8b9cb8">1 / 1</span>
+              <button class="sm-btn sm-btn-ghost" style="font-size:11px;padding:3px 8px;min-height:24px" onclick="secChangePage(1)">&rarr;</button>
+              <div style="width:1px;height:12px;background:rgba(255,255,255,0.1);margin:0 4px"></div>
+              <button class="sm-btn sm-btn-ghost" style="font-size:11px;padding:3px 8px;min-height:24px" id="secSignOutAllBtn" onclick="secSignOutAll()">Sign out all other</button>
+            </div>
+          </div>
+          <div class="sm-activity-list" id="secSessionsList">
+            <div class="sm-activity-item" style="justify-content:center;padding:18px 0">
+              <div class="sm-activity-time" style="text-align:center">Loading sessions…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Login history chart -->
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="7" width="4" height="13"/><rect x="17" y="3" width="4" height="17"/></svg>
+              </span>
+              Login History (last 14 days)
+            </div>
+          </div>
+          <div style="padding:18px 20px 20px">
+            <div id="secLoginChart" style="height:250px;width:100%"></div>
+          </div>
+        </div>
+
+      </div><!-- /panel-security -->
+
+
+      <!-- ── PANEL: Privacy ──────────────────────────── -->
+      <div class="sm-panel" id="panel-privacy">
+
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </span>
+              Data &amp; Privacy
+            </div>
+          </div>
+          <div class="sm-card-body">
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Analytics</div>
+                <div class="sm-row-desc">Share anonymous usage data to improve XplagiaX.</div>
+              </div>
+              <label class="sm-switch" aria-label="Analytics">
+                <input type="checkbox" checked onchange="smToast('Analytics preference saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Document Retention</div>
+                <div class="sm-row-desc">Automatically delete documents after analysis.</div>
+              </div>
+              <label class="sm-switch" aria-label="Document retention">
+                <input type="checkbox" onchange="smToast('Retention policy updated.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Third-Party Sharing</div>
+                <div class="sm-row-desc">Allow sharing data with partner services.</div>
+              </div>
+              <label class="sm-switch" aria-label="Third-party sharing">
+                <input type="checkbox" onchange="smToast('Privacy preference saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+          </div>
+          <div class="sm-card-foot">
+            <button class="sm-btn sm-btn-ghost" onclick="smToast('Data export queued. Check your email.','success')">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export My Data
+            </button>
+          </div>
+        </div>
+
+        <!-- Danger zone -->
+        <div class="sm-danger-zone">
+          <div class="sm-card-head">
+            <div class="sm-card-title" style="color:#fca5a5">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="#f43f5e" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Danger Zone
+            </div>
+          </div>
+          <div class="sm-row">
+            <div class="sm-row-left">
+              <div class="sm-row-label">Delete All Documents</div>
+              <div class="sm-row-desc">Permanently remove all stored documents and analyses.</div>
+            </div>
+            <button class="sm-btn sm-btn-danger" onclick="smToast('Contact support to delete all documents.','info')">Delete All</button>
+          </div>
+          <div class="sm-row">
+            <div class="sm-row-left">
+              <div class="sm-row-label">Delete Account</div>
+              <div class="sm-row-desc">Permanently delete your account and all data. This cannot be undone.</div>
+            </div>
+            <button class="sm-btn sm-btn-danger" onclick="smToast('Please contact support to delete your account.','info')">Delete Account</button>
+          </div>
+        </div>
+
+      </div><!-- /panel-privacy -->
+
+
+      <!-- ── PANEL: Integrations ─────────────────────── -->
+      <div class="sm-panel" id="panel-integrations">
+
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              </span>
+              Connected Services
+            </div>
+          </div>
+          <div class="sm-integration-grid">
+            {# key = provider key stored in user.tokens JSON #}
+            {% set integrations = [
+              ('Google Drive', 'google-drive.svg', 'google_drive'),
+              ('Dropbox',      'dropbox.svg',      'dropbox'),
+              ('OneDrive',     'onedrive.png',     'onedrive'),
+              ('Box',          'box.svg',          'box')
+            ] %}
+            {% for name, img, key in integrations %}
+            {% set is_connected = key in (connected_providers or []) %}
+            <div class="sm-integration-card" id="integ-card-{{ key }}">
+              <div class="sm-integration-logo sm-integration-logo--img">
+                <img src="{{ url_for('static', filename='img/svg/' + img) }}" alt="{{ name }}" width="28" height="28" style="object-fit:contain;">
+              </div>
+              <div class="sm-integration-info">
+                <div class="sm-integration-name">{{ name }}</div>
+                <div class="sm-integration-status" id="integ-status-{{ key }}">
+                  {% if is_connected %}
+                    <span style="color:#16a34a">● Connected</span>
+                  {% else %}
+                    <span style="color:var(--sm-t4)">○ Not connected</span>
+                  {% endif %}
+                </div>
+              </div>
+              {% if is_connected %}
+              <button class="sm-btn sm-btn-ghost" id="integ-btn-{{ key }}"
+                style="padding:4px 10px;font-size:11px;color:#dc2626;border-color:rgba(220,38,38,.2);"
+                onclick="smDisconnect('{{ key }}', '{{ name }}')">
+                Disconnect
+              </button>
+              {% else %}
+              <button class="sm-btn sm-btn-ghost" id="integ-btn-{{ key }}"
+                style="padding:4px 10px;font-size:11px;"
+                onclick="smConnect('{{ key }}')">
+                Connect
+              </button>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div><!-- /panel-integrations -->
+
+
+      <!-- ── PANEL: AI & Automation ──────────────────── -->
+      <div class="sm-panel" id="panel-ai">
+
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </span>
+              AI Detection Settings
+            </div>
+            <span class="sm-badge" style="background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3)">Beta</span>
+          </div>
+          <div class="sm-card-body">
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Enhanced Detection Mode</div>
+                <div class="sm-row-desc">Use deeper semantic analysis for higher accuracy (uses 2× quota).</div>
+              </div>
+              <label class="sm-switch" aria-label="Enhanced detection">
+                <input type="checkbox" onchange="smToast('AI mode updated.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Auto-Analysis on Upload</div>
+                <div class="sm-row-desc">Automatically trigger analysis when a document is uploaded.</div>
+              </div>
+              <label class="sm-switch" aria-label="Auto-analysis">
+                <input type="checkbox" checked onchange="smToast('Auto-analysis setting saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Detection Sensitivity</div>
+                <div class="sm-row-desc">Threshold for AI classification confidence.</div>
+              </div>
+              <select class="sm-select" style="width:160px" onchange="smToast('Sensitivity updated.','success')">
+                <option>Low (60%)</option>
+                <option selected>Medium (75%)</option>
+                <option>High (90%)</option>
+              </select>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Report Language</div>
+                <div class="sm-row-desc">Language for generated analysis reports.</div>
+              </div>
+              <select class="sm-select" style="width:160px" onchange="smToast('Language saved.','success')">
+                <option selected>English</option>
+                <option>Spanish</option>
+                <option>French</option>
+                <option>Portuguese</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              </span>
+              Automation Rules
+            </div>
+          </div>
+          <div class="sm-card-body">
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Auto-Archive after 30 days</div>
+                <div class="sm-row-desc">Move analyzed documents to archive automatically.</div>
+              </div>
+              <label class="sm-switch" aria-label="Auto-archive">
+                <input type="checkbox" checked onchange="smToast('Automation rule saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Smart Flagging</div>
+                <div class="sm-row-desc">Automatically flag documents with AI percentage &gt; 50%.</div>
+              </div>
+              <label class="sm-switch" aria-label="Smart flagging">
+                <input type="checkbox" checked onchange="smToast('Smart flagging saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /panel-ai -->
+
+
+      <!-- ── PANEL: Advanced ─────────────────────────── -->
+      <div class="sm-panel" id="panel-advanced">
+
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </span>
+              System Information
+            </div>
+          </div>
+          <div class="sm-kv-grid">
+            <div class="sm-kv">
+              <div class="sm-kv-label">App Version</div>
+              <div class="sm-kv-value">v2.4.1</div>
+            </div>
+            <div class="sm-kv">
+              <div class="sm-kv-label">Region</div>
+              <div class="sm-kv-value">CA-East</div>
+            </div>
+            <div class="sm-kv">
+              <div class="sm-kv-label">Uptime</div>
+              <div class="sm-kv-value" id="smUptime">—</div>
+            </div>
+          </div>
+          <div class="sm-card-foot">
+            <a href="/system_status" class="sm-btn sm-btn-ghost" target="_blank">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              View System Status
+            </a>
+          </div>
+        </div>
+
+      </div><!-- /panel-advanced -->
+
+    </div><!-- /sm-main-body -->
+  </main><!-- /sm-main -->
+
+</div><!-- /sm-root -->
+
+
+<!-- ── Toast container ──────────────────────────────────── -->
+<div class="sm-toast-wrap" id="smToastWrap"></div>
+
+
+<!-- ── Cancel Subscription Modal ────────────────────────── -->
+<div id="cancelModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);z-index:99998;display:none;align-items:center;justify-content:center;">
+  <div style="background:#141926;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:32px;max-width:400px;width:90%;box-shadow:0 40px 100px rgba(0,0,0,.6);text-align:center;">
+    <div style="width:56px;height:56px;border-radius:50%;background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.25);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <h3 style="color:#f0f4ff;font-size:17px;font-weight:600;margin-bottom:10px;">Cancel Subscription?</h3>
+    <p style="color:rgba(240,244,255,.5);font-size:13px;line-height:1.7;margin-bottom:24px;">Your subscription will remain active until the end of the current billing period. This action cannot be undone.</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="sm-btn sm-btn-secondary" onclick="closeCancelModal()">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Go Back
+      </button>
+      <button class="sm-btn sm-btn-danger" id="confirmCancelBtn" onclick="confirmCancelSubscription()">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Yes, Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Scripts ───────────────────────────────────────────── -->
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/userstorage.js') }}"></script>
+<script src="{{ url_for('static', filename='js/trial_status.js') }}"></script>
+
+<script>
+/* ───── Panel Navigation ─────────────────────────────────── */
+const panelMeta = {
+  general:       { label: 'General',          desc: 'Your account overview and key information.' },
+  profile:       { label: 'Profile',          desc: 'Manage how your name and avatar appear.' },
+  billing:       { label: 'Billing & Plan',   desc: 'Subscription status, storage and billing management.' },
+  appearance:    { label: 'Appearance',       desc: 'Customize the look and feel of XplagiaX.' },
+  notifications: { label: 'Notifications',    desc: 'Control how and when XplagiaX notifies you.' },
+  security:      { label: 'Security',         desc: 'Protect your account with strong authentication.' },
+  privacy:       { label: 'Privacy',          desc: 'Control how your data is used and shared.' },
+  integrations:  { label: 'Integrations',     desc: 'Connect third-party services and storage providers.' },
+  ai:            { label: 'AI & Automation',  desc: 'Configure intelligent detection and automated rules.' },
+  advanced:      { label: 'Advanced',         desc: 'Developer tools, API keys and system information.' },
+};
+
+function smActivatePanel(key) {
+  document.querySelectorAll('.sm-nav-item').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sm-panel').forEach(p => p.classList.remove('active'));
+  const btn = document.querySelector(`.sm-nav-item[data-panel="${key}"]`);
+  const panel = document.getElementById(`panel-${key}`);
+  if (btn)   btn.classList.add('active');
+  if (panel) panel.classList.add('active');
+  const meta = panelMeta[key] || {};
+  const bc = document.getElementById('smBreadcrumb');
+  const pt = document.getElementById('smPageTitle');
+  const pd = document.getElementById('smPageDesc');
+  if (bc) bc.textContent = meta.label || key;
+  if (pt) pt.textContent = meta.label || key;
+  if (pd) pd.textContent = meta.desc || '';
+  
+  if (key === 'security' && typeof _secChart !== 'undefined' && _secChart) {
+    // Timeout gives the DOM a moment to apply display: block before resizing
+    setTimeout(() => { _secChart.resize(); }, 50);
+  }
+}
+
+document.querySelectorAll('.sm-nav-item[data-panel]').forEach(btn => {
+  btn.addEventListener('click', () => smActivatePanel(btn.dataset.panel));
+});
+
+/* ───── Search ───────────────────────────────────────────── */
+document.getElementById('smSearchInput')?.addEventListener('input', function() {
+  const q = this.value.trim().toLowerCase();
+  document.querySelectorAll('.sm-nav-item[data-panel]').forEach(btn => {
+    const match = btn.dataset.label.toLowerCase().includes(q);
+    btn.style.display = match ? '' : 'none';
+  });
+  document.querySelectorAll('.sm-nav-label, .sm-nav-divider').forEach(el => {
+    el.style.display = q ? 'none' : '';
+  });
+});
+
+/* ───── Toast ─────────────────────────────────────────────── */
+function smToast(msg, type = 'info') {
+  const wrap = document.getElementById('smToastWrap');
+  if (!wrap) return;
+  const icons = {
+    success: '<polyline points="20 6 9 17 4 12"/>',
+    error:   '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+    info:    '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
+  };
+  const t = document.createElement('div');
+  t.className = `sm-toast sm-toast-${type}`;
+  t.innerHTML = `
+    <div class="sm-toast-icon">
+      <svg viewBox="0 0 24 24">${icons[type] || icons.info}</svg>
+    </div>
+    <span style="flex:1;font-size:12.5px">${msg}</span>
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--sm-t4);cursor:pointer;font-size:16px;line-height:1;padding:0 0 0 8px">&times;</button>
+  `;
+  wrap.appendChild(t);
+  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 250); }, 4000);
+}
+window.smToast = smToast;
+
+/* ───── Storage integrations ──────────────────────────────── */
+function smConnect(provider) {
+  // Navigate top frame so OAuth doesn't open inside the iframe
+  (window.top || window).location.href = '/x_integ/storage/connect/' + provider;
+}
+
+async function smDisconnect(provider, name) {
+  const btn = document.getElementById('integ-btn-' + provider);
+  const orig = btn.textContent.trim();
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  try {
+    const res = await fetch('/x_integ/storage/disconnect/' + provider, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    let data = {};
+    try { data = await res.json(); } catch (_) {}
+
+    if (res.ok && data.success) {
+      document.getElementById('integ-status-' + provider).innerHTML =
+        '<span style="color:var(--sm-t4)">○ Not connected</span>';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+      btn.textContent = 'Connect';
+      btn.disabled = false;
+      btn.onclick = function() { smConnect(provider); };
+      smToast(name + ' disconnected successfully.', 'success');
+    } else {
+      btn.disabled = false;
+      btn.textContent = orig;
+      smToast(data.error || 'Could not disconnect ' + name + '.', 'error');
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = orig;
+    smToast('Connection error. Please try again.', 'error');
+  }
+}
+
+/* ───── URL param: ?panel=&connected= ────────────────────── */
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const panel     = params.get('panel');
+  const connected = params.get('connected');
+  if (panel) smActivatePanel(panel);
+  if (connected) {
+    const nameMap = {
+      google_drive: 'Google Drive', dropbox: 'Dropbox',
+      onedrive: 'OneDrive', box: 'Box'
+    };
+    setTimeout(function() {
+      smToast((nameMap[connected] || connected) + ' connected successfully!', 'success');
+    }, 400);
+    // Clean URL
+    const url = new URL(window.location.href);
+    url.searchParams.delete('connected');
+    url.searchParams.delete('panel');
+    history.replaceState({}, '', url.toString());
+  }
+})();
+
+/* ───── Color theme picker ────────────────────────────────── */
+function smThemePick(el) {
+  document.querySelectorAll('.sm-theme-swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  smToast('Accent color saved.', 'success');
+}
+
+/* ───── Cancel subscription ───────────────────────────────── */
+function showCancelModal() {
+  document.getElementById('cancelModal').style.display = 'flex';
+}
+function closeCancelModal() {
+  document.getElementById('cancelModal').style.display = 'none';
+}
+async function confirmCancelSubscription() {
+  const btn = document.getElementById('confirmCancelBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="sm-btn-spinner"></div> Canceling…';
+  try {
+    const res = await fetch('/billing_bp/cancel-subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin'
+    });
+    const data = await res.json();
+    closeCancelModal();
+    if (res.ok) {
+      smToast(data.message || 'Subscription canceled.', 'success');
+      loadSubscriptionStatus();
+    } else {
+      smToast(data.error || 'Failed to cancel.', 'error');
+    }
+  } catch(e) {
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Yes, Cancel';
+  }
+}
+// Close on overlay click
+document.getElementById('cancelModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeCancelModal();
+});
+
+/* ───── Billing panel — datos reales ──────────────────────── */
+function fmtBytes(b) {
+  if (!b) return '0 MB';
+  const gb = b / 1073741824, mb = b / 1048576;
+  return gb >= 1 ? gb.toFixed(2) + ' GB' : mb.toFixed(0) + ' MB';
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString(undefined, {year:'numeric',month:'short',day:'numeric'});
+}
+function _setText(id, v) { const e = document.getElementById(id); if (e) e.textContent = v || '—'; }
+
+async function loadSubscriptionStatus() {
+  /* ── Subscription + Storage ── */
+  try {
+    const res = await fetch('/billing_bp/subscription-status', { credentials: 'same-origin' });
+    if (!res.ok) return;
+    const d = await res.json();
+
+    /* Badge */
+    const badge     = document.getElementById('subBadge');
+    const cancelBtn = document.getElementById('cancelSubBtn');
+    if (badge) {
+      badge.className = 'sm-badge';
+      const st = d.subscription_status;
+      if (d.is_on_trial) {
+        badge.className += ' sm-badge-trial';
+        badge.innerHTML = '<span class="sm-badge-dot"></span>Trial';
+      } else if (st === 'active') {
+        badge.className += ' sm-badge-active';
+        badge.innerHTML = '<span class="sm-badge-dot"></span>Active';
+      } else if (st === 'canceled') {
+        badge.className += ' sm-badge-canceled';
+        badge.innerHTML = '<span class="sm-badge-dot"></span>Canceled';
+        if (cancelBtn) cancelBtn.style.display = 'none';
+      } else if (!d.has_subscription) {
+        badge.className += ' sm-badge-canceled';
+        badge.innerHTML = '<span class="sm-badge-dot"></span>No Plan';
+      } else {
+        badge.className += ' sm-badge-sync';
+        badge.innerHTML = `<span class="sm-badge-dot"></span>${st||'Unknown'}`;
+      }
+    }
+
+    /* Fields — Billing panel */
+    const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
+    _setText('subStatus', d.is_on_trial ? 'Trial' : cap(d.subscription_status));
+    _setText('subType',   cap(d.subscription_type));
+    _setText('subEnds',   fmtDate(d.is_on_trial ? d.trial_ends_at : d.subscription_ends_at));
+
+    /* Fields — General panel KV grid */
+    _setText('kvProvider', cap(d.subscription_provider));
+    _setText('kvStatus',   d.is_on_trial ? 'Trial' : cap(d.subscription_status));
+    _setText('kvRenews',   fmtDate(d.is_on_trial ? d.trial_ends_at : d.subscription_ends_at));
+
+    /* Storage bar */
+    if (d.storage) {
+      const used  = d.storage.used_bytes  || 0;
+      const total = d.storage.total_bytes || 0;
+      const pct   = total > 0 ? Math.min(100, (used / total) * 100) : 0;
+      const pctTxt = pct.toFixed(1) + '% used';
+      const bar   = document.getElementById('storageBar');
+      const label = document.getElementById('storageLabel');
+      if (bar) {
+        bar.style.width = pct.toFixed(1) + '%';
+        if (pct >= 90)      bar.style.background = 'linear-gradient(90deg,#dc2626,#b91c1c)';
+        else if (pct >= 70) bar.style.background = 'linear-gradient(90deg,#d97706,#b45309)';
+        else                bar.style.background = '';
+      }
+      if (label) {
+        label.textContent = pctTxt;
+        label.className = 'sm-badge ' +
+          (pct >= 90 ? 'sm-badge-canceled' : pct >= 70 ? 'sm-badge-trial' : 'sm-badge-sync');
+      }
+      _setText('storageUsed', fmtBytes(used) + ' used');
+      _setText('storageTotal', 'of ' + fmtBytes(total));
+    }
+  } catch(e) { /* silent */ }
+
+  /* ── Trial countdown — only present in DOM when is_on_trial=True ── */
+  const trialBar  = document.getElementById('trialBar');
+  if (!trialBar) return;
+  try {
+    const tr = await fetch('/auth_bp/check-trial-status', { credentials: 'same-origin' });
+    if (!tr.ok) return;
+    const t = await tr.json();
+    const badge2 = document.getElementById('trialDaysBadge');
+    const txt    = document.getElementById('trialText');
+
+    if (t.trial_expired || !t.is_on_trial) {
+      trialBar.style.width = '100%';
+      trialBar.style.background = 'linear-gradient(90deg,#dc2626,#b91c1c)';
+      if (txt)    txt.textContent = 'Trial expired — upgrade to continue.';
+      if (badge2) { badge2.textContent = 'Expired'; badge2.style.background='rgba(220,38,38,.10)'; badge2.style.color='#dc2626'; }
+      return;
+    }
+
+    const days  = t.days_remaining || 0;
+    const total = t.total_trial_days || 5;
+    const pct   = Math.max(5, Math.min(100, (days / total) * 100));
+    trialBar.style.width = pct + '%';
+    if (days <= 1)      { trialBar.style.background='linear-gradient(90deg,#dc2626,#b91c1c)'; if(badge2){badge2.style.background='rgba(220,38,38,.10)';badge2.style.color='#dc2626';} }
+    else if (days <= 2) { trialBar.style.background='linear-gradient(90deg,#d97706,#b45309)'; if(badge2){badge2.style.background='rgba(217,119,6,.10)'; badge2.style.color='#b45309';} }
+    if (txt)    txt.textContent = `${days} day${days!==1?'s':''} remaining (${total}-day trial)`;
+    if (badge2) badge2.textContent = `${days}d left`;
+  } catch(e) { /* silent */ }
+}
+
+/* ───── Uptime clock ──────────────────────────────────────── */
+function updateUptime() {
+  const el = document.getElementById('smUptime');
+  if (!el) return;
+  const now = new Date();
+  el.textContent = now.toLocaleTimeString();
+}
+setInterval(updateUptime, 1000);
+updateUptime();
+
+/* ───── Init ──────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  loadSubscriptionStatus();
+  secLoadSessions();
+  secLoadChart();
+});
+
+/* ───── Security: password change ────────────────────────── */
+function secTogglePwForm() {
+  const form = document.getElementById('secPwForm');
+  const isHidden = form.style.display === 'none';
+  form.style.display = isHidden ? 'flex' : 'none';
+  if (isHidden) document.getElementById('secPwCurrent').focus();
+}
+
+async function secSubmitPwChange() {
+  const cur  = document.getElementById('secPwCurrent').value;
+  const nw   = document.getElementById('secPwNew').value;
+  const conf = document.getElementById('secPwConfirm').value;
+  if (!cur || !nw) { smToast('Please fill in all fields.', 'error'); return; }
+  if (nw !== conf) { smToast('New passwords do not match.', 'error'); return; }
+  if (nw.length < 8) { smToast('Password must be at least 8 characters.', 'error'); return; }
+  try {
+    const res = await fetch('/auth_bp/change-password', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_password: cur, new_password: nw })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      smToast(data.message || 'Password updated.', 'success');
+      secTogglePwForm();
+      document.getElementById('secPwCurrent').value = '';
+      document.getElementById('secPwNew').value = '';
+      document.getElementById('secPwConfirm').value = '';
+    } else {
+      smToast(data.error || 'Failed to update password.', 'error');
+    }
+  } catch { smToast('Connection error. Please try again.', 'error'); }
+}
+
+/* ───── Security: recent sessions ────────────────────────── */
+const _deviceIcon = isMobile =>
+  isMobile
+    ? '<svg viewBox="0 0 24 24" style="width:18px;height:18px"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>'
+    : '<svg viewBox="0 0 24 24" style="width:18px;height:18px"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
+
+function _relTime(isoStr) {
+  if (!isoStr) return '—';
+  const diff = Date.now() - new Date(isoStr + 'Z').getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'Just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+const _logoutIcon = '<svg viewBox="0 0 24 24" style="width:18px;height:18px;color:#dc2626"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+
+let _allSessions = [];
+let _curSessionPage = 1;
+const _SESS_PER_PAGE = 3;
+
+async function secLoadSessions() {
+  const list = document.getElementById('secSessionsList');
+  if (!list) return;
+  try {
+    const res = await fetch('/auth_bp/recent-sessions', { credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok || !data.sessions || !data.sessions.length) {
+      list.innerHTML = '<div class="sm-activity-item"><div class="sm-activity-time" style="padding:14px 0;text-align:center;width:100%">No sessions found.</div></div>';
+      return;
+    }
+    _allSessions = data.sessions;
+    _curSessionPage = 1;
+    _renderSessions();
+  } catch { list.innerHTML = '<div class="sm-activity-item"><div class="sm-activity-time" style="padding:14px 0;text-align:center;width:100%">Could not load sessions.</div></div>'; }
+}
+
+function secChangePage(delta) {
+  const maxPage = Math.ceil(_allSessions.length / _SESS_PER_PAGE) || 1;
+  _curSessionPage += delta;
+  if (_curSessionPage < 1) _curSessionPage = 1;
+  if (_curSessionPage > maxPage) _curSessionPage = maxPage;
+  _renderSessions();
+}
+
+function _renderSessions() {
+  const list = document.getElementById('secSessionsList');
+  const info = document.getElementById('secSessionPageInfo');
+  if (!list) return;
+  const maxPage = Math.ceil(_allSessions.length / _SESS_PER_PAGE) || 1;
+  if (info) info.textContent = `${_curSessionPage} / ${maxPage}`;
+
+  const start = (_curSessionPage - 1) * _SESS_PER_PAGE;
+  const pageItems = _allSessions.slice(start, start + _SESS_PER_PAGE);
+
+  list.innerHTML = pageItems.map(s => {
+    const isLogout = s.event_type === 'logout';
+    const isMob = /Android|iPhone|iPad|Mobile/.test(s.os || '');
+    const loc = [s.city, s.country].filter(Boolean).join(', ') || s.ip || '—';
+    const badge = s.is_current
+      ? '<span class="sm-badge sm-badge-active" style="margin-left:6px;font-size:9px"><span class="sm-badge-dot"></span>Active</span>'
+      : isLogout
+        ? '<span class="sm-badge" style="margin-left:6px;font-size:9px;background:rgba(220,38,38,.10);color:#dc2626">Logout</span>'
+        : '';
+    const icon = isLogout ? _logoutIcon : _deviceIcon(isMob);
+    const iconBg = isLogout ? 'background:rgba(220,38,38,.08)' : '';
+    const title = s.is_current ? 'Current session' : isLogout ? 'Signed out' : s.browser;
+    return `<div class="sm-activity-item">
+      <div class="sm-activity-icon" style="${iconBg}">${icon}</div>
+      <div class="sm-activity-meta">
+        <div class="sm-activity-title">${title}${badge}</div>
+        <div class="sm-activity-time">${s.browser} · ${s.os}</div>
+        <div class="sm-activity-loc">${s.ip} · ${loc}</div>
+        <div class="sm-activity-time" style="font-size:10px;margin-top:2px">${_relTime(s.created_at)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function secSignOutAll() {
+  const btn = document.getElementById('secSignOutAllBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch('/auth_bp/signout-all-sessions', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (res.ok) {
+      smToast('All other sessions signed out.', 'success');
+      secLoadSessions();
+    } else { smToast('Failed to sign out sessions.', 'error'); }
+  } catch { smToast('Connection error.', 'error'); }
+  finally { if (btn) btn.disabled = false; }
+}
+
+/* ───── Security: login history chart ────────────────────── */
+let _secChart = null;
+async function secLoadChart() {
+  const container = document.getElementById('secLoginChart');
+  if (!container) return;
+  try {
+    const res = await fetch('/auth_bp/login-history-chart', { credentials: 'include' });
+    const data = await res.json();
+    if (!window.echarts) {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js';
+      s.onload = () => _drawSecChart(container, data);
+      document.head.appendChild(s);
+    } else { _drawSecChart(container, data); }
+  } catch { /* silently skip */ }
+}
+
+function _drawSecChart(container, data) {
+  if (_secChart) {
+    _secChart.dispose();
+  }
+  _secChart = echarts.init(container);
+  
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    legend: {
+      data: ['Logins', 'Logouts'],
+      textStyle: { color: '#8b9cb8', fontSize: 11 },
+      top: 0
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: [
+      {
+        type: 'category',
+        data: data.labels || [],
+        axisTick: { show: false },
+        axisLabel: { color: '#8b9cb8', fontSize: 10, rotate: 45 },
+        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }
+      }
+    ],
+    yAxis: [
+      {
+        type: 'value',
+        minInterval: 1,
+        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+        axisLabel: { color: '#8b9cb8', fontSize: 10 }
+      }
+    ],
+    series: [
+      {
+        name: 'Logins',
+        type: 'bar',
+        stack: 'activity',
+        emphasis: { focus: 'series' },
+        itemStyle: { color: '#064CDB', borderRadius: [0, 0, 0, 0] },
+        data: data.logins || []
+      },
+      {
+        name: 'Logouts',
+        type: 'bar',
+        stack: 'activity',
+        emphasis: { focus: 'series' },
+        itemStyle: { color: '#dc2626', borderRadius: [2, 2, 0, 0] },
+        data: data.logouts || []
+      }
+    ]
+  };
+  _secChart.setOption(option);
+  
+  window.addEventListener('resize', () => {
+    if (_secChart) _secChart.resize();
+  });
+}
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,244 @@
+{% extends "base/adm_base.html" %}
+{% block content %}
+    <link rel="stylesheet"   href="{{ url_for('static', filename='css/document1.css') }}" />
+    <!-- Main Content -->
+     <div class="main-content" id="mainContent">
+        <div class="page-header">
+            <h1 class="page-title">Gestión de Documentos</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="exportDocuments()">
+                    <i class="bi bi-file-earmark-arrow-up"></i>
+                    Exportar
+                </button>
+                <button class="btn btn-primary" onclick="openCreateModal()">
+                    <i class="bi bi-plus-square"></i>
+                    Nuevo Documento
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-section">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-search"></i>  Buscar</label>
+                    <input type="text" class="filter-input" id="searchInput" placeholder="Título, autor, contenido...">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-file-earmark-text"></i> Tipo Documento</label>
+                    <select class="filter-input" id="doctypeFilter">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-globe-americas"></i>  País</label>
+                    <select class="filter-input" id="countryFilter">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-buildings"></i> Institución</label>
+                    <select class="filter-input" id="institutionFilter">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-translate"></i> Idioma</label>
+                    <select class="filter-input" id="languageFilter">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-calendar3"></i> Fecha desde</label>
+                    <input type="date" class="filter-input" id="dateFromFilter">
+                </div>
+            </div>
+            <div class="filters-actions">
+                <button class="btn btn-primary btn-filter" onclick="applyFilters()">
+                    <i class="bi bi-funnel"></i>
+                    Filtrar
+                </button>
+                <button class="btn btn-secondary btn-filter" onclick="clearFilters()">
+                    <i class="bi bi-eraser"></i>
+                    Limpiar
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Total Documentos</div>
+                    <div class="stat-icon" style="background: #e3f2fd; color: #1976d2;"><i class="bi bi-file-earmark-medical"></i></div>
+                </div>
+                <div class="stat-value" id="totalDocuments">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Este Mes</div>
+                    <div class="stat-icon" style="background: #e8f5e8; color: #2e7d32;"><i class="bi bi-calendar3"></i></div>
+                </div>
+                <div class="stat-value" id="monthlyDocuments">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Analizados</div>
+                    <div class="stat-icon" style="background: #fff3e0; color: #f57c00;"><i class="bi bi-file-bar-graph"></i></div>
+                </div>
+                <div class="stat-value" id="analyzedDocuments">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Tamaño Total</div>
+                    <div class="stat-icon" style="background: #fce4ec; color: #c2185b;"><i class="bi bi-floppy"></i></div>
+                </div>
+                <div class="stat-value" id="totalSize">0 MB</div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3 class="table-title">Lista de Documentos</h3>
+                <span class="table-stats" id="tableStats">Cargando...</span>
+            </div>
+
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                Cargando documentos...
+            </div>
+
+            <table class="data-table" id="documentsTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('title')">Título</th>
+                        <th onclick="sortTable('author')">Autor</th>
+                        <th onclick="sortTable('doctype')">Tipo</th>
+                        <th onclick="sortTable('theme')">Tema</th>
+                        <th onclick="sortTable('institution')">Institución</th>
+                        <th onclick="sortTable('country')">País</th>
+                        <th onclick="sortTable('language')">Idioma</th>
+                        <th onclick="sortTable('created_date')">Fecha</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="documentsTableBody">
+                    <!-- Data will be loaded here -->
+                </tbody>
+            </table>
+
+            <div class="pagination">
+                <div class="pagination-info" id="paginationInfo">
+                    Mostrando 0 de 0 documentos
+                </div>
+                <div class="pagination-controls" id="paginationControls">
+                    <!-- Pagination buttons will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Document Modal -->
+    <div class="modal" id="documentModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle"><i class="bi bi-plus-square"></i> Nuevo Documento</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="documentForm">
+                    <input type="hidden" id="documentId">
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Título *</label>
+                            <input type="text" class="form-input" id="documentTitle" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Autor *</label>
+                            <input type="text" class="form-input" id="documentAuthor" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Contenido</label>
+                        <textarea class="form-input" id="documentContent" rows="6" placeholder="Contenido del documento..."></textarea>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">RENA</label>
+                            <input type="text" class="form-input" id="documentRena">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Tema</label>
+                            <input type="text" class="form-input" id="documentTheme">
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+                        <div class="form-group">
+                            <label class="form-label">Tipo Documento</label>
+                            <select class="form-select" id="documentDoctype">
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">País</label>
+                            <select class="form-select" id="documentCountry">
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Institución</label>
+                            <select class="form-select" id="documentInstitution">
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Idioma</label>
+                            <select class="form-select" id="documentLanguage">
+                                <option value="">Seleccionar...</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeModal()">
+                    <i class="bi bi-x-square"></i> 
+                    Cancelar
+                </button>
+                <button class="btn btn-primary" onclick="saveDocument()">
+                    <i class="bi bi-save"></i> 
+                    Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Preview Modal -->
+    <div class="modal" id="contentModal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <i class="bi bi-file-earmark-break"></i>
+                <h3 class="modal-title" id="contentModalTitle">Contenido del Documento</h3>
+                <button class="modal-close" onclick="closeContentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="documentContentPreview" style="max-height: 500px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; background: #f8f9fa; padding: 16px; border-radius: 4px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeContentModal()"><i class="bi bi-x-square"></i> Cerrar</button>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/documents.js')}}"></script>
+{% endblock %}

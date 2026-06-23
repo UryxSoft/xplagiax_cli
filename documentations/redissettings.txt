@@ -1,0 +1,8 @@
+docker pull redis && docker run -d --name redis-server -p 6379:6379 redis
+🔹 Explicación del comando
+docker pull redis → Descarga la última imagen de Redis.
+docker run -d --name redis-server -p 6379:6379 redis
+-d → Ejecuta en segundo plano (modo daemon).
+--name redis-server → Asigna un nombre al contenedor (redis-server).
+-p 6379:6379 → Mapea el puerto 6379 del contenedor a tu máquina.
+redis → Usa la imagen de Redis.

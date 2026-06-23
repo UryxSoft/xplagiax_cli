@@ -1,0 +1,3043 @@
+{% extends "user/user_base.html" %}
+{% block content %}    
+
+<link rel="stylesheet"   href="{{ url_for('static', filename='css/analysis_results.css') }}" />
+<div class="scroll-indicator"></div>
+<div class="result-main-container">
+    <div class="document-panel">
+
+        <div id="content">
+        
+        </div>
+
+    </div>
+    <div class="similarity-panel">
+        <div class="similarity-header">              
+            <div class="similarity-label">Overall Similarity</div>
+        </div>
+
+        <!-- AQUÍ VA EL SWITCH -->
+        <div class="switch-container">
+            <label class="switch">
+                <input type="checkbox" id="highlight-toggle" checked>
+                <span class="slider"></span>
+            </label>
+            <span class="switch-label" >Show all underlines</span>
+            <div id="ai_global"></div>
+    
+
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs-header">
+                <button class="tab-button active" data-tab="matches">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                    </svg>
+                    Matches
+                </button>
+                <button class="tab-button" data-tab="references">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M6.354 5.5H4a3 3 0 0 0 0 6h3a3 3 0 0 0 2.83-4H9c-.086 0-.17.01-.25.031A2 2 0 0 1 7 10.5H4A2 2 0 1 1 4 6.5h2.354zM10 6a3 3 0 0 1 2.83 4h-.58c-.08 0-.16-.01-.25-.031A2 2 0 0 0 13 7.5h-3A2 2 0 1 0 10 11h2.646A3 3 0 0 1 10 6z"/>
+                    </svg>
+                    References
+                </button>
+                <button class="tab-button" data-tab="citations">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M12 12a1 1 0 0 0 1-1V8.558a1 1 0 0 0-1-1h-1.388q0-.527.062-1.054.093-.558.31-.992t.559-.683q.34-.279.868-.279V3q-.868 0-1.52.372a3.3 3.3 0 0 0-1.085.992 4.9 4.9 0 0 0-.62 1.458A7.7 7.7 0 0 0 9 7.558V11a1 1 0 0 0 1 1zm-6 0a1 1 0 0 0 1-1V8.558a1 1 0 0 0-1-1H4.612q0-.527.062-1.054.094-.558.31-.992.217-.434.559-.683.34-.279.868-.279V3q-.868 0-1.52.372a3.3 3.3 0 0 0-1.085.992 4.9 4.9 0 0 0-.62 1.458A7.7 7.7 0 0 0 3 7.558V11a1 1 0 0 0 1 1z"/>
+                    </svg>
+                    Citations
+                </button>
+                <button class="tab-button" data-tab="images">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                        <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                    </svg>
+                    Images
+                </button>
+            </div>
+            
+            <div class="tabs-content">
+                <div class="tab-panel active" id="tab-matches">
+                    <div class="sources-list" id="sourceslist"></div>
+                </div>
+                
+                <div class="tab-panel" id="tab-references">
+                    <div id="referenceslist"></div>
+                </div>
+                
+                <div class="tab-panel" id="tab-citations">
+                    <div class="citation-styles">
+                        <button class="citation-style-btn active" data-style="apa">APA</button>
+                        <button class="citation-style-btn" data-style="mla">MLA</button>
+                        <button class="citation-style-btn" data-style="chicago">Chicago</button>
+                    </div>
+                    <div id="citationslist"></div>
+                </div>
+                
+                <div class="tab-panel" id="tab-images">
+                    <div id="imageslist"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- Modal Sankey (debe estar ANTES del script) -->
+    <div id="sankeyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" style="color:blue;">
+                    Content Flow Analysis
+                </h3>
+                <button class="modal-close" onclick="closeSankeyModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="sankeyChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-left">
+            <button class="footer-button" id="shareButton" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" fill="currentColor" class="bi bi-share-fill" viewBox="0 0 16 16">
+                <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.5 2.5 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5"></path>
+                </svg>
+                Share
+            </button>
+            <!-- Modal flotante para compartir -->
+            <div id="shareModal" class="share-modal">
+                <div class="share-modal-arrow"></div>
+                <div class="share-modal-content">
+                    <div class="share-modal-header">
+                        <h4>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-share" viewBox="0 0 16 16">
+                            <path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.5 2.5 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5m-8.5 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m11 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3"/>
+                            </svg>
+                            Share Document
+                        </h4>
+                        <button class="share-modal-close" id="closeShareModal">×</button>
+                    </div>
+                    <div class="share-modal-body">
+                        <div class="email-input-container">
+                            <input type="email" id="emailInput" placeholder="Enter email address" />
+                            <button id="addEmailBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-send" viewBox="0 0 16 16">
+                                <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/>
+                                </svg>
+                                Add
+                            </button>
+                        </div>
+                        <div id="emailList" class="email-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="page-info"> 
+            <span id="page-info">Página: - / -</span>
+        </div>
+        <div class="navigation">
+            <div class="nav-arrow" id="prev-page" disabled>‹</div>
+            <div class="nav-arrow" id="next-page" disabled>›</div>
+        </div>
+    </div>
+</div>
+<!-- Agregar Chart.js en el HTML antes de tu script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Agregar Google Charts para Sankey -->
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script type="text/javascript">
+    google.charts.load('current', {'packages':['sankey']});
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        // ========== VARIABLES GLOBALES AL INICIO ==========
+        let highlightsVisible = true;
+        let currentPage = 1;
+        let totalPages = 0;
+        let tooltipsAttached = false;
+        
+        // NUEVA: Variable global para almacenar términos encontrados con metadatos
+        window.foundTermsGlobal = [];
+        let foundTerms = []; // Para la lista de sidebar
+        let termIdCounter = 0; // Contador único para IDs
+        
+        // NUEVO: Mapa para tracking de bloques con highlights
+        const blocksWithHighlights = new Set();
+        
+        // NUEVO: Caché para optimización
+        const spanMapCache = new Map();
+        const MAX_CACHE_SIZE = 50;
+
+        /// ========== RECUPERAR DATOS ==========
+        const htmlFilePath = sessionStorage.getItem('htmlFilePath');
+        const contentDiv = document.getElementById('content');
+        const analysisResult = JSON.parse(sessionStorage.getItem('analysisResult'));
+
+        console.log(analysisResult);
+        
+        if (!htmlFilePath) {
+            contentDiv.innerHTML = '<p>No hay análisis disponible.</p>';
+            return;
+        }
+        
+        // ========== CARGAR CONTENIDO HTML ==========
+        try {
+            const fullUrl = `${window.location.origin}${htmlFilePath}`;
+            console.log('Fetching from:', fullUrl);
+            
+            const response = await fetch(fullUrl);
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const htmlContent = await response.text();
+            contentDiv.innerHTML = htmlContent;
+            
+        } catch (error) {
+            console.error('Error completo:', error);
+            contentDiv.innerHTML = `<div class="xplag-error-container-main">Error: ${error.message}</div>`;
+            return;
+        }
+
+        // ========== PROCESAR DATOS DE ANÁLISIS ==========
+        
+        // Database terms
+        /*const term_db = (analysisResult.result_db || []).map(item => {
+            const match = (item.matches && item.matches.length > 0) ? item.matches[0] : {};
+            return {
+                text: item.original || "",
+                source: match.title || "",
+                score: match.normalized_score !== undefined
+                    ? match.normalized_score
+                    : (match.score !== undefined ? match.score / 100 : 0)
+            };
+        });*/
+
+        const term_db = (analysisResult.result_db || [])
+            .reduce((acc, item) => {
+                const match = (item.matches && item.matches.length > 0) ? item.matches[0] : {};
+                const score = match.normalized_score ?? (match.score !== undefined ? match.score / 100 : 0);
+
+                if (score > 0) {
+                    acc.push({
+                        text: item.original || "",
+                        source: match.title || "",
+                        score
+                    });
+                }
+                return acc;
+            }, []);
+
+
+        // AI Generated terms
+        const rawAiData = analysisResult.result_ai?.classified_paragraphs || [];
+        const term_ai = [];
+        let aiIndexCounter = 0;
+
+        rawAiData.forEach((item, rawIndex) => {
+            if (!item || item.is_human !== false) return;
+            
+            let textContent = '';
+            let pageNum = null;
+            let sentenceNum = null;
+            
+            if (Array.isArray(item.text) && item.text.length >= 3) {
+                pageNum = item.text[0];
+                sentenceNum = item.text[1];
+                textContent = item.text[2] || '';
+            } else if (typeof item.text === 'string') {
+                textContent = item.text;
+            } else if (item.text && typeof item.text === 'object' && item.text[2]) {
+                textContent = item.text[2];
+            }
+            
+            textContent = textContent.trim();
+            if (textContent.length < 5) return;
+            
+            term_ai.push({
+                originalIndex: rawIndex,
+                aiIndex: aiIndexCounter++,
+                text: textContent,
+                score: item.confidence ? parseFloat((item.confidence / 100).toFixed(2)) : 0,
+                aiModel: item.ai_model || 'unknown',
+                textLength: textContent.length,
+                pageNum: pageNum,
+                sentenceNum: sentenceNum,
+                rawItem: item
+            });
+        });
+
+        // Human terms
+        const rawHumanData = analysisResult.result_ai?.classified_paragraphs || [];
+        const term_human = [];
+        let humanIndexCounter = 0;
+
+        rawHumanData.forEach((item, rawIndex) => {
+            if (!item || item.is_human !== true) return;
+            
+            let textContent = '';
+            let pageNum = null;
+            let sentenceNum = null;
+            
+            if (Array.isArray(item.text) && item.text.length >= 3) {
+                pageNum = item.text[0];
+                sentenceNum = item.text[1];
+                textContent = item.text[2] || '';
+            } else if (typeof item.text === 'string') {
+                textContent = item.text;
+            } else if (item.text && typeof item.text === 'object' && item.text[2]) {
+                textContent = item.text[2];
+            }
+            
+            textContent = textContent.trim();
+            if (textContent.length < 5) return;
+            
+            term_human.push({
+                originalIndex: rawIndex,
+                humanIndex: humanIndexCounter++,
+                text: textContent,
+                score: item.confidence ? parseFloat((item.confidence / 100).toFixed(2)) : 0,
+                aiModel: item.ai_model || 'unknown',
+                textLength: textContent.length,
+                pageNum: pageNum,
+                sentenceNum: sentenceNum,
+                rawItem: item
+            });
+        });
+
+        const term_web = [];
+        const term_wikipedia = [];
+        const term_arxiv = [];
+        const term_pubmed = [];
+        const term_openalex = [];
+
+        const term_references = (analysisResult.urls || []).map(item => ({
+            url: item || " ",
+            title: item || " ",
+            searchText: " "
+        }));
+
+        const term_images = (analysisResult.images || []).map(item => ({
+            url: item || "",
+            alt: ""
+        }));
+
+        const term_citations = [];
+
+        // ========== CONFIGURACIÓN DE TÉRMINOS POR FUENTE ==========
+        const sources = [
+            { type: 'db', terms: term_db, color: '#8EC5FF', icon: 'database', label: 'Database' },
+            { type: 'ai', terms: term_ai, color: '#FF2E51', icon: 'robot', label: 'AI Generated' },
+            { type: 'human', terms: term_human, color: '#10b981', icon: 'people', label: 'Human' },
+            { type: 'web', terms: term_web, color: '#FFD6A7', icon: 'globe', label: 'Web' },
+            { type: 'wikipedia', terms: term_wikipedia, color: '#CAD5E2', icon: 'book', label: 'Wikipedia' },
+            { type: 'arxiv', terms: term_arxiv, color: '#DAB2FF', icon: 'file-text', label: 'ArXiv' },
+            { type: 'pubmed', terms: term_pubmed, color: '#FEF3C6', icon: 'heart-pulse', label: 'PubMed' },
+            { type: 'openalex', terms: term_openalex, color: '#84ddd6', icon: 'graduation-cap', label: 'OpenAlex' }
+        ];
+
+        console.log('✅ Parte 1 cargada: Variables y datos procesados');
+
+        // ========== FUNCIONES DE ICONOS SVG ==========
+        function getSourceIcon(sourceType) {
+            const icons = {
+                'db': `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m1.679-4.493-1.335 2.226a.75.75 0 0 1-1.174.144l-.774-.773a.5.5 0 0 1 .708-.708l.547.548 1.17-1.951a.5.5 0 1 1 .858.514"/><path d="M12.096 6.223A5 5 0 0 0 13 5.698V7c0 .289-.213.654-.753 1.007a4.5 4.5 0 0 1 1.753.25V4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16c.536 0 1.058-.034 1.555-.097a4.5 4.5 0 0 1-.813-.927Q8.378 15 8 15c-1.464 0-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13h.027a4.6 4.6 0 0 1 0-1H8c-1.464 0-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10q.393 0 .774-.024a4.5 4.5 0 0 1 1.102-1.132C9.298 8.944 8.666 9 8 9c-1.464 0-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777M3 4c0-.374.356-.875 1.318-1.313C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4"/></svg>`,
+                'web': `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855A8 8 0 0 0 5.145 4H7.5zM4.09 4a9.3 9.3 0 0 1 .64-1.539 7 7 0 0 1 .597-.933A7.03 7.03 0 0 0 2.255 4zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a7 7 0 0 0-.656 2.5zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5zM8.5 5v2.5h2.99a12.5 12.5 0 0 0-.337-2.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5zM5.145 12q.208.58.468 1.068c.552 1.035 1.218 1.65 1.887 1.855V12zm.182 2.472a7 7 0 0 1-.597-.933A9.3 9.3 0 0 1 4.09 12H2.255a7 7 0 0 0 3.072 2.472M3.82 11a13.7 13.7 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5zm6.853 3.472A7 7 0 0 0 13.745 12H11.91a9.3 9.3 0 0 1-.64 1.539 7 7 0 0 1-.597.933M8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855q.26-.487.468-1.068zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.7 13.7 0 0 1-.312 2.5m2.802-3.5a7 7 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7 7 0 0 0-3.072-2.472c.218.284.418.598.597.933M10.855 4a8 8 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4z"/></svg>`,
+                'wikipedia': `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.835 3.003c.828-.006 2.688 0 2.688 0l.033.03v.288q0 .12-.133.12c-.433.02-.522.063-.68.29-.087.126-.258.393-.435.694l-1.52 2.843-.043.089 1.858 3.801.113.031 2.926-6.946q.152-.42-.044-.595c-.132-.114-.224-.18-.563-.195l-.275-.014a.16.16 0 0 1-.096-.035.1.1 0 0 1-.046-.084v-.289l.042-.03h3.306l.034.03v.29q0 .117-.133.117-.65.03-.962.281a1.64 1.64 0 0 0-.488.704s-2.691 6.16-3.612 8.208c-.353.672-.7.61-1.004-.019A224 224 0 0 1 8.044 8.81c-.623 1.285-1.475 3.026-1.898 3.81-.411.715-.75.622-1.02.019-.45-1.065-1.131-2.519-1.817-3.982-.735-1.569-1.475-3.149-1.943-4.272-.167-.4-.293-.657-.412-.759q-.18-.15-.746-.18Q0 3.421 0 3.341v-.303l.034-.03c.615-.003 3.594 0 3.594 0l.034.03v.288q0 .119-.15.118l-.375.016q-.483.02-.483.288-.002.125.109.4c.72 1.753 3.207 6.998 3.207 6.998l.091.023 1.603-3.197-.32-.71L6.24 5.095s-.213-.433-.286-.577l-.098-.196c-.387-.77-.411-.82-.865-.88-.137-.017-.208-.035-.208-.102v-.304l.041-.03h2.853l.075.024v.303q0 .104-.15.104l-.206.03c-.523.04-.438.254-.09.946l1.057 2.163 1.17-2.332c.195-.427.155-.534.074-.633-.046-.055-.202-.144-.54-.158l-.133-.015a.16.16 0 0 1-.096-.034.1.1 0 0 1-.045-.085v-.288l.041-.03Z"/></svg>`,
+                'arxiv': `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/><path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/></svg>`,
+                'pubmed': `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M1.475 9C2.702 10.84 4.779 12.871 8 15c3.221-2.129 5.298-4.16 6.525-6H12a.5.5 0 0 1-.464-.314l-1.457-3.642-1.598 5.593a.5.5 0 0 1-.945.049L5.889 6.568l-1.473 2.21A.5.5 0 0 1 4 9z"/><path d="M.88 8C-2.427 1.68 4.41-2 7.823 1.143q.09.083.176.171a3 3 0 0 1 .176-.17C11.59-2 18.426 1.68 15.12 8h-2.783l-1.874-4.686a.5.5 0 0 0-.945.049L7.921 8.956 6.464 5.314a.5.5 0 0 0-.88-.091L3.732 8z"/></svg>`,
+                'openalex': `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783"/></svg>`,
+                'ai': `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135"/><path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"/></svg>`,
+                'human': `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/></svg>`
+            };
+            return icons[sourceType] || icons['web'];
+        }
+
+
+
+        // ========== FUNCIÓN PRINCIPAL MEJORADA (REEMPLAZA highlightTerm) ==========
+// ========== FUNCIÓN PRINCIPAL CORREGIDA ==========
+function highlightTerm(term, source) {
+    let textToFind = normalizeTextEnhanced(term.text.replace(/\n/g, ' '));
+    if (!textToFind || textToFind.length < 5) return;
+
+    const words = textToFind.split(/\s+/).filter(word => word.length > 0);
+    if (words.length === 0) return;
+
+    const allPages = document.querySelectorAll('.pdf-page');
+    let foundAtLeastOnce = false;
+    
+    console.log(`🔍 Buscando: "${textToFind.substring(0, 60)}..."`);
+    
+    allPages.forEach(page => {
+        const pageNumber = parseInt(page.id.replace('page-', '')) || 1;
+        
+        // ✅ ESTRATEGIA 1: Búsqueda en TODOS los spans (sin excluir)
+        foundAtLeastOnce = searchInAllSpans(page, pageNumber, textToFind, words, term, source) || foundAtLeastOnce;
+    });
+    
+    //  FALLBACK ESTRATÉGICO
+    if (!foundAtLeastOnce) {
+        console.log(`⚠️ Fallback para: "${textToFind.substring(0, 50)}..."`);
+        
+        // ESTRATEGIA 2: Búsqueda por segmentos
+        if (words.length > 10) {
+            const segments = createSearchSegments(words);
+            
+            segments.forEach(segment => {
+                allPages.forEach(page => {
+                    const pageNumber = parseInt(page.id.replace('page-', '')) || 1;
+                    foundAtLeastOnce = searchInAllSpans(page, pageNumber, segment.text, segment.words, term, source) || foundAtLeastOnce;
+                });
+            });
+        }
+        
+        // ESTRATEGIA 3: Búsqueda por bloques consecutivos
+        if (!foundAtLeastOnce) {
+            allPages.forEach(page => {
+                const pageNumber = parseInt(page.id.replace('page-', '')) || 1;
+                foundAtLeastOnce = searchConsecutiveBlocksEnhanced(page, pageNumber, textToFind, term, source) || foundAtLeastOnce;
+            });
+        }
+    }
+}
+
+// ========== BÚSQUEDA EN TODOS LOS SPANS (CORREGIDA) ==========
+function searchInAllSpans(page, pageNumber, textToFind, words, term, source) {
+    //  CAMBIO CRÍTICO: Buscar en TODOS los spans, no excluir
+    const allSpans = Array.from(page.querySelectorAll('.text-span'));
+    if (allSpans.length === 0) return false;
+    
+    // Filtrar spans que ya tienen este término específico para evitar duplicados
+    const spansToProcess = allSpans.filter(span => {
+        const existingTermId = span.getAttribute('data-term-id');
+        // Solo excluir si tiene exactamente el mismo término
+        return !existingTermId || existingTermId !== term.id?.toString();
+    });
+    
+    if (spansToProcess.length === 0) return false;
+    
+    // Construir texto completo
+    let fullPageText = '';
+    const spanMap = [];
+    
+    spansToProcess.forEach((span, idx) => {
+        const text = span.textContent;
+        const start = fullPageText.length;
+        
+        spanMap.push({
+            span: span,
+            start: start,
+            end: start + text.length,
+            text: text,
+            block: span.closest('.text-block'),
+            originalElement: span,
+            isAlreadyHighlighted: span.classList.contains('highlight'),
+            existingTermId: span.getAttribute('data-term-id'),
+            existingSourceType: span.getAttribute('data-source-type')
+        });
+        
+        fullPageText += text;
+        
+        // Agregar espacio entre spans
+        if (idx < spansToProcess.length - 1) {
+            const nextSpan = spansToProcess[idx + 1];
+            const nextText = nextSpan.textContent;
+            if (!nextText.match(/^[.,;:!?\)\]}]/)) {
+                fullPageText += ' ';
+            }
+        }
+    });
+    
+    const normalizedPage = normalizeTextEnhanced(fullPageText);
+    const normalizedTarget = textToFind;
+    
+    const found = searchWithToleranceEnhanced(normalizedPage, normalizedTarget, words);
+    
+    if (!found) return false;
+    
+    const { matchStart, matchEnd, matchedText } = found;
+    
+    console.log(`✅ Match en page-${pageNumber}: "${matchedText.substring(0, 60)}..."`);
+    
+    const termId = termIdCounter++;
+    
+    const origStart = mapEnhancedPosition(fullPageText, normalizedPage, matchStart);
+    const origEnd = mapEnhancedPosition(fullPageText, normalizedPage, matchEnd);
+    
+    if (origStart === -1 || origEnd === -1) {
+        console.warn(`⚠️ Mapeo falló en page-${pageNumber}`);
+        return false;
+    }
+    
+    const affectedSpans = spanMap.filter(sp => 
+        sp.start < origEnd && sp.end > origStart
+    );
+    
+    if (affectedSpans.length === 0) {
+        console.warn(`⚠️ No spans encontrados para el match`);
+        return false;
+    }
+    
+    console.log(`   📍 Afecta ${affectedSpans.length} spans/bloques`);
+    
+    const firstBlock = affectedSpans[0].block;
+    let paragraphNumber = 1;
+    
+    if (firstBlock) {
+        const allBlocks = page.querySelectorAll('.text-block');
+        paragraphNumber = Array.from(allBlocks).indexOf(firstBlock) + 1;
+    }
+    
+    affectedSpans.forEach(spanData => {
+        highlightSpanEnhanced(spanData, origStart, origEnd, termId, source);
+    });
+    
+    saveTermMetadata(termId, term, source, pageNumber, paragraphNumber);
+    
+    return true;
+}
+
+// ========== RESALTADO MEJORADO ==========
+function highlightSpanEnhanced(spanData, matchStart, matchEnd, termId, source) {
+    const { span, start, end, text, originalElement, isAlreadyHighlighted, existingTermId } = spanData;
+    
+    //  MANEJO DE SPANS YA RESALTADOS
+    if (isAlreadyHighlighted) {
+        // Si ya está resaltado con el MISMO término, no hacer nada
+        if (existingTermId && existingTermId === termId.toString()) {
+            return;
+        }
+        
+        // Si está resaltado con OTRO término, agregar clase adicional
+        highlightAlreadyHighlightedSpan(spanData, termId, source);
+        return;
+    }
+    
+    // Calcular intersección para span no resaltado
+    const hlStart = Math.max(0, matchStart - start);
+    const hlEnd = Math.min(text.length, matchEnd - start);
+    
+    // Validaciones
+    if (hlStart >= hlEnd || hlEnd <= 0) return;
+    if (hlStart < 0 || hlEnd > text.length) return;
+    if (!span.parentNode) return;
+    
+    const before = text.substring(0, hlStart);
+    const highlight = text.substring(hlStart, hlEnd);
+    const after = text.substring(hlEnd);
+    
+    if (highlight.trim().length === 0) return;
+    
+    const parent = span.parentNode;
+    
+    // PRESERVAR ESTILOS ORIGINALES
+    if (before) {
+        const beforeSpan = originalElement.cloneNode(false);
+        beforeSpan.textContent = before;
+        beforeSpan.classList.remove('highlight');
+        beforeSpan.removeAttribute('data-term-id');
+        beforeSpan.removeAttribute('data-source-type');
+        parent.insertBefore(beforeSpan, span);
+    }
+    
+    const highlightSpan = originalElement.cloneNode(false);
+    highlightSpan.textContent = highlight;
+    highlightSpan.classList.add('highlight', `highlight-${source.type}`);
+    highlightSpan.setAttribute('data-term-id', termId);
+    highlightSpan.setAttribute('data-source-type', source.type);
+    parent.insertBefore(highlightSpan, span);
+    
+    // Marcar bloque con highlight
+    const block = highlightSpan.closest('.text-block');
+    if (block) blocksWithHighlights.add(block);
+    
+    // Manejar span original
+    if (after) {
+        span.textContent = after;
+        span.classList.remove('highlight');
+        span.removeAttribute('data-term-id');
+        span.removeAttribute('data-source-type');
+    } else {
+        parent.removeChild(span);
+    }
+}
+
+// ========== MANEJO DE SPANS YA RESALTADOS ==========
+function highlightAlreadyHighlightedSpan(spanData, termId, source) {
+    const { span } = spanData;
+    
+    const existingTermId = span.getAttribute('data-term-id');
+    
+    // Si ya tiene el mismo término, no hacer nada
+    if (existingTermId && existingTermId === termId.toString()) return;
+    
+    // Agregar la nueva clase de highlight manteniendo las existentes
+    span.classList.add(`highlight-${source.type}`);
+    
+    // Si no tenía data-term-id, asignarle uno
+    if (!existingTermId) {
+        span.setAttribute('data-term-id', termId);
+        span.setAttribute('data-source-type', source.type);
+    } else {
+        // Si ya tiene un término diferente, marcar como múltiple
+        span.setAttribute('data-multiple-terms', 'true');
+    }
+    
+    // Marcar bloque con highlight
+    const block = span.closest('.text-block');
+    if (block) blocksWithHighlights.add(block);
+    
+    console.log(`   🔄 Span ya resaltado - agregado highlight adicional: ${source.type}`);
+}
+
+// ========== BÚSQUEDA EN BLOQUES CONSECUTIVOS MEJORADA ==========
+function searchConsecutiveBlocksEnhanced(page, pageNumber, textToFind, term, source) {
+    const allBlocks = Array.from(page.querySelectorAll('.text-block'));
+    const normalizedTarget = normalizeTextEnhanced(textToFind);
+    
+    // Buscar secuencias de bloques que contengan el texto
+    for (let startBlock = 0; startBlock < allBlocks.length; startBlock++) {
+        for (let endBlock = startBlock; endBlock < Math.min(startBlock + 6, allBlocks.length); endBlock++) {
+            const blocks = allBlocks.slice(startBlock, endBlock + 1);
+            
+            // Construir texto de todos los spans en estos bloques
+            let blockText = '';
+            const blockSpans = [];
+            
+            blocks.forEach(block => {
+                const spans = Array.from(block.querySelectorAll('.text-span'));
+                spans.forEach(span => {
+                    blockSpans.push({
+                        span: span,
+                        text: span.textContent,
+                        block: block,
+                        isAlreadyHighlighted: span.classList.contains('highlight')
+                    });
+                    blockText += span.textContent + ' ';
+                });
+            });
+            
+            const normalizedBlockText = normalizeTextEnhanced(blockText);
+            
+            if (normalizedBlockText.includes(normalizedTarget)) {
+                console.log(`✅ Match en bloques consecutivos ${startBlock}-${endBlock} page-${pageNumber}`);
+                
+                const termId = termIdCounter++;
+                let paragraphNumber = startBlock + 1;
+                
+                // Resaltar en todos los spans de la secuencia
+                blockSpans.forEach(spanData => {
+                    if (!spanData.span.parentNode) return;
+                    
+                    // Si ya está resaltado, agregar clase adicional
+                    if (spanData.isAlreadyHighlighted) {
+                        spanData.span.classList.add(`highlight-${source.type}`);
+                        spanData.span.setAttribute('data-multiple-terms', 'true');
+                    } else {
+                        // Si no está resaltado, crear nuevo highlight
+                        const highlightSpan = spanData.span.cloneNode(false);
+                        highlightSpan.textContent = spanData.span.textContent;
+                        highlightSpan.classList.add('highlight', `highlight-${source.type}`);
+                        highlightSpan.setAttribute('data-term-id', termId);
+                        highlightSpan.setAttribute('data-source-type', source.type);
+                        
+                        spanData.span.parentNode.insertBefore(highlightSpan, spanData.span);
+                        spanData.span.parentNode.removeChild(spanData.span);
+                    }
+                    
+                    const block = spanData.span.closest('.text-block');
+                    if (block) blocksWithHighlights.add(block);
+                });
+                
+                saveTermMetadata(termId, term, source, pageNumber, paragraphNumber);
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+// ========== BÚSQUEDA CON TOLERANCIA MEJORADA ==========
+function searchWithToleranceEnhanced(normalizedPage, normalizedTarget, words) {
+    // Estrategia 1: Búsqueda exacta
+    let exactIndex = normalizedPage.indexOf(normalizedTarget);
+    if (exactIndex !== -1) {
+        return {
+            matchStart: exactIndex,
+            matchEnd: exactIndex + normalizedTarget.length,
+            matchedText: normalizedTarget
+        };
+    }
+    
+    // Estrategia 2: Búsqueda por palabras consecutivas (60% de palabras)
+    const minWordsMatch = Math.max(2, Math.floor(words.length * 0.6));
+    
+    for (let start = 0; start <= words.length - minWordsMatch; start++) {
+        for (let end = words.length; end >= start + minWordsMatch; end--) {
+            const segmentWords = words.slice(start, end);
+            const segmentText = segmentWords.join(' ');
+            const segmentIndex = normalizedPage.indexOf(segmentText);
+            
+            if (segmentIndex !== -1 && segmentText.length > 10) {
+                console.log(`   🔄 Match parcial (${segmentWords.length}/${words.length} palabras): "${segmentText}"`);
+                return {
+                    matchStart: segmentIndex,
+                    matchEnd: segmentIndex + segmentText.length,
+                    matchedText: segmentText
+                };
+            }
+        }
+    }
+    
+    // Estrategia 3: Búsqueda de palabras clave
+    const stopWords = new Set(['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'a', 'an']);
+    const keyWords = words.filter(word => word.length > 2 && !stopWords.has(word));
+    
+    if (keyWords.length >= 2) {
+        let currentIndex = 0;
+        let matchedKeywords = [];
+        
+        for (const keyword of keyWords) {
+            const keywordIndex = normalizedPage.indexOf(keyword, currentIndex);
+            if (keywordIndex === -1) break;
+            
+            matchedKeywords.push({ keyword, index: keywordIndex });
+            currentIndex = keywordIndex + keyword.length;
+        }
+        
+        if (matchedKeywords.length >= 2) {
+            const firstMatch = matchedKeywords[0];
+            const lastMatch = matchedKeywords[matchedKeywords.length - 1];
+            const distance = lastMatch.index - firstMatch.index;
+            
+            if (distance < 400) {
+                const matchedText = normalizedPage.substring(
+                    firstMatch.index, 
+                    lastMatch.index + lastMatch.keyword.length
+                );
+                console.log(`   🔄 Match por palabras clave: "${matchedText}"`);
+                
+                return {
+                    matchStart: firstMatch.index,
+                    matchEnd: lastMatch.index + lastMatch.keyword.length,
+                    matchedText: matchedText
+                };
+            }
+        }
+    }
+    
+    return null;
+}
+
+     // Función principal para resaltar todos los términos
+        function highlightAll() {
+            console.log('🎨 Iniciando highlightAll()...');
+            sources.forEach(source => {
+                if (source.terms.length === 0) return;
+                source.terms.forEach(term => {
+                    highlightTerm(term, source);
+                });
+            });
+            
+            console.log(`✅ Resaltado completo: ${window.foundTermsGlobal.length} términos`);
+            tooltipsAttached = true;
+        }
+
+       // ========== NORMALIZACIÓN MEJORADA ==========
+function normalizeTextEnhanced(text) {
+    return text
+        .toLowerCase()
+        .replace(/[\u2018\u2019]/g, "'")          // Comillas tipográficas simples
+        .replace(/[\u201C\u201D]/g, '"')          // Comillas tipográficas dobles
+        .replace(/\u2013/g, '-')                  // En dash (–)
+        .replace(/\u2014/g, '--')                 // Em dash (—)
+        .replace(/\u00A0/g, ' ')                  // Non-breaking space
+        .replace(/\u200B/g, '')                   // Zero-width space
+        .replace(/[\r\n\t]/g, ' ')                // Saltos de línea → espacio
+        .replace(/\s+/g, ' ')                     // Colapsar espacios múltiples
+        .replace(/[.,;:!?]/g, '')                 // Remover puntuación para matching más flexible
+        .trim();
+}
+
+// ========== MAPEO MEJORADO DE POSICIONES ==========
+function mapEnhancedPosition(original, normalized, normPos) {
+    let origIdx = 0;
+    let normIdx = 0;
+    
+    while (normIdx < normPos && origIdx < original.length) {
+        const origChar = original[origIdx].toLowerCase();
+        
+        // Manejar caracteres especiales
+        if (origChar.match(/[.,;:!?]/)) {
+            // Los caracteres de puntuación se eliminan en la normalización
+            origIdx++;
+            continue;
+        }
+        
+        // Manejar espacios
+        if (/\s/.test(origChar)) {
+            while (origIdx < original.length && /\s/.test(original[origIdx])) {
+                origIdx++;
+            }
+            if (normIdx < normalized.length && normalized[normIdx] === ' ') {
+                normIdx++;
+            }
+        } else {
+            // Caracteres normales
+            const normalizedChar = normalizeTextEnhanced(origChar);
+            normIdx += normalizedChar.length;
+            origIdx++;
+        }
+    }
+    
+    return origIdx <= original.length ? origIdx : -1;
+}
+
+
+        function saveTermMetadata(termId, term, source, pageNumber, paragraphNumber) {
+            const termData = {
+                id: termId,
+                text: term.text,
+                sourceType: source.type,
+                sourceLabel: source.label,
+                sourceColor: source.color,
+                score: term.score,
+                aiModel: term.aiModel,
+                pageNumber: pageNumber,
+                paragraphNumber: paragraphNumber,
+                metadata: {
+                    source: term.source || source.label,
+                    title: term.source || source.label,
+                    url: term.url || null,
+                    score: term.score,
+                    aiModel: term.aiModel
+                }
+            };
+            
+            window.foundTermsGlobal.push(termData);
+            foundTerms.push(termData);
+            
+            console.log(`✅ Highlight ID=${termId}, Page=${pageNumber}, §${paragraphNumber}`);
+        }
+
+ // ========== FUNCIONES DE TOGGLE ==========
+        function toggleHighlights(show) {
+            document.querySelectorAll('.highlight').forEach(highlight => {
+                highlight.style.backgroundColor = show ? '' : 'transparent';
+            });
+        }
+
+        function resetHighlightEffects() {
+            document.querySelectorAll('.highlight').forEach(h => {
+                h.style.opacity = '1';
+                h.style.filter = 'none';
+            });
+        }
+
+
+        console.log('✅ Parte 2 cargada: Funciones de resaltado');
+
+        // ========== CREAR TOOLTIP ==========
+        const tooltip = document.createElement('div');
+        tooltip.className = 'custom-tooltip';
+        document.body.appendChild(tooltip);
+
+        let currentHighlight = null;
+
+        function createEnhancedTooltip(termData, sourceType) {
+            const source = sources.find(s => s.type === sourceType);
+            if (!source) {
+                console.error('❌ Fuente no encontrada:', sourceType);
+                return '<div>Error: Fuente no encontrada</div>';
+            }
+            
+            const sections = [];
+            
+            sections.push(`
+                <div class="tooltip-header" style="background: ${source.color};">
+                    <div class="tooltip-icon" style="background: white;">
+                        ${getSourceIcon(sourceType).replace('fill="currentColor"', `fill="${source.color}"`)}
+                    </div>
+                    <div class="tooltip-title">${source.label}</div>
+                </div>
+            `);
+            
+            const bodyItems = [];
+            
+            if (termData.source) {
+                bodyItems.push(`<div class="tooltip-source"><strong>Source:</strong> ${termData.source}</div>`);
+            }
+            
+            if (termData.title && termData.title !== termData.source) {
+                bodyItems.push(`<div class="tooltip-source"><strong>Title:</strong> ${termData.title}</div>`);
+            }
+            
+            if (termData.url) {
+                bodyItems.push(`
+                    <a href="${termData.url}" target="_blank" class="tooltip-link">
+                        <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M6.354 5.5H4a3 3 0 0 0 0 6h3a3 3 0 0 0 2.83-4H9q-.13 0-.25.031A2.5 2.5 0 0 1 7 10.5H4A2.5 2.5 0 0 1 4 5.5h2.354zM10 6a3 3 0 0 0-2.83 4h.58q.13 0 .25-.031A2.5 2.5 0 0 1 9 5.5h3A2.5 2.5 0 0 1 12 8a2.5 2.5 0 0 1-2 2.45v1.05A3.5 3.5 0 0 0 13 8a3.5 3.5 0 0 0-3-3.46V3.5h-1v1.04z"/>
+                        </svg>
+                        Ver fuente completa
+                    </a>
+                `);
+            }
+            
+            if (termData.score !== null && termData.score !== undefined) {
+                const scorePercent = Math.round(termData.score * 100);
+                const scoreColor = scorePercent > 80 ? '#27ae60' : scorePercent > 50 ? '#f39c12' : '#e74c3c';
+                bodyItems.push(`
+                    <div class="tooltip-score" style="color: ${scoreColor};">
+                        <strong>Confidence:</strong> ${scorePercent}%
+                    </div>
+                `);
+            }
+            
+            //if (termData.aiModel) {
+            //    bodyItems.push(`<div class="tooltip-score"><strong>AI Model:</strong> ${termData.aiModel}</div>`);
+            //}
+            
+            if (termData.text && termData.text.length > 80) {
+                const preview = termData.text.substring(0, 150) + '...';
+                bodyItems.push(`
+                    <div class="tooltip-preview" style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 11px; color: #555;">
+                        "${preview}"
+                    </div>
+                `);
+            }
+            
+            sections.push(`
+                <div class="tooltip-body">
+                    ${bodyItems.join('')}
+                </div>
+            `);
+            
+            return sections.join('');
+        }
+
+        function showTooltip_(highlight, event) {
+            const termId = highlight.getAttribute('data-term-id');
+            const sourceType = highlight.getAttribute('data-source-type');
+            
+            if (!termId || !sourceType) {
+                console.error('❌ Highlight sin datos:', highlight);
+                return;
+            }
+            
+            const term = window.foundTermsGlobal?.find(t => t.id === parseInt(termId));
+            
+            if (!term) {
+                tooltip.innerHTML = `
+                    <div class="tooltip-header" style="background: #e74c3c;">
+                        <div class="tooltip-title">Error: Término no encontrado (ID: ${termId})</div>
+                    </div>
+                    <div class="tooltip-body">
+                        <div class="tooltip-source">Source Type: ${sourceType}</div>
+                    </div>
+                `;
+            } else {
+                const fullMetadata = {
+                    ...term.metadata,
+                    source: term.metadata?.source || term.sourceLabel,
+                    title: term.metadata?.title || term.sourceLabel,
+                    url: term.metadata?.url || null,
+                    score: term.score,
+                    aiModel: term.aiModel,
+                    aiIndex: term.aiIndex,
+                    text: term.text
+                };
+                
+                tooltip.innerHTML = createEnhancedTooltip(fullMetadata, sourceType);
+            }
+            
+            const rect = highlight.getBoundingClientRect();
+            tooltip.style.display = 'block';
+            tooltip.style.opacity = '0'; // Resetear opacidad
+
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+            let top = rect.top - tooltipRect.height - 10;
+            
+            if (left < 10) left = 10;
+            if (left + tooltipRect.width > window.innerWidth - 10) {
+                left = window.innerWidth - tooltipRect.width - 10;
+            }
+            if (top < 10) {
+                top = rect.bottom + 10;
+            }
+            
+            tooltip.style.left = `${left + window.scrollX}px`;
+            tooltip.style.top = `${top + window.scrollY}px`;
+            
+            setTimeout(() => {
+                tooltip.style.opacity = '1';
+            }, 10);
+        }
+// ========== FUNCIÓN showTooltip CORREGIDA ==========
+function showTooltip(highlight, event) {
+    const termId = highlight.getAttribute('data-term-id');
+    const sourceType = highlight.getAttribute('data-source-type');
+    const hasMultipleTerms = highlight.getAttribute('data-multiple-terms') === 'true';
+    
+    if (!termId || !sourceType) {
+        console.error('❌ Highlight sin datos:', highlight);
+        return;
+    }
+    
+    //  CORRECCIÓN: Buscar el término correcto considerando múltiples términos
+    let term;
+    
+    if (hasMultipleTerms) {
+        // Si tiene múltiples términos, buscar el más relevante basado en el texto
+        const highlightText = normalizeTextEnhanced(highlight.textContent);
+        
+        term = window.foundTermsGlobal?.find(t => {
+            const termText = normalizeTextEnhanced(t.text);
+            // Buscar coincidencia parcial en el texto del highlight
+            return termText.includes(highlightText) || highlightText.includes(termText.substring(0, 20));
+        });
+        
+        // Si no encuentra por texto, usar el primer término que coincida con el sourceType
+        if (!term) {
+            term = window.foundTermsGlobal?.find(t => 
+                t.sourceType === sourceType && t.id === parseInt(termId)
+            );
+        }
+    } else {
+        // Búsqueda normal por ID
+        term = window.foundTermsGlobal?.find(t => t.id === parseInt(termId));
+    }
+    
+    if (!term) {
+        console.warn('⚠️ Término no encontrado, buscando alternativas...');
+        
+        //  FALLBACK: Buscar por texto del highlight
+        const highlightText = normalizeTextEnhanced(highlight.textContent);
+        term = window.foundTermsGlobal?.find(t => {
+            const termText = normalizeTextEnhanced(t.text);
+            return termText.includes(highlightText) || highlightText.includes(termText.substring(0, 30));
+        });
+        
+        if (!term) {
+            tooltip.innerHTML = `
+                <div class="tooltip-header" style="background: #e74c3c;">
+                    <div class="tooltip-title">Término no encontrado</div>
+                </div>
+                <div class="tooltip-body">
+                    <div class="tooltip-source">ID: ${termId}</div>
+                    <div class="tooltip-source">Tipo: ${sourceType}</div>
+                    <div class="tooltip-source">Texto: "${highlight.textContent.substring(0, 50)}..."</div>
+                    <div style="margin-top: 8px; color: #7f8c8d; font-size: 11px;">
+                        Total términos: ${window.foundTermsGlobal?.length || 0}
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    if (term) {
+        const fullMetadata = {
+            ...term.metadata,
+            source: term.metadata?.source || term.sourceLabel,
+            title: term.metadata?.title || term.sourceLabel,
+            url: term.metadata?.url || null,
+            score: term.score,
+            aiModel: term.aiModel,
+            text: term.text,
+            //  AGREGAR: Información sobre múltiples términos
+            hasMultipleTerms: hasMultipleTerms,
+            actualTermId: term.id,
+            displayedTermId: termId
+        };
+        
+        tooltip.innerHTML = createEnhancedTooltip(fullMetadata, sourceType);
+    }
+    
+    // Posicionamiento del tooltip (sin cambios)
+    const rect = highlight.getBoundingClientRect();
+    tooltip.style.display = 'block';
+    tooltip.style.opacity = '0';
+
+    const tooltipRect = tooltip.getBoundingClientRect();
+    
+    let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+    let top = rect.top - tooltipRect.height - 10;
+    
+    if (left < 10) left = 10;
+    if (left + tooltipRect.width > window.innerWidth - 10) {
+        left = window.innerWidth - tooltipRect.width - 10;
+    }
+    if (top < 10) {
+        top = rect.bottom + 10;
+    }
+    
+    tooltip.style.left = `${left + window.scrollX}px`;
+    tooltip.style.top = `${top + window.scrollY}px`;
+    
+    setTimeout(() => {
+        tooltip.style.opacity = '1';
+    }, 10);
+}
+
+// ========== FUNCIÓN createEnhancedTooltip MEJORADA ==========
+function createEnhancedTooltip(termData, sourceType) {
+    const source = sources.find(s => s.type === sourceType);
+    if (!source) {
+        console.error('❌ Fuente no encontrada:', sourceType);
+        return '<div>Error: Fuente no encontrada</div>';
+    }
+    
+    const sections = [];
+    
+    //  AGREGAR: Indicador de múltiples términos
+    const multipleTermsIndicator = termData.hasMultipleTerms ? 
+        '<div style="background: #f39c12; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-left: 8px; display: inline-block;">Múltiples términos</div>' : 
+        '';
+    
+    sections.push(`
+        <div class="tooltip-header" style="background: ${source.color};">
+            <div class="tooltip-icon" style="background: white;">
+                ${getSourceIcon(sourceType).replace('fill="currentColor"', `fill="${source.color}"`)}
+            </div>
+            <div class="tooltip-title">${source.label} ${multipleTermsIndicator}</div>
+        </div>
+    `);
+    
+    const bodyItems = [];
+    
+    //  AGREGAR: Información de debug para múltiples términos
+    if (termData.hasMultipleTerms) {
+        bodyItems.push(`
+            <div class="tooltip-debug" style="background: #fff3cd; border-left: 3px solid #ffc107; padding: 6px 8px; margin-bottom: 8px; font-size: 10px; color: #856404;">
+                <strong>⚠️ Múltiples términos detectados</strong><br>
+                ID Mostrado: ${termData.displayedTermId}<br>
+                ID Real: ${termData.actualTermId}
+            </div>
+        `);
+    }
+    
+    if (termData.source) {
+        bodyItems.push(`<div class="tooltip-source"><strong>Source:</strong> ${termData.source}</div>`);
+    }
+    
+    if (termData.title && termData.title !== termData.source) {
+        bodyItems.push(`<div class="tooltip-source"><strong>Title:</strong> ${termData.title}</div>`);
+    }
+    
+    if (termData.url) {
+        bodyItems.push(`
+            <a href="${termData.url}" target="_blank" class="tooltip-link">
+                <svg width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M6.354 5.5H4a3 3 0 0 0 0 6h3a3 3 0 0 0 2.83-4H9q-.13 0-.25.031A2.5 2.5 0 0 1 7 10.5H4A2.5 2.5 0 0 1 4 5.5h2.354zM10 6a3 3 0 0 0-2.83 4h.58q.13 0 .25-.031A2.5 2.5 0 0 1 9 5.5h3A2.5 2.5 0 0 1 12 8a2.5 2.5 0 0 1-2 2.45v1.05A3.5 3.5 0 0 0 13 8a3.5 3.5 0 0 0-3-3.46V3.5h-1v1.04z"/>
+                </svg>
+                Ver fuente completa
+            </a>
+        `);
+    }
+    
+    if (termData.score !== null && termData.score !== undefined) {
+        const scorePercent = Math.round(termData.score * 100);
+        const scoreColor = scorePercent > 80 ? '#27ae60' : scorePercent > 50 ? '#f39c12' : '#e74c3c';
+        bodyItems.push(`
+            <div class="tooltip-score" style="color: ${scoreColor};">
+                <strong>Confidence:</strong> ${scorePercent}%
+            </div>
+        `);
+    }
+    
+    if (termData.text) {
+        const preview = termData.text.length > 80 ? 
+            termData.text.substring(0, 150) + '...' : 
+            termData.text;
+        bodyItems.push(`
+            <div class="tooltip-preview" style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 11px; color: #555;">
+                "${preview}"
+            </div>
+        `);
+    }
+    
+    sections.push(`
+        <div class="tooltip-body">
+            ${bodyItems.join('')}
+        </div>
+    `);
+    
+    return sections.join('');
+}
+
+
+// ========== MEJORA EN EL MANEJO DE MÚLTIPLES TÉRMINOS ==========
+function improveMultipleTermsHandling() {
+    console.log('🔧 Mejorando manejo de múltiples términos...');
+    
+    // Para cada highlight con múltiples términos, intentar asignar el término correcto
+    const multiTermHighlights = document.querySelectorAll('[data-multiple-terms="true"]');
+    
+    multiTermHighlights.forEach(highlight => {
+        const currentTermId = highlight.getAttribute('data-term-id');
+        const sourceType = highlight.getAttribute('data-source-type');
+        const highlightText = normalizeTextEnhanced(highlight.textContent);
+        
+        // Buscar el término que mejor coincida con el texto
+        const matchingTerms = window.foundTermsGlobal.filter(term => 
+            term.sourceType === sourceType && 
+            normalizeTextEnhanced(term.text).includes(highlightText)
+        );
+        
+        if (matchingTerms.length > 0) {
+            // Ordenar por longitud de coincidencia (la más específica primero)
+            matchingTerms.sort((a, b) => b.text.length - a.text.length);
+            
+            const bestMatch = matchingTerms[0];
+            
+            // Si el término actual no es el mejor match, actualizarlo
+            if (bestMatch.id !== parseInt(currentTermId)) {
+                highlight.setAttribute('data-term-id', bestMatch.id);
+                console.log(`   🔄 Actualizado highlight: ${currentTermId} → ${bestMatch.id}`);
+            }
+        }
+    });
+}
+
+// Ejecutar después de 5 segundos
+setTimeout(() => {
+    //debugTooltipIssues();
+    improveMultipleTermsHandling();
+}, 3000);
+        function hideTooltip() {
+            tooltip.classList.remove('show');
+            // ✅ AGREGAR ESTAS DOS LÍNEAS:
+            setTimeout(() => {
+                tooltip.style.display = 'none';
+            }, 300); // Esperar a que termine la animación
+        }
+
+        // CORRECCIÓN: Adjuntar eventos de tooltip correctamente
+        function attachTooltipEvents() {
+            const highlights = document.querySelectorAll('.highlight');
+            const currentCount = highlights.length;
+            
+            console.log(`🔧 Adjuntando eventos a ${currentCount} highlights...`);
+            
+            // ❌ ELIMINAR el check que causa el problema
+            // if (tooltipsAttached) {
+            //     console.log('⚠️ Tooltips ya adjuntados, saltando...');
+            //     return;
+            // }
+            
+            let eventsAttached = 0;
+            
+            highlights.forEach(highlight => {
+                // Verificar si ya tiene el evento
+                if (highlight.dataset.tooltipAttached === 'true') {
+                    return; // Saltar este highlight
+                }
+                
+                highlight.addEventListener('mouseenter', function(e) {
+                    currentHighlight = this;
+                    showTooltip(this, e);
+                });
+
+                highlight.addEventListener('mouseleave', function() {
+                    currentHighlight = null;
+                    setTimeout(() => {
+                        if (!currentHighlight) {
+                            hideTooltip();
+                        }
+                    }, 100);
+                });
+                
+                // Marcar como procesado
+                highlight.dataset.tooltipAttached = 'true';
+                eventsAttached++;
+            });
+            
+            tooltipsAttached = true;
+            console.log(`✅ Eventos adjuntados a ${eventsAttached} nuevos highlights (total: ${currentCount})`);
+        }
+
+        // ========== FUNCIONES DE NAVEGACIÓN ==========
+        function updatePageInfo() {
+            const pageInfoElement = document.getElementById('page-info');
+            if (pageInfoElement) {
+                pageInfoElement.textContent = `Página: ${currentPage} / ${totalPages}`;
+            }
+        }
+
+        function updateNavigationButtons() {
+            const prevButton = document.getElementById('prev-page');
+            const nextButton = document.getElementById('next-page');
+            
+            if (prevButton) {
+                if (currentPage === 1) {
+                    prevButton.setAttribute('disabled', 'true');
+                    prevButton.style.opacity = '0.4';
+                    prevButton.style.cursor = 'not-allowed';
+                } else {
+                    prevButton.removeAttribute('disabled');
+                    prevButton.style.opacity = '1';
+                    prevButton.style.cursor = 'pointer';
+                }
+            }
+            
+            if (nextButton) {
+                if (currentPage === totalPages) {
+                    nextButton.setAttribute('disabled', 'true');
+                    nextButton.style.opacity = '0.4';
+                    nextButton.style.cursor = 'not-allowed';
+                } else {
+                    nextButton.removeAttribute('disabled');
+                    nextButton.style.opacity = '1';
+                    nextButton.style.cursor = 'pointer';
+                }
+            }
+        }
+
+        function showPage(pageNumber) {
+            if (pageNumber < 1 || pageNumber > totalPages || totalPages === 0) return;
+            
+            const targetPage = document.getElementById(`page-${pageNumber}`);
+            if (targetPage) {
+                currentPage = pageNumber;
+                targetPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                updatePageInfo();
+                updateNavigationButtons();
+                
+                setTimeout(() => {
+                    attachTooltipEvents();
+                }, 300);
+            }
+        }
+
+        function goToNextPage() {
+            if (currentPage < totalPages) {
+                showPage(currentPage + 1);
+            }
+        }
+
+        function goToPreviousPage() {
+            if (currentPage > 1) {
+                showPage(currentPage - 1);
+            }
+        }
+
+        window.goToPage = function(pageNumber, textToHighlight, termId) {
+            if (pageNumber < 1 || pageNumber > totalPages) return;
+            
+            showPage(pageNumber);
+            
+            if (textToHighlight) {
+                setTimeout(() => {
+                    const pageDiv = document.getElementById(`page-${pageNumber}`);
+                    if (pageDiv) {
+                        window.highlightTextInPage(pageDiv, textToHighlight, termId);
+                    }
+                }, 300);
+            }
+        };
+
+        function initializeNavigation() {
+            const pages = document.querySelectorAll('.pdf-page');
+            totalPages = pages.length;
+            
+            updatePageInfo();
+            
+            const prevButton = document.getElementById('prev-page');
+            const nextButton = document.getElementById('next-page');
+            
+            if (prevButton) prevButton.addEventListener('click', goToPreviousPage);
+            if (nextButton) nextButton.addEventListener('click', goToNextPage);
+            
+            updateNavigationButtons();
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                        const pageNumber = parseInt(entry.target.id.replace('page-', ''));
+                        if (currentPage !== pageNumber) {
+                            currentPage = pageNumber;
+                            updatePageInfo();
+                            updateNavigationButtons();
+                        }
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            pages.forEach(page => observer.observe(page));
+        }
+
+        // ========== PROGRESS BAR CORREGIDO ==========
+        function updatePageProgressBar(pageNumber, isGlobalView = true) {
+            const progressBar = document.getElementById('pageProgressBar');
+            const legend = document.getElementById('pageProgressLegend');
+            
+            if (!progressBar || !legend) return;
+            
+            let blockData = [];
+            let titleText = '';
+            
+            if (isGlobalView) {
+                titleText = 'Global Content Distribution - All Pages';
+                
+                const allPages = document.querySelectorAll('.pdf-page');
+                allPages.forEach(page => {
+                    const pgNumber = parseInt(page.id.replace('page-', ''));
+                    const textBlocks = Array.from(page.querySelectorAll('.text-block'));
+                    
+                    textBlocks.forEach((block) => {
+                        const spans = block.querySelectorAll('.text-span');
+                        let hasValidText = false;
+                        
+                        spans.forEach(span => {
+                            if (span.textContent.trim().length > 10) {
+                                hasValidText = true;
+                            }
+                        });
+                        
+                        if (hasValidText) {
+                            const highlights = block.querySelectorAll('.highlight');
+                            
+                            if (highlights.length > 0) {
+                                const sourceTypes = new Set();
+                                highlights.forEach(h => {
+                                    const sourceType = h.getAttribute('data-source-type');
+                                    if (sourceType) sourceTypes.add(sourceType);
+                                });
+                                
+                                blockData.push({
+                                    pageNumber: pgNumber,
+                                    blockElement: block,
+                                    hasMatch: true,
+                                    sourceTypes: Array.from(sourceTypes),
+                                    matchCount: highlights.length
+                                });
+                            } else {
+                                blockData.push({
+                                    pageNumber: pgNumber,
+                                    blockElement: block,
+                                    hasMatch: false,
+                                    sourceTypes: [],
+                                    matchCount: 0
+                                });
+                            }
+                        }
+                    });
+                });
+            } else {
+                titleText = `Page ${pageNumber} Content Distribution`;
+                
+                const pageDiv = document.getElementById(`page-${pageNumber}`);
+                if (!pageDiv) return;
+                
+                const textBlocks = Array.from(pageDiv.querySelectorAll('.text-block'));
+                
+                textBlocks.forEach((block) => {
+                    const spans = block.querySelectorAll('.text-span');
+                    let hasValidText = false;
+                    
+                    spans.forEach(span => {
+                        if (span.textContent.trim().length > 10) {
+                            hasValidText = true;
+                        }
+                    });
+                    
+                    if (hasValidText) {
+                        const highlights = block.querySelectorAll('.highlight');
+                        
+                        if (highlights.length > 0) {
+                            const sourceTypes = new Set();
+                            highlights.forEach(h => {
+                                const sourceType = h.getAttribute('data-source-type');
+                                if (sourceType) sourceTypes.add(sourceType);
+                            });
+                            
+                            blockData.push({
+                                pageNumber: pageNumber,
+                                blockElement: block,
+                                hasMatch: true,
+                                sourceTypes: Array.from(sourceTypes),
+                                matchCount: highlights.length
+                            });
+                        } else {
+                            blockData.push({
+                                pageNumber: pageNumber,
+                                blockElement: block,
+                                hasMatch: false,
+                                sourceTypes: [],
+                                matchCount: 0
+                            });
+                        }
+                    }
+                });
+            }
+            
+            const titleDiv = document.querySelector('#pageProgressBarContainer > div:first-child');
+            if (titleDiv) {
+                titleDiv.innerHTML = `
+                    ${titleText}
+                    ${!isGlobalView ? `<button id="backToGlobalBtn" style="margin-left: 15px; padding: 4px 12px; background: #222dff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">← Back to Global View</button>` : ''}
+                `;
+            }
+            
+            progressBar.innerHTML = '';
+            
+            if (blockData.length === 0) {
+                progressBar.innerHTML = '<div style="width: 100%; display: flex; align-items: center; justify-content: center; color: #7f8c8d;">No content</div>';
+                legend.textContent = '';
+                return;
+            }
+            
+            const segmentWidth = 100 / blockData.length;
+            
+            blockData.forEach((block, idx) => {
+                const segment = document.createElement('div');
+                segment.className = 'progress-segment';
+                segment.style.width = `${segmentWidth}%`;
+                
+                if (block.hasMatch) {
+                    const source = sources.find(s => block.sourceTypes.includes(s.type));
+                    const color = source ? source.color : '#3498db';
+                    
+                    segment.classList.add('has-match');
+                    segment.style.backgroundColor = color;
+                    
+                    const iconCount = Math.max(2, Math.floor(segmentWidth / 3));
+                    const animations = ['float1', 'float2', 'float3'];
+                    
+                    for (let i = 0; i < iconCount; i++) {
+                        const iconDiv = document.createElement('div');
+                        iconDiv.className = 'progress-icon';
+                        iconDiv.innerHTML = getSourceIcon(block.sourceTypes[0])
+                            .replace('width="16" height="16"', 'width="6" height="6"');
+                        iconDiv.style.left = `${Math.random() * 90 + 5}%`;
+                        iconDiv.style.top = `${Math.random() * 70 + 15}%`;
+                        iconDiv.style.animation = `${animations[i % 3]} ${1.5 + Math.random() * 2}s ease-in-out infinite`;
+                        iconDiv.style.animationDelay = `${Math.random() * 2}s`;
+                        segment.appendChild(iconDiv);
+                    }
+                    
+                    const countDiv = document.createElement('div');
+                    countDiv.className = 'progress-segment-count';
+                    countDiv.textContent = block.matchCount;
+                    segment.appendChild(countDiv);
+                    
+                    segment.title = `Page ${block.pageNumber}, Block ${idx + 1}: ${block.matchCount} match${block.matchCount > 1 ? 'es' : ''} (${source ? source.label : 'Multiple'})`;
+                } else {
+                    segment.style.backgroundColor = '#ecf0f1';
+                    segment.title = `Page ${block.pageNumber}, Block ${idx + 1}: No matches`;
+                }
+                
+                segment.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scaleY(1.2)';
+                    this.style.zIndex = '10';
+                });
+                
+                segment.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scaleY(1)';
+                    this.style.zIndex = '1';
+                });
+                
+                segment.addEventListener('click', function() {
+                    if (block.blockElement) {
+                        showPage(block.pageNumber);
+                        setTimeout(() => {
+                            block.blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            block.blockElement.style.transition = 'background 0.3s ease';
+                            block.blockElement.style.background = '#fff9c4';
+                            setTimeout(() => {
+                                block.blockElement.style.background = '';
+                            }, 1500);
+                        }, 300);
+                    }
+                });
+                
+                progressBar.appendChild(segment);
+            });
+            
+            const matchCount = blockData.filter(b => b.hasMatch).length;
+            const noMatchCount = blockData.length - matchCount;
+            const matchPercent = ((matchCount / blockData.length) * 100).toFixed(1);
+            
+            const sourceStats = {};
+            sources.forEach(source => {
+                sourceStats[source.type] = { count: 0, label: source.label, color: source.color };
+            });
+            
+            blockData.forEach(block => {
+                if (block.hasMatch) {
+                    block.sourceTypes.forEach(type => {
+                        if (sourceStats[type]) sourceStats[type].count++;
+                    });
+                }
+            });
+            
+            legend.innerHTML = `
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 12px; height: 12px; background: #3498db; border-radius: 2px;"></div>
+                        <span>Matches: ${matchCount} (${matchPercent}%)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 12px; height: 12px; background: #ecf0f1; border-radius: 2px;"></div>
+                        <span>No Match: ${noMatchCount}</span>
+                    </div>
+                    ${Object.entries(sourceStats)
+                        .filter(([_, data]) => data.count > 0)
+                        .map(([type, data]) => `
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <div style="width: 10px; height: 10px; background: ${data.color}; border-radius: 2px;"></div>
+                                <span style="font-size: 11px;">${data.label}: ${data.count}</span>
+                            </div>
+                        `).join('')}
+                    <div style="color: #95a5a6;">
+                        Total blocks: ${blockData.length} ${isGlobalView ? `(${totalPages} pages)` : ''}
+                    </div>
+                </div>
+            `;
+
+            const backBtn = document.getElementById('backToGlobalBtn');
+            if (backBtn) {
+                backBtn.addEventListener('click', () => {
+                    updatePageProgressBar(currentPage, true);
+                });
+            }
+        }
+
+        console.log('✅ Parte 3 cargada: Tooltips, navegación y progress bar');
+
+        // ========== CALCULAR ESTADÍSTICAS CORREGIDAS ==========
+        function calculateStats_() {
+            const allPages = document.querySelectorAll('.pdf-page');
+            let totalValidBlocks = 0;
+            
+            allPages.forEach(page => {
+                const textBlocks = Array.from(page.querySelectorAll('.text-block'));
+                
+                textBlocks.forEach((block) => {
+                    const spans = block.querySelectorAll('.text-span');
+                    let hasValidText = false;
+                    
+                    spans.forEach(span => {
+                        if (span.textContent.trim().length > 10) {
+                            hasValidText = true;
+                        }
+                    });
+                    
+                    if (hasValidText) {
+                        totalValidBlocks++;
+                    }
+                });
+            });
+            
+            const statsBySource = {};
+            sources.forEach(source => {
+                statsBySource[source.type] = {
+                    count: 0,
+                    label: source.label,
+                    color: source.color
+                };
+            });
+            
+            foundTerms.forEach(term => {
+                if (statsBySource[term.sourceType]) {
+                    statsBySource[term.sourceType].count++;
+                }
+            });
+            
+            return {
+                statsBySource,
+                blocksWithoutMatches: totalValidBlocks - blocksWithHighlights.size,
+                totalTextBlocks: totalValidBlocks,
+                totalTermsFound: blocksWithHighlights.size
+            };
+        }
+
+        // ========== CALCULAR ESTADÍSTICAS CORREGIDAS ==========
+function calculateStats() {
+    const allPages = document.querySelectorAll('.pdf-page');
+    let totalValidBlocks = 0;
+    let blocksWithMatches = 0;
+    
+    // 🔥 CORRECCIÓN: Contar bloques válidos y bloques con matches de forma consistente
+    allPages.forEach(page => {
+        const textBlocks = Array.from(page.querySelectorAll('.text-block'));
+        
+        textBlocks.forEach((block) => {
+            const spans = block.querySelectorAll('.text-span');
+            let hasValidText = false;
+            let blockHasMatches = false;
+            
+            spans.forEach(span => {
+                if (span.textContent.trim().length > 10) {
+                    hasValidText = true;
+                }
+                if (span.classList.contains('highlight')) {
+                    blockHasMatches = true;
+                }
+            });
+            
+            if (hasValidText) {
+                totalValidBlocks++;
+                if (blockHasMatches) {
+                    blocksWithMatches++;
+                }
+            }
+        });
+    });
+    
+    console.log('🔍 CALCULO ESTADÍSTICAS:', {
+        totalValidBlocks,
+        blocksWithMatches,
+        blocksWithHighlightsSize: blocksWithHighlights.size,
+        foundTermsCount: foundTerms.length
+    });
+    
+    const statsBySource = {};
+    sources.forEach(source => {
+        statsBySource[source.type] = {
+            count: 0,
+            label: source.label,
+            color: source.color
+        };
+    });
+    
+    foundTerms.forEach(term => {
+        if (statsBySource[term.sourceType]) {
+            statsBySource[term.sourceType].count++;
+        }
+    });
+    
+    return {
+        statsBySource,
+        blocksWithoutMatches: totalValidBlocks - blocksWithMatches,
+        totalTextBlocks: totalValidBlocks,
+        totalTermsFound: blocksWithMatches // 🔥 CORRECCIÓN: Usar blocksWithMatches en lugar de blocksWithHighlights.size
+    };
+}
+
+        // Función para llenar foundTerms durante el proceso de análisis
+        function populateFoundTerms() {
+    foundTerms = [];
+    const allPages = document.querySelectorAll('.pdf-page');
+    
+    allPages.forEach(page => {
+        const textBlocks = Array.from(page.querySelectorAll('.text-block'));
+        
+        textBlocks.forEach(block => {
+            const highlights = block.querySelectorAll('.highlight');
+            
+            highlights.forEach(highlight => {
+                const sourceType = highlight.getAttribute('data-source');
+                const text = highlight.textContent.trim();
+                
+                if (sourceType && text) {
+                    // Encontrar la fuente correspondiente
+                    const source = sources.find(s => s.type === sourceType);
+                    if (source) {
+                        foundTerms.push({
+                            sourceType: sourceType,
+                            text: text,
+                            label: source.label,
+                            color: source.color
+                        });
+                    }
+                }
+            });
+        });
+    });
+    
+    // También actualizar la global
+    window.foundTermsGlobal = [...foundTerms];
+    console.log(`✅ foundTerms poblado con ${foundTerms.length} términos`);
+}
+
+        function calculateDetailedStats() {
+            const allPages = document.querySelectorAll('.pdf-page');
+            let totalValidBlocks = 0;
+            let blocksWithMatches = 0;
+            const matchesBySource = {};
+            
+            // Inicializar matchesBySource
+            sources.forEach(source => {
+                matchesBySource[source.type] = {
+                    count: 0,
+                    label: source.label,
+                    color: source.color
+                };
+            });
+            
+            // Primero contar bloques
+            allPages.forEach(page => {
+                const textBlocks = Array.from(page.querySelectorAll('.text-block'));
+                
+                textBlocks.forEach(block => {
+                    const spans = block.querySelectorAll('.text-span');
+                    let hasValidText = false;
+                    
+                    spans.forEach(span => {
+                        if (span.textContent.trim().length > 10) {
+                            hasValidText = true;
+                        }
+                    });
+                    
+                    if (hasValidText) {
+                        totalValidBlocks++;
+                        
+                        const highlights = block.querySelectorAll('.highlight');
+                        if (highlights.length > 0) {
+                            blocksWithMatches++;
+                        }
+                    }
+                });
+            });
+            
+            // Luego contar por fuente usando foundTerms
+            if (foundTerms.length === 0) {
+                console.warn('⚠️ foundTerms está vacío, llamando a populateFoundTerms...');
+                populateFoundTerms();
+            }
+            
+            foundTerms.forEach(term => {
+                if (matchesBySource[term.sourceType]) {
+                    matchesBySource[term.sourceType].count++;
+                }
+            });
+            
+            console.log('📊 Estadísticas calculadas:', {
+                totalValidBlocks,
+                blocksWithMatches,
+                matchesBySource
+            });
+            
+            return {
+                totalValidBlocks,
+                blocksWithMatches,
+                blocksWithoutMatches: totalValidBlocks - blocksWithMatches,
+                matchesBySource
+            };
+        }
+
+        function calculateDetailedStats_() {
+            const allPages = document.querySelectorAll('.pdf-page');
+            let totalValidBlocks = 0;
+            let blocksWithMatches = 0;
+            const matchesBySource = {};
+            
+            sources.forEach(source => {
+                matchesBySource[source.type] = {
+                    count: 0,
+                    label: source.label,
+                    color: source.color
+                };
+            });
+            
+            allPages.forEach(page => {
+                const textBlocks = Array.from(page.querySelectorAll('.text-block'));
+                
+                textBlocks.forEach(block => {
+                    const spans = block.querySelectorAll('.text-span');
+                    let hasValidText = false;
+                    
+                    spans.forEach(span => {
+                        if (span.textContent.trim().length > 10) {
+                            hasValidText = true;
+                        }
+                    });
+                    
+                    if (hasValidText) {
+                        totalValidBlocks++;
+                        
+                        const highlights = block.querySelectorAll('.highlight');
+                        if (highlights.length > 0) {
+                            blocksWithMatches++;
+                        }
+                    }
+                });
+            });
+            
+            foundTerms.forEach(term => {
+                if (matchesBySource[term.sourceType]) {
+                    matchesBySource[term.sourceType].count++;
+                }
+            });
+            
+            return {
+                totalValidBlocks,
+                blocksWithMatches,
+                blocksWithoutMatches: totalValidBlocks - blocksWithMatches,
+                matchesBySource
+            };
+        }
+
+        // ========== CREAR LISTA DE RESULTADOS EN SIDEBAR (CORREGIDO) ==========
+        function populateSourcesList() {
+            const sourcesListDiv = document.getElementById('sourceslist');
+
+            if (!sourcesListDiv) {
+                console.error('❌ sourceslist no encontrado');
+                return;
+            }
+
+            sourcesListDiv.innerHTML = '';
+
+            if (foundTerms.length === 0) {
+                sourcesListDiv.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;">No matches found</div>';
+                return;
+            }
+
+            console.log(`📋 Poblando lista con ${foundTerms.length} términos`);
+
+            // CORRECCIÓN: Ordenar por página y párrafo
+            const sortedTerms = [...foundTerms].sort((a, b) => {
+                if (a.pageNumber !== b.pageNumber) {
+                    return a.pageNumber - b.pageNumber;
+                }
+                return a.paragraphNumber - b.paragraphNumber;
+            });
+
+            sortedTerms.forEach(found => {
+                const sourceItem = document.createElement('div');
+                sourceItem.className = 'source-item';
+                sourceItem.style.cssText = `
+                    cursor: pointer; 
+                    padding: 16px; 
+                    border-left: 4px solid ${found.sourceColor}; 
+                    background: #fff; 
+                    margin-bottom: 12px; 
+                    border-radius: 8px; 
+                    transition: all 0.2s ease;
+                `;
+                
+                const metadataHtml = found.metadata.url 
+                    ? `<a href="${found.metadata.url}" target="_blank" style="color: #3498db; text-decoration: none; font-size: 12px;">🔗 ${found.metadata.title || found.metadata.source || 'View Source'}</a>` 
+                    : `<span style="color: #7f8c8d; font-size: 12px;">${found.metadata.title || found.metadata.source || ''}</span>`;
+                
+                sourceItem.innerHTML = `
+                    <div style="display: flex; align-items: flex-start; gap: 12px;">
+                        <div style="flex-shrink: 0; width: 40px; height: 40px; background: ${found.sourceColor}; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            ${getSourceIcon(found.sourceType)}
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #2c3e50;">${found.sourceLabel}</h3>
+                                ${found.score ? `<div style="background: ${found.sourceColor}; color: #2c3e50; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 700;">${Math.round(found.score * 100)}%</div>` : ''}
+                            </div>
+                            <p style="margin: 0 0 8px 0; color: #555; font-size: 14px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                "${found.text.substring(0, 120)}..."
+                            </p>
+                            <div style="margin-bottom: 6px;">
+                                ${metadataHtml}
+                            </div>
+                            <div style="display: flex; gap: 16px; font-size: 12px; color: #7f8c8d;">
+                                <span><strong>Page:</strong> ${found.pageNumber}</span>
+                                <span><strong>Paragraph:</strong> ${found.paragraphNumber}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                sourceItem.addEventListener('click', function(e) {
+                    if (e.target.tagName !== 'A') {
+                        showPage(found.pageNumber);
+                        
+                        const toggleSwitch = document.getElementById('highlight-toggle');
+                        
+                        if (!highlightsVisible && toggleSwitch) {
+                            const userWants = confirm('Los subrayados están ocultos. ¿Deseas mostrarlos para ver este término?');
+                            if (userWants) {
+                                highlightsVisible = true;
+                                toggleSwitch.checked = true;
+                                toggleHighlights(true);
+                                
+                                const progressBarContainer = document.getElementById('pageProgressBarContainer');
+                                const chartLegend = document.getElementById('chartLegend');
+                                if (progressBarContainer) progressBarContainer.style.display = 'block';
+                                if (chartLegend) chartLegend.style.display = 'flex';
+                            }
+                        }
+                        
+                        setTimeout(() => updatePageProgressBar(found.pageNumber, false), 100);
+                        
+                        setTimeout(() => {
+                            const pageDiv = document.getElementById(`page-${found.pageNumber}`);
+                            if (pageDiv) {
+                                const allBlocks = pageDiv.querySelectorAll('.text-block');
+                                const targetBlock = Array.from(allBlocks).find(block => {
+                                    const highlights = block.querySelectorAll(`[data-term-id="${found.id}"]`);
+                                    return highlights.length > 0;
+                                });
+                                
+                                if (targetBlock) {
+                                    //showOnlyTermHighlight(found.id);
+                                    targetBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                            }
+                        }, 300);
+                    }
+                });
+                
+                sourcesListDiv.appendChild(sourceItem);
+            });
+
+            console.log('✅ Lista de resultados poblada correctamente');
+        }
+
+        // ========== CREAR GRÁFICOS CORREGIDOS ==========
+// ========== CREAR GRÁFICOS CORREGIDOS ==========
+function createCharts() {
+    const stats = calculateStats();
+
+    if (stats.totalTextBlocks === 0) {
+        console.warn('⚠️ No hay bloques de texto válidos');
+        const similarityHeader = document.querySelector('.similarity-header');
+        if (similarityHeader) {
+            similarityHeader.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #7f8c8d;">
+                    <h3>No se pudo analizar el documento</h3>
+                    <p>No se encontraron bloques de texto válidos</p>
+                </div>
+            `;
+        }
+        return;
+    }
+
+    // 🔥 CORRECCIÓN: Asegurar que el porcentaje no exceda 100%
+    const similarityPercentage = Math.min(100, ((stats.totalTermsFound / stats.totalTextBlocks) * 100)).toFixed(1);
+
+    console.log('\n📊 CÁLCULO DE SIMILITUD CORREGIDO:');
+    console.log('Total text-blocks:', stats.totalTextBlocks);
+    console.log('Bloques con matches:', stats.totalTermsFound);
+    console.log('Similitud:', similarityPercentage + '%');
+
+    const chartData = {
+        labels: [],
+        datasets: [{
+            data: [],
+            backgroundColor: [],
+            borderColor: '#ffffff',
+            borderWidth: 2
+        }]
+    };
+
+    Object.entries(stats.statsBySource).forEach(([type, data]) => {
+        if (data.count > 0) {
+            chartData.labels.push(data.label);
+            chartData.datasets[0].data.push(data.count);
+            chartData.datasets[0].backgroundColor.push(data.color);
+        }
+    });
+
+    if (stats.blocksWithoutMatches > 0) {
+        chartData.labels.push('No Match');
+        chartData.datasets[0].data.push(stats.blocksWithoutMatches);
+        chartData.datasets[0].backgroundColor.push('#ecf0f1');
+    }
+
+    if (chartData.datasets[0].data.length === 0) {
+        console.warn('⚠️ No hay datos para el gráfico');
+        const similarityHeader = document.querySelector('.similarity-header');
+        if (similarityHeader) {
+            similarityHeader.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #7f8c8d;">
+                    <h3>No se encontraron coincidencias</h3>
+                    <p>El documento parece ser completamente original</p>
+                    <div style="margin-top: 20px; font-size: 48px; color: #27ae60;">✓</div>
+                </div>
+            `;
+        }
+        return;
+    }
+
+    const similarityHeader = document.querySelector('.similarity-header');
+    if (similarityHeader) {
+        similarityHeader.innerHTML = `
+            <div class="chart-container" style="width: 65%; height: 120px; margin: 0 auto;">
+                <canvas id="similarityChart"></canvas>
+            </div>
+            <div class="similarity-label">Overall Similarity: ${similarityPercentage}%</div>
+            <div class="chart-legend" id="chartLegend"></div>
+
+        `;
+
+        const progressBarContainer = document.createElement('div');
+        progressBarContainer.id = 'pageProgressBarContainer';
+        progressBarContainer.style.cssText = 'padding: 20px 0; margin: 20px 0;';
+        progressBarContainer.innerHTML = `
+            <div style="margin-bottom: 10px; font-size: 14px; font-weight: 600; color: #2c3e50;">
+                Global Content Distribution - All Pages
+            </div>
+            <div id="pageProgressBar" style="display: flex; height: 40px; background: #ecf0f1; border-radius: 8px; overflow: hidden; position: relative;"></div>
+            <div id="pageProgressLegend" style="margin-top: 10px; font-size: 12px; color: #7f8c8d;"></div>
+        `;
+        
+        similarityHeader.parentNode.insertBefore(progressBarContainer, document.querySelector('.switch-container'));
+
+        const ctx = document.getElementById('similarityChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // 🔥 IMPORTANTE: Desactivar para control manual del tamaño
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} blocks (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '70%',
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+        
+        const legendContainer = document.getElementById('chartLegend');
+        if (legendContainer) {
+            // 🔥 CORRECCIÓN: Agregar el porcentaje total a la leyenda
+            const totalLegendItem = document.createElement('div');
+            totalLegendItem.className = 'legend-item';
+            totalLegendItem.style.cssText = 'font-weight: bold; margin-bottom: 8px; font-size: 14px; color: #2c3e50;';
+            totalLegendItem.innerHTML = `Overall Similarity: ${similarityPercentage}%`;
+            legendContainer.appendChild(totalLegendItem);
+            
+            chartData.labels.forEach((label, index) => {
+                const value = chartData.datasets[0].data[index];
+                const color = chartData.datasets[0].backgroundColor[index];
+                const total = chartData.datasets[0].data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.innerHTML = `
+                    <span class="legend-color" style="background: ${color};"></span>
+                    <span>${label}: ${percentage}%</span>
+                `;
+                legendContainer.appendChild(legendItem);
+            });
+        }
+
+        // Evento de doble click en el donut para Sankey
+        setTimeout(() => {
+            const chartCanvas = document.getElementById('similarityChart');
+            if (chartCanvas) {
+                chartCanvas.addEventListener('dblclick', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const rect = this.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    
+                    const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+                    const innerRadius = Math.min(centerX, centerY) * 0.7;
+                    
+                    if (distance < innerRadius) {
+                        openSankeyModal();
+                    }
+                });
+            }
+        }, 1000);
+
+        // Botón alternativo - 🔥 CORRECCIÓN: Ajustar posición para el nuevo tamaño
+        const chartContainer = document.querySelector('.chart-container');
+        if (chartContainer) {
+            const sankeyButton = document.createElement('button');
+            sankeyButton.style.cssText = `
+                position: absolute;
+                bottom: 5px;
+                right: 5px;
+                background: #222dff;
+                color: white;
+                border: none;
+                padding: 3px 8px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 11px;
+                font-weight: 600;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+                transition: all 0.2s;
+                z-index: 10;
+            `;
+            sankeyButton.innerHTML = '📊 Flow';
+            sankeyButton.title = 'Click para ver el diagrama Sankey';
+            
+            sankeyButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                openSankeyModal();
+            });
+            
+            chartContainer.style.position = 'relative';
+            chartContainer.appendChild(sankeyButton);
+        }
+    }
+}
+// 🔥 FUNCIÓN PARA VERIFICAR LA DISCREPANCIA EN BLOQUES
+function debugBlockDiscrepancy() {
+    console.log('=== 🔍 DEBUG DISCREPANCIA DE BLOQUES ===');
+    
+    const allPages = document.querySelectorAll('.pdf-page');
+    let manualValidBlocks = 0;
+    let manualBlocksWithMatches = 0;
+    const manualBlocksWithHighlights = new Set();
+    
+    allPages.forEach(page => {
+        const textBlocks = Array.from(page.querySelectorAll('.text-block'));
+        
+        textBlocks.forEach(block => {
+            const spans = block.querySelectorAll('.text-span');
+            let hasValidText = false;
+            let blockHasMatches = false;
+            
+            spans.forEach(span => {
+                if (span.textContent.trim().length > 10) {
+                    hasValidText = true;
+                }
+                if (span.classList.contains('highlight')) {
+                    blockHasMatches = true;
+                    manualBlocksWithHighlights.add(block);
+                }
+            });
+            
+            if (hasValidText) {
+                manualValidBlocks++;
+                if (blockHasMatches) {
+                    manualBlocksWithMatches++;
+                }
+            }
+        });
+    });
+    
+    console.log('📊 Conteo manual:', {
+        manualValidBlocks,
+        manualBlocksWithMatches,
+        manualBlocksWithHighlightsSize: manualBlocksWithHighlights.size,
+        blocksWithHighlightsGlobalSize: blocksWithHighlights.size
+    });
+    
+    console.log('📊 Diferencia:', {
+        validBlocksDiff: manualValidBlocks - blocksWithHighlights.size,
+        matchesDiff: manualBlocksWithMatches - blocksWithHighlights.size
+    });
+}
+
+// Ejecutar después de 3 segundos
+setTimeout(debugBlockDiscrepancy, 3000);
+
+        function createCharts_() {
+            const stats = calculateStats();
+
+            if (stats.totalTextBlocks === 0) {
+                console.warn('⚠️ No hay bloques de texto válidos');
+                const similarityHeader = document.querySelector('.similarity-header');
+                if (similarityHeader) {
+                    similarityHeader.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #7f8c8d;">
+                            <h3>No se pudo analizar el documento</h3>
+                            <p>No se encontraron bloques de texto válidos</p>
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            // CORRECCIÓN: Cálculo correcto del porcentaje
+            const similarityPercentage = ((stats.totalTermsFound / stats.totalTextBlocks) * 100).toFixed(1);
+
+            console.log('\n📊 CÁLCULO DE SIMILITUD:');
+            console.log('Total text-blocks:', stats.totalTextBlocks);
+            console.log('Bloques con matches:', stats.totalTermsFound);
+            console.log('Similitud:', similarityPercentage + '%');
+
+            const chartData = {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [],
+                    borderColor: '#ffffff',
+                    borderWidth: 2
+                }]
+            };
+
+            Object.entries(stats.statsBySource).forEach(([type, data]) => {
+                if (data.count > 0) {
+                    chartData.labels.push(data.label);
+                    chartData.datasets[0].data.push(data.count);
+                    chartData.datasets[0].backgroundColor.push(data.color);
+                }
+            });
+
+            if (stats.blocksWithoutMatches > 0) {
+                chartData.labels.push('No Match');
+                chartData.datasets[0].data.push(stats.blocksWithoutMatches);
+                chartData.datasets[0].backgroundColor.push('#ecf0f1');
+            }
+
+            if (chartData.datasets[0].data.length === 0) {
+                console.warn('⚠️ No hay datos para el gráfico');
+                const similarityHeader = document.querySelector('.similarity-header');
+                if (similarityHeader) {
+                    similarityHeader.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #7f8c8d;">
+                            <h3>No se encontraron coincidencias</h3>
+                            <p>El documento parece ser completamente original</p>
+                            <div style="margin-top: 20px; font-size: 48px; color: #27ae60;">✓</div>
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            const similarityHeader = document.querySelector('.similarity-header');
+            if (similarityHeader) {
+                similarityHeader.innerHTML = `
+                    <div class="chart-container">
+                        <canvas id="similarityChart"></canvas>
+                    </div>
+                    <div class="similarity-label">Overall Similarity: ${similarityPercentage}%</div>
+                    <div class="chart-legend" id="chartLegend"></div>
+                `;
+
+                const progressBarContainer = document.createElement('div');
+                progressBarContainer.id = 'pageProgressBarContainer';
+                progressBarContainer.style.cssText = 'padding: 20px 0; margin: 20px 0;';
+                progressBarContainer.innerHTML = `
+                    <div style="margin-bottom: 10px; font-size: 14px; font-weight: 600; color: #2c3e50;">
+                        Global Content Distribution - All Pages
+                    </div>
+                    <div id="pageProgressBar" style="display: flex; height: 40px; background: #ecf0f1; border-radius: 8px; overflow: hidden; position: relative;"></div>
+                    <div id="pageProgressLegend" style="margin-top: 10px; font-size: 12px; color: #7f8c8d;"></div>
+                `;
+                
+                similarityHeader.parentNode.insertBefore(progressBarContainer, document.querySelector('.switch-container'));
+
+                const centerTextPlugin = {
+                    id: 'centerText',
+                    afterDraw: function(chart) {
+                        if (chart.config.type === 'doughnut') {
+                            const ctx = chart.ctx;
+                            const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                            const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                            
+                            ctx.save();
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            
+                            ctx.font = 'bold 32px Arial';
+                            ctx.fillStyle = '#2196F3';
+                            ctx.fillText(chart.config.options.plugins.centerText.percentage, centerX, centerY);
+                            
+                            ctx.restore();
+                        }
+                    }
+                };
+
+                Chart.register(centerTextPlugin);
+                
+                const ctx = document.getElementById('similarityChart').getContext('2d');
+                const chart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${label}: ${value} blocks (${percentage}%)`;
+                                    }
+                                }
+                            },
+                            centerText: {
+                                percentage: `${similarityPercentage}%`
+                            }
+                        },
+                        cutout: '70%',
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true,
+                            duration: 1500,
+                            easing: 'easeOutQuart'
+                        }
+                    }
+                });
+                
+                const legendContainer = document.getElementById('chartLegend');
+                if (legendContainer) {
+                    chartData.labels.forEach((label, index) => {
+                        const value = chartData.datasets[0].data[index];
+                        const color = chartData.datasets[0].backgroundColor[index];
+                        const total = chartData.datasets[0].data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        
+                        const legendItem = document.createElement('div');
+                        legendItem.className = 'legend-item';
+                        legendItem.innerHTML = `
+                            <span class="legend-color" style="background: ${color};"></span>
+                            <span>${label}: ${percentage}%</span>
+                        `;
+                        legendContainer.appendChild(legendItem);
+                    });
+                }
+
+                // Evento de doble click en el donut para Sankey
+                setTimeout(() => {
+                    const chartCanvas = document.getElementById('similarityChart');
+                    if (chartCanvas) {
+                        chartCanvas.addEventListener('dblclick', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            const rect = this.getBoundingClientRect();
+                            const x = e.clientX - rect.left;
+                            const y = e.clientY - rect.top;
+                            const centerX = rect.width / 2;
+                            const centerY = rect.height / 2;
+                            
+                            const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+                            const innerRadius = Math.min(centerX, centerY) * 0.7;
+                            
+                            if (distance < innerRadius) {
+                                openSankeyModal();
+                            }
+                        });
+                    }
+                }, 1000);
+
+                // Botón alternativo
+                const chartContainer = document.querySelector('.chart-container');
+                if (chartContainer) {
+                    const sankeyButton = document.createElement('button');
+                    sankeyButton.style.cssText = `
+                        position: absolute;
+                        bottom: 10px;
+                        right: 10px;
+                        background: #222dff;
+                        color: white;
+                        border: none;
+                        padding: 4px 9px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        font-weight: 600;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                        transition: all 0.2s;
+                        z-index: 10;
+                    `;
+                    sankeyButton.innerHTML = ' <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard-data" viewBox="0 0 16 16"><path d="M4 11a1 1 0 1 1 2 0v1a1 1 0 1 1-2 0zm6-4a1 1 0 1 1 2 0v5a1 1 0 1 1-2 0zM7 9a1 1 0 0 1 2 0v3a1 1 0 1 1-2 0z"/><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>Content Flow Analysis';
+                    sankeyButton.title = 'Click para ver el diagrama Sankey';
+                    
+                    sankeyButton.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        openSankeyModal();
+                    });
+                    
+                    chartContainer.style.position = 'relative';
+                    chartContainer.appendChild(sankeyButton);
+                }
+            }
+        }
+
+        // ========== SANKEY MODAL ==========
+        function openSankeyModal() {
+            console.log('🎨 openSankeyModal() llamado');
+            
+            const modal = document.getElementById('sankeyModal');
+            if (!modal) {
+                console.error('❌ Modal #sankeyModal NO EXISTE en el DOM');
+                alert('Error: El modal de Sankey no está disponible en el HTML.\n\nAgrega este código a tu HTML:\n<div id="sankeyModal" class="modal">...</div>');
+                return;
+            }
+            
+            console.log('✅ Modal encontrado:', modal);
+            
+            // Verificar Google Charts
+            if (typeof google === 'undefined') {
+                console.error('❌ Google Charts NO está cargado');
+                
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title">⏳ Cargando Google Charts...</h2>
+                            <button class="modal-close" onclick="closeSankeyModal()">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="text-align:center; padding:100px;">
+                                <p style="font-size:18px; color:#7f8c8d;">
+                                    Cargando biblioteca de gráficos...<br>
+                                    <small>Si esto tarda mucho, recarga la página</small>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                modal.classList.add('show');
+                
+                // Intentar cargar Google Charts dinámicamente
+                const script = document.createElement('script');
+                script.src = 'https://www.gstatic.com/charts/loader.js';
+                script.onload = function() {
+                    console.log('✅ Google Charts script cargado');
+                    google.charts.load('current', {'packages':['sankey']});
+                    google.charts.setOnLoadCallback(function() {
+                        console.log('✅ Google Charts inicializado');
+                        drawSankeyChart();
+                    });
+                };
+                script.onerror = function() {
+                    console.error('❌ Error al cargar Google Charts');
+                    modal.innerHTML = `
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h2 class="modal-title">❌ Error</h2>
+                                <button class="modal-close" onclick="closeSankeyModal()">×</button>
+                            </div>
+                            <div class="modal-body">
+                                <div style="text-align:center; padding:50px; color:#e74c3c;">
+                                    <h3>No se pudo cargar Google Charts</h3>
+                                    <p>Verifica tu conexión a internet</p>
+                                    <button onclick="location.reload()" style="
+                                        padding:10px 20px;
+                                        background:#3498db;
+                                        color:white;
+                                        border:none;
+                                        border-radius:6px;
+                                        cursor:pointer;
+                                        margin-top:20px;
+                                    ">Recargar Página</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                };
+                document.head.appendChild(script);
+                return;
+            }
+            
+            console.log('✅ Google Charts disponible');
+            
+            // Abrir modal
+            modal.classList.add('show');
+            console.log('✅ Clase "show" agregada al modal');
+            
+            // Verificar que google.visualization existe
+            if (!google.visualization) {
+                console.warn('⚠️ google.visualization no existe aún, esperando...');
+                google.charts.setOnLoadCallback(function() {
+                    console.log('✅ google.visualization cargado, dibujando...');
+                    setTimeout(() => {
+                        drawSankeyChart();
+                    }, 100);
+                });
+            } else {
+                console.log('✅ google.visualization existe, dibujando inmediatamente');
+                setTimeout(() => {
+                    drawSankeyChart();
+                }, 100);
+            }
+        }
+
+        // Función para cerrar el modal
+        window.closeSankeyModal = function() {
+            console.log(' Cerrando modal Sankey');
+            const modal = document.getElementById('sankeyModal');
+            if (modal) {
+                modal.classList.remove('show');
+                console.log(' Clase "show" removida');
+            } else {
+                console.error(' Modal no encontrado al cerrar');
+            }
+        };
+
+        // Event listener para cerrar al hacer click fuera
+        setTimeout(() => {
+            const sankeyModal = document.getElementById('sankeyModal');
+            if (sankeyModal) {
+                console.log(' Evento de click en overlay registrado');
+                sankeyModal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        console.log(' Click en overlay detectado');
+                        closeSankeyModal();
+                    }
+                });
+            } else {
+                console.error(' sankeyModal no encontrado para evento');
+            }
+        }, 500);
+
+
+        const sankeyModal = document.getElementById('sankeyModal');
+        if (sankeyModal) {
+            sankeyModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeSankeyModal();
+                }
+            });
+        }
+
+        function drawSankeyChart() {
+            if (typeof google === 'undefined' || !google.visualization) {
+                console.error('❌ Google Charts no disponible');
+                return;
+            }
+
+            //  CORRECCIÓN CRÍTICA: Contar BLOQUES por fuente, no términos
+            const blocksBySource = {};
+            sources.forEach(source => {
+                blocksBySource[source.type] = new Set();
+            });
+
+            // Recorrer TODOS los bloques con highlights y contar por fuente
+            const allBlocks = document.querySelectorAll('.text-block');
+            let totalValidBlocks = 0;
+            let blocksWithHighlightsCount = 0;
+
+            allBlocks.forEach(block => {
+                const spans = block.querySelectorAll('.text-span');
+                let hasValidText = false;
+                
+                spans.forEach(span => {
+                    if (span.textContent.trim().length > 10) {
+                        hasValidText = true;
+                    }
+                });
+                
+                if (hasValidText) {
+                    totalValidBlocks++;
+                    
+                    const highlights = block.querySelectorAll('.highlight');
+                    if (highlights.length > 0) {
+                        blocksWithHighlightsCount++;
+                        
+                        // Para CADA bloque con highlights, registrar TODAS sus fuentes
+                        highlights.forEach(highlight => {
+                            const sourceType = highlight.getAttribute('data-source-type');
+                            if (sourceType && blocksBySource[sourceType]) {
+                                blocksBySource[sourceType].add(block);
+                            }
+                        });
+                    }
+                }
+            });
+
+            console.log('🔍 SANKEY - Bloques reales por fuente:');
+            const blocksCountBySource = {};
+            sources.forEach(source => {
+                const count = blocksBySource[source.type].size;
+                blocksCountBySource[source.type] = {
+                    count: count,
+                    label: source.label,
+                    color: source.color
+                };
+                console.log(`   ${source.label}: ${count} bloques`);
+            });
+
+            const blocksWithoutMatches = totalValidBlocks - blocksWithHighlightsCount;
+            const matchPercent = totalValidBlocks > 0 ? ((blocksWithHighlightsCount / totalValidBlocks) * 100).toFixed(1) : '0';
+            const noMatchPercent = totalValidBlocks > 0 ? ((blocksWithoutMatches / totalValidBlocks) * 100).toFixed(1) : '0';
+
+            console.log('🔍 SANKEY - Resumen real:', {
+                totalValidBlocks,
+                blocksWithHighlightsCount,
+                blocksWithoutMatches,
+                matchPercent,
+                noMatchPercent,
+                foundTermsCount: foundTerms.length
+            });
+
+            const data = new google.visualization.DataTable();
+            data.addColumn('string', 'From');
+            data.addColumn('string', 'To');
+            data.addColumn('number', 'Weight');
+            data.addColumn({type: 'string', role: 'tooltip', p: {html: true}});
+            
+            //  CORRECCIÓN: Usar colores EXACTOS de las fuentes
+            const nodeColors = [];
+            const nodeMap = new Map();
+            
+            const registerNode = (nodeName, color) => {
+                if (!nodeMap.has(nodeName)) {
+                    nodeMap.set(nodeName, nodeColors.length);
+                    nodeColors.push(color);
+                }
+            };
+            
+            // Registrar nodos principales
+            registerNode(`Total (${totalValidBlocks})`, '#95a5a6');
+            
+            if (blocksWithHighlightsCount > 0) {
+                registerNode(`With Matches Found (${blocksWithHighlightsCount})`, '#bdc3c7');
+            }
+            
+            if (blocksWithoutMatches > 0) {
+                registerNode(`Original Content (${blocksWithoutMatches})`, '#7f8c8d');
+            }
+            
+            //  CORRECCIÓN: Registrar CADA fuente que tenga BLOQUES (no términos)
+            sources.forEach(source => {
+                const count = blocksCountBySource[source.type].count;
+                if (count > 0) {
+                    registerNode(`${source.label} (${count})`, source.color);
+                }
+            });
+            
+            //  CORRECCIÓN: Conexiones desde Total usando BLOQUES reales
+            if (blocksWithHighlightsCount > 0) {
+                data.addRow([
+                    `Total (${totalValidBlocks})`,
+                    `With Matches Found (${blocksWithHighlightsCount})`,
+                    blocksWithHighlightsCount,
+                    `<div style="padding:10px; font-family:Arial; min-width:180px;">
+                        <strong style="color:#2ecc71;">With Matches Found</strong><br/>
+                        <span style="font-size:20px; font-weight:bold;">${blocksWithHighlightsCount}</span> bloques<br/>
+                        <span style="color:#7f8c8d;">${matchPercent}% del total</span>
+                        <div style="margin-top:6px; font-size:11px; color:#95a5a6;">
+                            (${foundTerms.length} términos distribuidos)
+                        </div>
+                    </div>`
+                ]);
+            }
+            
+            if (blocksWithoutMatches > 0) {
+                data.addRow([
+                    `Total (${totalValidBlocks})`,
+                    `Original Content (${blocksWithoutMatches})`,
+                    blocksWithoutMatches,
+                    `<div style="padding:10px; font-family:Arial; min-width:180px;">
+                        <strong style="color:#95a5a6;">Original Content</strong><br/>
+                        <span style="font-size:20px; font-weight:bold;">${blocksWithoutMatches}</span> blocks<br/>
+                        <span style="color:#7f8c8d;">${noMatchPercent}% of the total</span>
+                    </div>`
+                ]);
+            }
+            
+            //  CORRECCIÓN CRÍTICA: Conexiones desde "Con Coincidencias" a CADA fuente usando BLOQUES
+            let totalSourceBlocks = 0;
+            sources.forEach(source => {
+                const count = blocksCountBySource[source.type].count;
+                if (count > 0) {
+                    totalSourceBlocks += count;
+                    
+                    const sourcePercent = blocksWithHighlightsCount > 0 ? ((count / blocksWithHighlightsCount) * 100).toFixed(1) : '0';
+                    const termCount = foundTerms.filter(term => term.sourceType === source.type).length;
+                    
+                    data.addRow([
+                        `With Matches Found (${blocksWithHighlightsCount})`,
+                        `${source.label} (${count})`,
+                        count,
+                        `<div style="padding:10px; font-family:Arial; min-width:220px;">
+                            <div style="width:16px; height:16px; background:${source.color}; display:inline-block; border-radius:3px; margin-right:8px;"></div>
+                            <strong>${source.label}</strong><br/>
+                            <span style="font-size:20px; font-weight:bold;">${count}</span> blocks<br/>
+                            <span style="color:#7f8c8d;">${sourcePercent}% from blocks with matches</span>
+                            <div style="margin-top:4px; font-size:11px; color:#95a5a6;">
+                                (${termCount} specialized terms)
+                            </div>
+                        </div>`
+                    ]);
+                }
+            });
+            
+            //  VERIFICACIÓN: Mostrar si hay bloques con múltiples fuentes
+            console.log('🔍 SANKEY - Verificación final:', {
+                blocksWithHighlightsCount,
+                totalSourceBlocks,
+                diferencia: totalSourceBlocks - blocksWithHighlightsCount,
+                bloquesConMultiplesFuentes: totalSourceBlocks - blocksWithHighlightsCount
+            });
+            
+            const options = {
+                width: '100%',
+                height: 450,
+                sankey: {
+                    node: {
+                        colors: nodeColors,
+                        label: {
+                            fontName: 'Arial',
+                            fontSize: 12,
+                            color: '#2c3e50',
+                            bold: true
+                        },
+                        nodePadding: 20,
+                        width: 15,
+                        interactivity: true
+                    },
+                    link: {
+                        colorMode: 'gradient',
+                        colors: nodeColors,
+                        fillOpacity: 0.8
+                    }
+                },
+                tooltip: {
+                    isHtml: true
+                }
+            };
+            
+            const container = document.getElementById('sankeyChart');
+            if (!container) {
+                console.error('❌ Contenedor sankeyChart no encontrado');
+                return;
+            }
+            
+            container.innerHTML = `
+                <div style="text-align:center; padding:15px; background:#f8f9fa; border-bottom:1px solid #dee2e6;">
+                    <h4 style="margin:0; color:#2c3e50;">Block Distribution by Source</h4>
+                    <p style="margin:5px 0 0 0; color:#6c757d; font-size:14px;">
+                        ${totalValidBlocks} blocks • ${blocksWithHighlightsCount} with matches (${matchPercent}%) • ${foundTerms.length} terms found
+                    </p>
+                    ${(totalSourceBlocks > blocksWithHighlightsCount) ? 
+                        `<p style="margin:3px 0 0 0; color:#e67e22; font-size:12px;">
+                            ⚠️ Some blocks contain multiple sources
+                        </p>` : ''
+                    }
+                </div>
+                <div id="sankeyChartCanvas" style="width:100%; height:550px;"></div>
+            `;
+            
+            try {
+                const chartContainer = document.getElementById('sankeyChartCanvas');
+                const sankeyChart = new google.visualization.Sankey(chartContainer);
+                sankeyChart.draw(data, options);
+                console.log('✅ Gráfico Sankey dibujado correctamente');
+            } catch (error) {
+                console.error('❌ Error al dibujar Sankey:', error);
+                container.innerHTML += `
+                    <div style="text-align:center; padding:20px; color:#dc3545;">
+                        <p>Error al generar el gráfico: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+  
+        // ========== OTRAS FUNCIONES DE INICIALIZACIÓN ==========
+        function initializeTabs() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetTab = button.getAttribute('data-tab');
+                    
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabPanels.forEach(panel => panel.classList.remove('active'));
+                    
+                    button.classList.add('active');
+                    document.getElementById(`tab-${targetTab}`).classList.add('active');
+                });
+            });
+        }
+
+        function populateReferences() {
+            const container = document.getElementById('referenceslist');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            if (term_references.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;">No references found</div>';
+                return;
+            }
+            
+            term_references.forEach((ref, index) => {
+                const card = document.createElement('div');
+                card.className = 'reference-card';
+                
+                card.innerHTML = `
+                    <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 16px;">${ref.title || `Reference ${index + 1}`}</h4>
+                    <a href="${ref.url}" target="_blank" class="reference-url">${ref.url}</a>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function populateImages() {
+            const container = document.getElementById('imageslist');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            if (term_images.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #7f8c8d;">No images found</div>';
+                return;
+            }
+            
+            term_images.forEach((img) => {
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                card.innerHTML = `
+                    <img src="${img.url}" alt="${img.alt || 'Image'}" class="image-preview" loading="lazy">
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function hideEmptyTabs() {
+            const tabsConfig = [
+                { id: 'matches', hasData: foundTerms.length > 0 },
+                { id: 'references', hasData: term_references.length > 0 },
+                { id: 'citations', hasData: term_citations.length > 0 },
+                { id: 'images', hasData: term_images.length > 0 }
+            ];
+            
+            tabsConfig.forEach(config => {
+                const tabButton = document.querySelector(`[data-tab="${config.id}"]`);
+                const tabPanel = document.getElementById(`tab-${config.id}`);
+                
+                if (!config.hasData) {
+                    if (tabButton) tabButton.style.display = 'none';
+                    if (tabPanel) tabPanel.style.display = 'none';
+                } else {
+                    if (tabButton) tabButton.style.display = '';
+                    if (tabPanel) tabPanel.style.display = '';
+                }
+            });
+            
+            const firstVisibleTab = document.querySelector('.tab-button:not([style*="display: none"])');
+            if (firstVisibleTab) {
+                firstVisibleTab.click();
+            }
+        }
+
+        function renderGlobalAIModel() {
+            const aiGlobalDiv = document.getElementById('ai_global');
+            if (!aiGlobalDiv) return;
+            
+            const globalModel = analysisResult?.result_ai?.summary?.global_model;
+            
+            aiGlobalDiv.style.textAlign = 'left';
+            aiGlobalDiv.innerHTML = `
+                <div style="text-align: left;">
+                    <div style="
+                        background: #e5e7eb; 
+                        color: #374151; 
+                        padding: 6px 14px; 
+                        border-radius: 20px; 
+                        font-size: 10px; 
+                        font-weight: 600;
+                        white-space: nowrap;
+                        display: inline-block;
+                    ">AI Model: ${globalModel || 'Unknown'}</div>
+                </div>
+            `;
+        }
+
+        // ========== KEYBOARD SHORTCUTS ==========
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft') {
+                goToPreviousPage();
+            } else if (e.key === 'ArrowRight') {
+                goToNextPage();
+            }
+        });
+
+        // ========== INICIALIZACIÓN COMPLETA (ORDEN CORRECTO) ==========
+        console.log('🚀 Iniciando sistema completo...');
+
+        // 1. Primero resaltar todos los términos
+        highlightAll();
+        
+        // 2. Esperar a que el resaltado termine, luego inicializar todo lo demás
+        setTimeout(() => {
+            console.log('📊 Iniciando componentes de UI...');
+            
+            // 3. Inicializar navegación
+            initializeNavigation();
+
+            // 4. Crear gráficos y estadísticas
+            createCharts();
+
+            // 5. Poblar lista de resultados (DESPUÉS de resaltar)
+            populateSourcesList();
+
+            // 6. Actualizar progress bar global
+            if (totalPages > 0) {
+                updatePageProgressBar(1, true);
+            }
+
+            // 7. Inicializar tabs
+            initializeTabs();
+            
+            // 8. Poblar otras secciones
+            populateReferences();
+            populateImages();
+            
+            // 9. Ocultar tabs vacíos
+            hideEmptyTabs();
+            
+            // 10. Renderizar modelo AI
+            renderGlobalAIModel();
+
+            // 11. CRÍTICO: Adjuntar eventos de tooltip DESPUÉS de todo
+            setTimeout(() => {
+                attachTooltipEvents();
+                console.log('✅ Tooltips adjuntados');
+            }, 500);
+
+            //console.log('✅ Sistema completamente inicializado');
+            //console.log(`📝 Términos encontrados: ${foundTerms.length}`);
+            //console.log(`📄 Páginas totales: ${totalPages}`);
+            //console.log(`🎯 Bloques con highlights: ${blocksWithHighlights.size}`);
+            
+        }, 300);
+
+        // ========== SWITCH DE HIGHLIGHTS (UNA SOLA VEZ) ==========
+        const toggleSwitch = document.getElementById('highlight-toggle');
+
+        if (toggleSwitch) {
+            //console.log('🔘 Switch encontrado');
+            highlightsVisible = toggleSwitch.checked;
+            
+            toggleSwitch.addEventListener('change', function() {
+                highlightsVisible = this.checked;
+                toggleHighlights(highlightsVisible);
+                
+                const progressBarContainer = document.getElementById('pageProgressBarContainer');
+                const chartLegend = document.getElementById('chartLegend');
+                
+                if (highlightsVisible) {
+                    resetHighlightEffects();
+                    if (progressBarContainer) progressBarContainer.style.display = 'block';
+                    if (chartLegend) chartLegend.style.display = 'flex';
+                } else {
+                    if (progressBarContainer) progressBarContainer.style.display = 'none';
+                    if (chartLegend) chartLegend.style.display = 'none';
+                }
+            });
+            
+            // Aplicar estado inicial
+            toggleHighlights(highlightsVisible);
+        } else {
+            console.error('❌ Switch no encontrado');
+        }
+                
+    }); // FIN del DOMContentLoaded
+</script>
+{% endblock %}

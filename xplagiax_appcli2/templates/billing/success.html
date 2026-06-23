@@ -1,0 +1,46 @@
+<!-- ====== BILLING SUCCESS TEMPLATE (billing/success.html) ====== -->
+<div style="display: none;" id="billing-success-template">
+{% extends "base.html" %}
+
+{% block title %}Pago Exitoso - Mi App{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                </div>
+                <h2 class="card-title text-success mb-3">¡Pago Exitoso!</h2>
+                <p class="lead">Tu suscripción ha sido activada correctamente.</p>
+                
+                {% if session %}
+                <div class="alert alert-info">
+                    <h5><i class="fas fa-info-circle"></i> Detalles del Pago</h5>
+                    <p><strong>ID de Sesión:</strong> {{ session.id }}</p>
+                    {% if session.metadata %}
+                        {% if session.metadata.plan_id %}
+                            <p><strong>Plan:</strong> {{ session.metadata.plan_id }}</p>
+                        {% endif %}
+                        {% if session.metadata.billing_cycle %}
+                            <p><strong>Ciclo:</strong> {{ session.metadata.billing_cycle }}</p>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                        <i class="fas fa-tachometer-alt"></i> Ir al Dashboard
+                    </a>
+                    <a href="{{ url_for('billing.subscription_status') }}" class="btn btn-outline-info">
+                        <i class="fas fa-credit-card"></i> Ver Suscripción
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+</div>

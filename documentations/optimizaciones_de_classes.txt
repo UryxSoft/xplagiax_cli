@@ -1,0 +1,41 @@
+
+
+
+
+
+1- class OcrDocument:
+
+    El porcentaje de mejora en eficiencia, uso de recursos y velocidad puede variar dependiendo de factores como el tamaño de los archivos PDF, la cantidad de páginas, el tipo de hardware y el entorno en el que se ejecute el código. Sin embargo, con las optimizaciones sugeridas, se pueden esperar mejoras generales en los siguientes aspectos:
+
+    1. Uso de __slots__:
+    Mejora en uso de memoria: La reducción en el consumo de memoria podría alcanzar hasta un 20-30% para cada instancia de la clase OcrDocument, especialmente cuando hay muchos objetos de la clase. Esto se debe a que __slots__ elimina la necesidad de un diccionario por objeto para almacenar atributos, lo cual ahorra memoria.
+    2. Uso de listas en lugar de DataFrame.append en un bucle:
+    Velocidad de procesamiento: Usar listas y luego convertirlas en un DataFrame puede aumentar la velocidad de extracción de texto en aproximadamente un 30-40%, especialmente si estás extrayendo texto de múltiples páginas. Esto evita la reubicación constante de datos en el DataFrame en cada iteración.
+    Consumo de memoria: Esta optimización también puede reducir el uso de memoria en un 15-20%, ya que el DataFrame.append en un bucle genera múltiples copias temporales en la memoria.
+    3. Minimización de llamadas a os.path y uso de rutas absolutas:
+    Velocidad en operaciones de archivos: Al evitar concatenaciones repetidas y minimizando operaciones en el sistema de archivos, podrías ver mejoras de velocidad en operaciones de archivos de entre un 10-15%, dependiendo del sistema y el número de archivos involucrados.
+    Impacto en consumo de recursos: Estas mejoras son más notables cuando se trabaja con varios archivos, pues cada llamada a funciones del sistema de archivos implica una operación que consume recursos.
+    4. Flujo optimizado en process_pdfs:
+    Velocidad general del proceso: Al reorganizar el flujo y evitar operaciones redundantes, el proceso podría acelerarse en un 10-20%. Este aumento dependerá principalmente de cuántos archivos estés procesando, ya que reducimos llamadas y el tiempo de ejecución en cada operación.
+    Estimación Total:
+    Considerando todos estos factores, la mejora total en eficiencia y velocidad podría estar en el rango del 25-40% para el proceso completo, en entornos con múltiples archivos y páginas.
+
+    Para una estimación más precisa, se recomienda realizar pruebas en el código antes y después de las optimizaciones.
+
+
+
+2- class ImageClassifier:
+
+    Explicación de las optimizaciones:
+    Carga única del modelo en el constructor:
+
+    Evita recargar el modelo en cada llamada de img_analizer, ahorrando una cantidad considerable de recursos y mejorando la velocidad.
+    Eliminación del uso de @lru_cache:
+
+    No es necesario aquí, ya que img_analizer no produce resultados idénticos siempre y no depende de cálculos internos repetitivos.
+    Reducción de asignaciones:
+
+    Elimina la lista adicional test y usa directamente np.expand_dims para crear el formato de entrada adecuado.
+    Beneficios esperados:
+    Velocidad: La carga única del modelo debería mejorar significativamente la velocidad en cada llamada a img_analizer, posiblemente hasta un 80% si se llama al método varias veces.
+    Consumo de memoria: La eliminación de variables innecesarias y la carga optimizada del modelo deberían reducir el consumo de memoria en alrededor de un 20-30%.

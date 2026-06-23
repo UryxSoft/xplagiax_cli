@@ -1,0 +1,172 @@
+/* Logout Modal Overlay */
+.logout-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.logout-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Logout Modal Container */
+.logout-modal-container {
+    background: white;
+    border-radius: 16px;
+    padding: 0;
+    width: 90%;
+    max-width: 440px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    transform: scale(0.9) translateY(20px);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.logout-modal-overlay.active .logout-modal-container {
+    transform: scale(1) translateY(0);
+}
+
+/* Logout Modal Header */
+.logout-modal-header {
+    padding: 24px 24px 16px 24px;
+    text-align: center;
+}
+
+.logout-modal-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px auto;
+}
+
+.logout-modal-icon svg {
+    width: 32px;
+    height: 32px;
+    color: #dc2626;
+}
+
+.logout-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 8px;
+}
+
+.logout-modal-message {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+/* Logout Modal Footer */
+.logout-modal-footer {
+    padding: 16px 24px 24px 24px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* Logout Buttons - Diseño inline con colores originales */
+.logout-btn {
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 100px;
+    flex: 1;
+}
+
+.logout-btn-cancel {
+    background-color: #f9fafb;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.logout-btn-cancel:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.logout-btn-cancel:active {
+    background-color: #e5e7eb;
+    transform: translateY(1px);
+}
+
+.logout-btn-danger {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+
+.logout-btn-danger:hover {
+    background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+    transform: translateY(-1px);
+}
+
+.logout-btn-danger:active {
+    background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+    transform: translateY(0);
+}
+
+/* Logout Loading state */
+.logout-btn-loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.logout-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: logout-spin 1s linear infinite;
+}
+
+@keyframes logout-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Logout Modal */
+@media (max-width: 480px) {
+    .logout-modal-container {
+        width: 95%;
+        margin: 20px;
+    }
+    
+    .logout-modal-footer {
+        flex-direction: row;
+    }
+    
+    .logout-btn {
+        width: auto;
+        flex: 1;
+        min-width: 80px;
+        padding: 10px 20px;
+    }
+}

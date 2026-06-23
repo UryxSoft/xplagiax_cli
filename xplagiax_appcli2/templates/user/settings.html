@@ -1,0 +1,1018 @@
+<!-- templates/user_base.html -->
+{% extends "user/user_base.html" %}
+{% block content %}   
+
+<!-- Dashboard Tab -->
+<div id="dashboard" class="tab-content active">
+    <h1 class="dashboard-title">Sistema de Gestión de Limpieza</h1>
+    
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <h2>Tareas Programadas</h2>
+            <p id="scheduledCount">0</p>
+            <p>Limpiezas pendientes</p>
+        </div>
+        
+        <div class="dashboard-card">
+            <h2>Completadas Hoy</h2>
+            <p id="completedToday">0</p>
+            <p>Tareas ejecutadas</p>
+        </div>
+        
+        <div class="dashboard-card">
+            <h2>Estado del Sistema</h2>
+            <p id="systemStatus">Activo</p>
+            <p>Monitoreo automático</p>
+        </div>
+        
+        <div class="dashboard-card">
+            <h2>Última Actividad</h2>
+            <p id="lastActivity">--</p>
+            <p>Hace minutos</p>
+        </div>
+    </div>
+
+    <!-- Tareas Programadas -->
+    <div class="tab-panel-card">
+        <div class="tab-content-wrapper">
+            <div class="tab-header">
+                <h2>Tareas Programadas</h2>
+                <p>Gestiona las limpiezas pendientes de ejecución</p>
+            </div>
+            
+            <div class="documents-table">
+                <div class="table-header">
+                    <div class="table-row">
+                        <div class="table-cell header-cell">Carpeta</div>
+                        <div class="table-cell header-cell">Programada para</div>
+                        <div class="table-cell header-cell">Estado</div>
+                        <div class="table-cell header-cell">Tiempo restante</div>
+                        <div class="table-cell header-cell">Acciones</div>
+                    </div>
+                </div>
+                <div id="scheduledTasksList">
+                    <!-- Las tareas se cargarán aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Tab -->
+<div id="schedule" class="tab-content">
+    <h1 class="dashboard-title">Programar Limpieza</h1>
+    
+    <div class="tab-panel-card">
+        <div class="tab-content-wrapper">
+            <div class="tab-header">
+                <h2>Nueva Tarea de Limpieza</h2>
+                <p>Programa la eliminación automática de carpetas</p>
+            </div>
+            
+            <form id="scheduleForm">
+                <div class="form-group">
+                    <label for="folderPath">Ruta de la Carpeta</label>
+                    <input type="text" id="folderPath" placeholder="/ruta/completa/a/la/carpeta" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="delayMinutes">Retraso en Minutos</label>
+                    <input type="number" id="delayMinutes" placeholder="60" min="1">
+                </div>
+                
+                <div class="editor-actions">
+                    <button type="button" class="btn-secondary" onclick="testPath()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9,11 12,14 22,4"/>
+                            <path d="M21,12v7a2,2 0,0,1-2,2H5a2,2 0,0,1-2-2V5a2,2 0,0,1,2-2h11"/>
+                        </svg>
+                        Verificar Ruta
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        Programar
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Limpieza Inmediata -->
+            <div class="separator" style="margin: 2rem 0;"></div>
+            
+            <div class="tab-header">
+                <h2>Limpieza Inmediata</h2>
+                <p>Elimina una carpeta inmediatamente sin programación</p>
+            </div>
+            
+            <form id="immediateForm">
+                <div class="form-group">
+                    <label for="immediateFolderPath">Ruta de la Carpeta</label>
+                    <input type="text" id="immediateFolderPath" placeholder="/ruta/completa/a/la/carpeta" required>
+                </div>
+                
+                <div class="editor-actions">
+                    <button type="submit" class="btn-primary btn-danger">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3,6 5,6 21,6"/>
+                            <path d="M19,6v14a2,2 0,0,1-2,2H7a2,2 0,0,1-2-2V6m3,0V4a2,2 0,0,1,2-2h4a2,2 0,0,1,2,2v2"/>
+                        </svg>
+                        Eliminar Ahora
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- History Tab -->
+<div id="history" class="tab-content">
+    <h1 class="dashboard-title">Historial de Limpiezas</h1>
+    
+    <div class="tab-panel-card">
+        <div class="tab-content-wrapper">
+            <div class="tab-header">
+                <h2>Registro de Actividades</h2>
+                <p>Consulta el historial completo de operaciones</p>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <input type="text" id="historySearch" placeholder="Buscar en historial..." 
+                           style="max-width: 300px;">
+                </div>
+            </div>
+            
+            <div class="documents-table">
+                <div class="table-header">
+                    <div class="table-row">
+                        <div class="table-cell header-cell">Fecha/Hora</div>
+                        <div class="table-cell header-cell">Carpeta</div>
+                        <div class="table-cell header-cell">Acción</div>
+                        <div class="table-cell header-cell">Detalles</div>
+                        <div class="table-cell header-cell">ID Tarea</div>
+                    </div>
+                </div>
+                <div id="historyList">
+                    <!-- El historial se cargará aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Config Tab -->
+<div id="config" class="tab-content">
+    <h1 class="dashboard-title">Configuración</h1>
+    
+    <div class="tab-panel-card">
+        <div class="tab-content-wrapper">
+            <div class="tab-header">
+                <h2>Configuración del Sistema</h2>
+                <p>Ajusta los parámetros de funcionamiento</p>
+            </div>
+            
+            <form id="configForm">
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="autoCleanupEnabled"> 
+                        Activar limpieza automática
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="defaultDelayMinutes">Retraso por defecto (minutos)</label>
+                    <input type="number" id="defaultDelayMinutes" min="1" value="60">
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="dryRunMode"> 
+                        Modo simulación (no eliminar realmente)
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="preservePatterns">Patrones a preservar (JSON)</label>
+                    <textarea id="preservePatterns" rows="3" placeholder='[".log", ".config"]'></textarea>
+                </div>
+                
+                <div class="editor-actions">
+                    <button type="button" class="btn-secondary" onclick="loadConfig()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1,4 1,10 7,10"/>
+                            <path d="M3.51,15a9,9 0,0,0,9.49,9"/>
+                            <polyline points="23,20 23,14 17,14"/>
+                            <path d="M20.49,9A9,9 0,0,0,11,0"/>
+                        </svg>
+                        Recargar
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19,21H5a2,2 0,0,1-2-2V5a2,2 0,0,1,2-2h11l5,5v11A2,2 0,0,1,19,21z"/>
+                            <polyline points="17,21 17,13 7,13 7,21"/>
+                            <polyline points="7,3 7,8 15,8"/>
+                        </svg>
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Toast -->
+<div id="notification" class="notification" style="display: none;">
+    <div class="notification-content">
+        <span id="notificationMessage"></span>
+        <button onclick="hideNotification()">&times;</button>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let currentTab = 'dashboard';
+let refreshInterval;
+
+// Inicialización
+document.addEventListener('DOMContentLoaded', function() {
+    setupEventListeners();
+    loadInitialData();
+    startAutoRefresh();
+    addFormValidation();
+});
+
+function setupEventListeners() {
+    // Formulario de programación
+    document.getElementById('scheduleForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        scheduleCleanup();
+    });
+
+    // Formulario de limpieza inmediata
+    document.getElementById('immediateForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        immediateCleanup();
+    });
+
+    // Formulario de configuración
+    document.getElementById('configForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        saveConfig();
+    });
+
+    // Búsqueda en historial
+    document.getElementById('historySearch').addEventListener('input', (e) => {
+        searchHistory(e.target.value);
+    });
+}
+
+// API Functions
+async function apiCall(endpoint, method = 'GET', data = null) {
+    try {
+        const options = {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        };
+
+        if (data) {
+            options.body = JSON.stringify(data);
+        }
+
+        const response = await fetch(`/x_cleanup/api/cleanup${endpoint}`, options);
+        return await response.json();
+    } catch (error) {
+        console.error('API Error:', error);
+        showNotification('Error de conexión con el servidor', 'error');
+        return { success: false, message: 'Error de conexión' };
+    }
+}
+
+async function loadInitialData() {
+    showLoading(true);
+    try {
+        const status = await apiCall('/status');
+        if (status.success) {
+            updateDashboard(status);
+            loadScheduledTasks(status.scheduled_cleanups);
+        }
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function scheduleCleanup() {
+    const folderPath = document.getElementById('folderPath').value;
+    const delayMinutes = document.getElementById('delayMinutes').value;
+
+    const data = { folder_path: folderPath };
+    if (delayMinutes) {
+        data.delay_minutes = parseInt(delayMinutes);
+    }
+
+    const result = await apiCall('/schedule', 'POST', data);
+    
+    if (result.success) {
+        showNotification('Limpieza programada exitosamente', 'success');
+        document.getElementById('scheduleForm').reset();
+        loadInitialData();
+    } else {
+        showNotification(result.message, 'error');
+    }
+}
+
+async function immediateCleanup() {
+    const folderPath = document.getElementById('immediateFolderPath').value;
+    
+    if (!folderPath) {
+        showNotification('Por favor ingresa una ruta de carpeta', 'warning');
+        return;
+    }
+    
+    if (!confirm(`¿Estás seguro de eliminar inmediatamente la carpeta: ${folderPath}?`)) {
+        return;
+    }
+
+    const result = await apiCall('/immediate', 'POST', { folder_path: folderPath });
+    
+    if (result.success) {
+        showNotification('Carpeta eliminada exitosamente', 'success');
+        document.getElementById('immediateForm').reset();
+        loadInitialData();
+    } else {
+        showNotification(result.message, 'error');
+    }
+}
+
+async function cancelCleanup(folderPath) {
+    if (!confirm(`¿Cancelar la limpieza programada para: ${folderPath}?`)) {
+        return;
+    }
+
+    const result = await apiCall('/cancel', 'POST', { folder_path: folderPath });
+    
+    if (result.success) {
+        showNotification('Limpieza cancelada', 'success');
+        loadInitialData();
+    } else {
+        showNotification(result.message, 'error');
+    }
+}
+
+async function loadHistory() {
+    const result = await apiCall('/history');
+    if (result.success) {
+        displayHistory(result.history);
+    }
+}
+
+async function loadConfig() {
+    const result = await apiCall('/config');
+    if (result.success) {
+        displayConfig(result.config);
+    }
+}
+
+async function saveConfig() {
+    const config = {
+        auto_cleanup_enabled: document.getElementById('autoCleanupEnabled').checked,
+        cleanup_delay_minutes: parseInt(document.getElementById('defaultDelayMinutes').value),
+        dry_run: document.getElementById('dryRunMode').checked,
+        preserve_patterns: JSON.parse(document.getElementById('preservePatterns').value || '[]')
+    };
+
+    const result = await apiCall('/config', 'POST', config);
+    
+    if (result.success) {
+        showNotification('Configuración guardada', 'success');
+    } else {
+        showNotification(result.message, 'error');
+    }
+}
+
+async function testPath() {
+    const folderPath = document.getElementById('folderPath').value;
+    if (!folderPath) {
+        showNotification('Ingresa una ruta de carpeta', 'warning');
+        return;
+    }
+    
+    showNotification('Verificando ruta...', 'info');
+    // Aquí podrías hacer una llamada API para verificar la ruta
+}
+
+// UI Functions
+function updateDashboard(status) {
+    document.getElementById('scheduledCount').textContent = status.scheduled_cleanups.length;
+    
+    // Calcular completadas hoy (simulado)
+    document.getElementById('completedToday').textContent = '0';
+    
+    document.getElementById('systemStatus').textContent = 
+        status.config?.auto_cleanup_enabled ? 'Activo' : 'Inactivo';
+    
+    // Última actividad
+    if (status.scheduled_cleanups.length > 0) {
+        const latest = status.scheduled_cleanups[0];
+        const time = new Date(latest.created_at);
+        document.getElementById('lastActivity').textContent = formatTimeAgo(time);
+    }
+}
+
+function loadScheduledTasks(tasks) {
+    const container = document.getElementById('scheduledTasksList');
+    container.innerHTML = '';
+
+    if (tasks.length === 0) {
+        container.innerHTML = '<div class="table-row"><div class="table-cell" style="grid-column: 1 / -1; text-align: center; color: var(--text);">No hay tareas programadas</div></div>';
+        return;
+    }
+
+    tasks.forEach(task => {
+        const row = document.createElement('div');
+        row.className = 'table-row';
+        
+        const scheduledTime = new Date(task.scheduled_time);
+        const timeRemaining = getTimeRemaining(scheduledTime);
+        
+        row.innerHTML = `
+            <div class="table-cell">${task.folder_path}</div>
+            <div class="table-cell">${formatDateTime(scheduledTime)}</div>
+            <div class="table-cell">
+                <span class="status-badge ${task.status}">${task.status}</span>
+            </div>
+            <div class="table-cell">${timeRemaining}</div>
+            <div class="table-cell">
+                <button class="btn-secondary" onclick="cancelCleanup('${task.folder_path}')" style="padding: 0.5rem;">
+                    Cancelar
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(row);
+    });
+}
+
+function displayHistory(history) {
+    const container = document.getElementById('historyList');
+    container.innerHTML = '';
+
+    if (history.length === 0) {
+        container.innerHTML = '<div class="table-row"><div class="table-cell" style="grid-column: 1 / -1; text-align: center; color: var(--text);">No hay historial disponible</div></div>';
+        return;
+    }
+
+    history.forEach(entry => {
+        const row = document.createElement('div');
+        row.className = 'table-row';
+        
+        const timestamp = new Date(entry.timestamp);
+        
+        row.innerHTML = `
+            <div class="table-cell">${formatDateTime(timestamp)}</div>
+            <div class="table-cell">${entry.folder_path}</div>
+            <div class="table-cell">
+                <span class="action-badge ${entry.action}">${entry.action}</span>
+            </div>
+            <div class="table-cell">${entry.details || '--'}</div>
+            <div class="table-cell">#${entry.task_id}</div>
+        `;
+        
+        container.appendChild(row);
+    });
+}
+
+function displayConfig(config) {
+    document.getElementById('autoCleanupEnabled').checked = config.auto_cleanup_enabled || false;
+    document.getElementById('defaultDelayMinutes').value = config.cleanup_delay_minutes || 60;
+    document.getElementById('dryRunMode').checked = config.dry_run || false;
+    document.getElementById('preservePatterns').value = JSON.stringify(config.preserve_patterns || [], null, 2);
+}
+
+// Utility Functions
+function formatDateTime(date) {
+    return date.toLocaleString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function formatTimeAgo(date) {
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / (1000 * 60));
+    
+    if (minutes < 1) return 'Ahora';
+    if (minutes < 60) return `${minutes}m`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    
+    const days = Math.floor(hours / 24);
+    return `${days}d`;
+}
+
+function getTimeRemaining(targetDate) {
+    const now = new Date();
+    const diff = targetDate - now;
+    
+    if (diff <= 0) return 'Vencido';
+    
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days}d ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    return `${minutes}m`;
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.getElementById('notification');
+    const messageEl = document.getElementById('notificationMessage');
+    
+    messageEl.textContent = message;
+    notification.className = `notification show ${type}`;
+    notification.style.display = 'block';
+    
+    setTimeout(() => {
+        hideNotification();
+    }, 5000);
+}
+
+function hideNotification() {
+    const notification = document.getElementById('notification');
+    notification.style.display = 'none';
+}
+
+function showLoading(show) {
+    const containers = document.querySelectorAll('#scheduledTasksList, #historyList');
+    containers.forEach(el => {
+        if (show) {
+            el.classList.add('loading');
+            el.innerHTML = '<div class="table-row"><div class="table-cell" style="grid-column: 1 / -1; text-align: center;">Cargando...</div></div>';
+        } else {
+            el.classList.remove('loading');
+        }
+    });
+}
+
+function startAutoRefresh() {
+    refreshInterval = setInterval(() => {
+        if (currentTab === 'dashboard') {
+            loadInitialData();
+        }
+    }, 30000);
+}
+
+// Validación de formularios
+function addFormValidation() {
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        const inputs = form.querySelectorAll('input[required], textarea[required]');
+        inputs.forEach(input => {
+            input.addEventListener('blur', validateField);
+            input.addEventListener('input', clearValidation);
+        });
+    });
+}
+
+function validateField(event) {
+    const field = event.target;
+    const formGroup = field.closest('.form-group');
+    
+    if (!field.value.trim()) {
+        showFieldError(formGroup, 'Este campo es requerido');
+        return false;
+    }
+    
+    if (field.type === 'number' && field.value < 1) {
+        showFieldError(formGroup, 'El valor debe ser mayor a 0');
+        return false;
+    }
+    
+    if (field.id.includes('folderPath') || field.id.includes('FolderPath')) {
+        if (!field.value.startsWith('/')) {
+            showFieldError(formGroup, 'La ruta debe comenzar con /');
+            return false;
+        }
+    }
+    
+    if (field.id === 'preservePatterns') {
+        try {
+            JSON.parse(field.value);
+        } catch (e) {
+            showFieldError(formGroup, 'JSON inválido');
+            return false;
+        }
+    }
+    
+    showFieldSuccess(formGroup);
+    return true;
+}
+
+function showFieldError(formGroup, message) {
+    formGroup.classList.add('error');
+    formGroup.classList.remove('success');
+    
+    let errorEl = formGroup.querySelector('.error-message');
+    if (!errorEl) {
+        errorEl = document.createElement('span');
+        errorEl.className = 'error-message';
+        formGroup.appendChild(errorEl);
+    }
+    errorEl.textContent = message;
+}
+
+function showFieldSuccess(formGroup) {
+    formGroup.classList.add('success');
+    formGroup.classList.remove('error');
+    
+    const errorEl = formGroup.querySelector('.error-message');
+    if (errorEl) {
+        errorEl.remove();
+    }
+}
+
+function clearValidation(event) {
+    const formGroup = event.target.closest('.form-group');
+    formGroup.classList.remove('error', 'success');
+    
+    const errorEl = formGroup.querySelector('.error-message');
+    if (errorEl) {
+        errorEl.remove();
+    }
+}
+
+// Búsqueda en historial
+function searchHistory(query) {
+    const rows = document.querySelectorAll('#historyList .table-row');
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const matches = text.includes(query.toLowerCase());
+        row.style.display = matches ? 'grid' : 'none';
+    });
+}
+
+// Funciones de navegación de tabs
+function switchTab(tabId) {
+    // Actualizar enlaces activos
+    document.querySelectorAll('.tab-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    const activeLink = document.querySelector([`data-tab="${tabId}"`]);
+    if (activeLink) {
+        activeLink.classList.add('active');
+    }
+
+    // Mostrar contenido del tab
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById(tabId).classList.add('active');
+
+    currentTab = tabId;
+
+    // Cargar datos específicos del tab
+    if (tabId === 'history') {
+        loadHistory();
+    } else if (tabId === 'config') {
+        loadConfig();
+    }
+}
+
+// Limpiar interval al cerrar
+window.addEventListener('beforeunload', () => {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+});
+
+// Agregar funciones de utilidad al objeto global
+window.cleanupManager = {
+    loadData: loadInitialData,
+    switchTab,
+    apiCall,
+    exportHistory: async () => {
+        const result = await apiCall('/history?limit=1000');
+        if (result.success) {
+            const filename = `cleanup_history_${new Date().toISOString().split('T')[0]}`.json;
+            downloadData(result.history, filename);
+            showNotification('Historial exportado', 'success');
+        } else {
+            showNotification('Error al exportar historial', 'error');
+        }
+    }
+};
+
+function downloadData(data, filename, type = 'application/json') {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+</script>
+
+<style>
+/* Estilos del sistema de limpieza */
+.notification {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 2000;
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;
+    padding: 1rem 1.5rem;
+    max-width: 400px;
+    border-left: 4px solid var(--primary);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification.success { border-left-color: #22c55e; }
+.notification.error { border-left-color: #ef4444; }
+.notification.warning { border-left-color: #f59e0b; }
+.notification.info { border-left-color: var(--primary); }
+
+.notification-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.notification-content button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text);
+    padding: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+}
+
+.notification-content button:hover {
+    background: var(--sidebar-primary-hover);
+}
+
+.status-badge, .action-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.scheduled, .action-badge.scheduled {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.status-badge.completed, .action-badge.executed {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+}
+
+.status-badge.cancelled, .action-badge.cancelled {
+    background: rgba(251, 191, 36, 0.1);
+    color: #f59e0b;
+}
+
+.status-badge.failed, .action-badge.failed {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    color: var(--primary-color);
+    background: white;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: rgba(22, 33, 255, 0.1) 0px 0px 0px 3px;
+    transform: translateY(-2px);
+}
+
+.form-group input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-right: 0.75rem;
+    accent-color: var(--primary);
+}
+
+.form-group label:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    transition: background 0.2s ease;
+}
+
+.form-group label:has(input[type="checkbox"]):hover {
+    background: var(--sidebar-primary-hover);
+}
+
+.table-row {
+    grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr;
+}
+
+#historyList .table-row {
+    grid-template-columns: 1.5fr 2fr 1fr 2fr 0.5fr;
+}
+
+.table-row {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeInUp 0.3s ease forwards;
+}
+
+.table-row:nth-child(1) { animation-delay: 0.1s; }
+.table-row:nth-child(2) { animation-delay: 0.2s; }
+.table-row:nth-child(3) { animation-delay: 0.3s; }
+.table-row:nth-child(4) { animation-delay: 0.4s; }
+.table-row:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.loading {
+    position: relative;
+    overflow: hidden;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(22, 33, 255, 0.1), transparent);
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.btn-danger {
+    background: #ef4444 !important;
+    color: white !important;
+}
+
+.btn-danger:hover {
+    background: #dc2626 !important;
+    transform: translateY(-2px);
+    box-shadow: rgba(239, 68, 68, 0.3) 0px 8px 20px;
+}
+
+.form-group.error input,
+.form-group.error textarea {
+    border-color: #ef4444;
+    box-shadow: rgba(239, 68, 68, 0.1) 0px 0px 0px 3px;
+}
+
+.form-group.success input,
+.form-group.success textarea {
+    border-color: #22c55e;
+    box-shadow: rgba(34, 197, 94, 0.1) 0px 0px 0px 3px;
+}
+
+.error-message {
+    color: #ef4444;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.separator {
+    border-top: 1px solid var(--border);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .table-row {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        margin-bottom: 1rem;
+        background: white;
+    }
+
+    .table-header {
+        display: none;
+    }
+
+    .table-cell {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.25rem 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .table-cell:last-child {
+        border-bottom: none;
+        justify-content: center;
+        margin-top: 0.5rem;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .dashboard-card {
+        padding: 1.5rem;
+    }
+
+    .editor-actions {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .btn-secondary, .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .notification {
+        left: 1rem;
+        right: 1rem;
+        max-width: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tab-content-wrapper {
+        padding: 1rem;
+    }
+
+    .tab-header h2 {
+        font-size: 1.25rem;
+    }
+
+    .tab-header p {
+        font-size: 0.9rem;
+    }
+}
+</style>
+
+{% endblock %}

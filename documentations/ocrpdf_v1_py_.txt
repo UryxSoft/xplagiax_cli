@@ -1,0 +1,84 @@
+import ocrmypdf
+import pandas as pd
+import fitz
+import os
+
+class OcrDocument:
+    __slots__ = ('pdf_path')
+    
+    def __init__(self, pdf_path):
+        self.PATH = os.path.dirname(pdf_path)
+        self.file_list = [os.path.basename(pdf_path)]
+        self.error_log = {}
+        self.ocr_file_list = []
+        self.extraction_pdfs = {}
+
+    def perform_ocr(self, file):
+        """
+        The `perform_ocr` function attempts to perform OCR on a given file using the ocrmypdf library,
+        logging any errors encountered.
+        
+        @param file The `perform_ocr` function takes a file as input and performs OCR (Optical Character
+        Recognition) on it using the `ocrmypdf` library. The OCR result is saved as a PDF file with a
+        filename prefixed by 'OCR_'.
+        
+        @return The `perform_ocr` function is returning a boolean value. It returns `True` if the OCR
+        operation is successful, and `False` if an exception occurs during the OCR process.
+        """
+        try:
+            result = ocrmypdf.ocr(file, 'OCR_'+file, output_type='pdf', skip_text=True, deskew=False)  # Adjusted deskew to False
+        except Exception as e:
+            if hasattr(e, 'message'):
+                self.error_log[file] = e.message
+            else:
+                self.error_log[file] = str(e)
+            return False
+        return True
+
+    def extract_pdf_text(self, file):
+        """
+        The function `extract_pdf_text` reads text from each page of a PDF file and stores it in a
+        DataFrame, handling exceptions and logging errors.
+        
+        @param file The `file` parameter in the `extract_pdf_text` function is the path to the PDF file from
+        which you want to extract text. This function uses the PyMuPDF library (fitz) to open the PDF file
+        and extract text from each page. The extracted text from each page is then
+        """
+        pages_df = pd.DataFrame(columns=['text'])
+        doc = fitz.open(file)
+        
+        for page_num in range(doc.page_count):
+            try:
+                page = doc.loadPage(page_num)
+                pages_df = pages_df.append({'text': page.getText('text')}, ignore_index=True)
+            except Exception as e:
+                if hasattr(e, 'message'):
+                    self.error_log[file] = e.message
+                else:
+                    self.error_log[file] = str(e)
+                continue
+
+        self.extraction_pdfs[file] = pages_df
+
+    def cleanup_files(self):
+        """
+        The `cleanup_files` function removes files from a specified directory and renames certain files
+        within the same directory.
+        """
+        for file in self.file_list:
+            os.remove(os.path.join(self.PATH, file))
+        for ocr_file in self.ocr_file_list:
+            new_name = ocr_file.replace('OCR_', '')
+            os.rename(os.path.join(self.PATH, ocr_file), os.path.join(self.PATH, new_name))
+            
+    def process_pdfs(self):
+        """
+        The `process_pdfs` function iterates through a list of PDF files, performs OCR on them, extracts
+        text from the OCR'd files, and then cleans up the files.
+        """
+        for file in self.file_list:
+            if self.perform_ocr(file):
+                self.ocr_file_list.append('OCR_' + file)
+        for file in self.ocr_file_list:
+            self.extract_pdf_text(file)
+        self.cleanup_files()

@@ -1,0 +1,136 @@
+# microsoft_oauth.py
+import os
+import secrets
+import requests
+import urllib.parse
+from datetime import datetime
+from flask import current_app, session, request, url_for
+
+class MicrosoftOAuth:
+    """Servicio para manejar autenticación con Microsoft OAuth 2.0"""
+    
+    def __init__(self):
+        # Configuración OAuth - considera mover a variables de entorno
+        self.client_id =  "35f3700d-cfc1-42df-bde5-2f03206dbf82" #"5ac5c931-f1fa-4b40-8d96-9830e17fdc7a"
+        self.client_secret =  "uv~8Q~nwt.OD0611lMKDiFW58GhNDeaIiueGnbln"
+        self.tenant_id =  "common"  # 'common' permite cuentas personales y organizacionales
+        self.redirect_uri =  "http://localhost:5000/auth_bp/microsoft/callback"
+        
+        # URLs de Microsoft OAuth
+        self.auth_url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/authorize"
+        self.token_url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
+        self.userinfo_url = "https://graph.microsoft.com/v1.0/me"
+        
+        # Scopes mínimos necesarios
+        self.scopes = ["openid", "profile", "email", "User.Read"]
+
+    def get_authorization_url(self):
+        """Generar URL de autorización para redirigir al usuario"""
+        # Generar estado único para seguridad CSRF
+        state = secrets.token_urlsafe(32)
+        session['oauth_state'] = state
+        
+        params = {
+            'client_id': self.client_id,
+            'redirect_uri': self.redirect_uri,
+            'scope': ' '.join(self.scopes),
+            'response_type': 'code',
+            'state': state,
+            'response_mode': 'query',
+            'prompt': 'select_account'  # Permite elegir cuenta si hay múltiples
+        }
+        
+        return f"{self.auth_url}?{urllib.parse.urlencode(params)}"
+
+    def exchange_code_for_user_data(self, authorization_code, state):
+        """
+        Intercambiar código de autorización por datos del usuario
+        Returns: (user_data, error_message)
+        """
+        try:
+            # Verificar estado para prevenir CSRF
+            stored_state = session.get('oauth_state')
+            if not stored_state or state != stored_state:
+                return None, "Estado OAuth inválido - posible ataque CSRF"
+            
+            # Intercambiar código por token
+            token_data = {
+                'client_id': self.client_id,
+                'client_secret': self.client_secret,
+                'code': authorization_code,
+                'grant_type': 'authorization_code',
+                'redirect_uri': self.redirect_uri,
+                'scope': ' '.join(self.scopes)
+            }
+            
+            # Obtener token de acceso
+            token_response = requests.post(self.token_url, data=token_data, timeout=10)
+            if not token_response.ok:
+                current_app.logger.error(f"Error token response: {token_response.text}")
+                return None, f"Error obteniendo token: {token_response.status_code}"
+            
+            token_info = token_response.json()
+            access_token = token_info.get('access_token')
+            
+            if not access_token:
+                return None, "No se recibió token de acceso válido"
+            
+            # Obtener información del usuario usando Microsoft Graph
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/json'
+            }
+            user_response = requests.get(self.userinfo_url, headers=headers, timeout=10)
+            
+            if not user_response.ok:
+                current_app.logger.error(f"Error user response: {user_response.text}")
+                return None, f"Error obteniendo datos de usuario: {user_response.status_code}"
+            
+            user_data = user_response.json()
+            
+            # Validar datos mínimos requeridos
+            email = user_data.get('mail') or user_data.get('userPrincipalName')
+            if not email:
+                return None, "No se pudo obtener email del usuario"
+            
+            # Normalizar datos para compatibilidad con el sistema existente
+            normalized_data = {
+                'id': user_data.get('id'),
+                'email': email,
+                'name': user_data.get('displayName', ''),
+                'given_name': user_data.get('givenName', ''),
+                'family_name': user_data.get('surname', ''),
+                'picture': None,  # Microsoft Graph requiere llamada separada para foto
+                'verified_email': True,  # Microsoft siempre verifica emails
+                'access_token': access_token  # ✅ Pasar token para obtener foto en el callback
+            }
+            
+            return normalized_data, None
+            
+        except requests.exceptions.Timeout:
+            return None, "Timeout de conexión con Microsoft"
+        except requests.exceptions.RequestException as e:
+            current_app.logger.exception("Error de conexión con Microsoft")
+            return None, f"Error de conexión: {str(e)}"
+        except Exception as e:
+            current_app.logger.exception("Error inesperado en OAuth Microsoft")
+            return None, f"Error inesperado: {str(e)}"
+
+    def get_user_photo(self, access_token):
+        """
+        Obtener foto de perfil del usuario (opcional)
+        """
+        try:
+            headers = {'Authorization': f'Bearer {access_token}'}
+            photo_response = requests.get(
+                "https://graph.microsoft.com/v1.0/me/photo/$value", 
+                headers=headers, 
+                timeout=5
+            )
+            
+            if photo_response.ok:
+                return photo_response.content
+            return None
+            
+        except Exception:
+            return None

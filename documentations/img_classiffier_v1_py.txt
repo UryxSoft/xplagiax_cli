@@ -1,0 +1,39 @@
+import os
+import cv2 as cv
+import numpy as np
+from functools import lru_cache
+from tensorflow import keras
+
+class ImageClassifier:
+    __slots__ = ('path_img')
+
+    def __init__(self,path_img):
+       self.path_img = path_img
+       
+    @lru_cache()
+    def img_analizer(self):
+        """
+        This Python function loads a pre-trained neural network model to analyze an image and determine if
+        it is real or AI-generated.
+        
+        @return The function `img_analizer` returns a string indicating whether the given image is
+        classified as "Real" or "AI Generated". If the predicted value `y[0]` is less than or equal to 0.5,
+        it returns "The given image is Real." If the predicted value is greater than 0.5, it returns "The
+        given image is AI Generated." If
+        """
+        model_new = keras.models.load_model(os.path.join(os.path.dirname(__file__),"model_ai_img/AIGeneratedModel.h5"))
+        img_size = 48
+        print(self.path_img)
+        img_arr = cv.imread(self.path_img)
+        new_arr = cv.resize(img_arr, (48,48))
+        new_arr = new_arr/255
+        test = []
+        test.append(new_arr)
+        test = np.array(test).reshape(-1, img_size, img_size, 3)
+        y = model_new.predict(test)
+        if y[0] <= 0.5:
+            return "The given image is Real."
+        elif y[0]>0.5:
+            return "The given image is AI Generated."
+        else:
+            return None

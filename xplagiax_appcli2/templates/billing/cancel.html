@@ -1,0 +1,32 @@
+<!-- ====== BILLING CANCEL TEMPLATE (billing/cancel.html) ====== -->
+<div style="display: none;" id="billing-cancel-template">
+{% extends "base.html" %}
+
+{% block title %}Pago Cancelado - Mi App{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-times-circle text-warning" style="font-size: 4rem;"></i>
+                </div>
+                <h2 class="card-title text-warning mb-3">Pago Cancelado</h2>
+                <p class="lead">Has cancelado el proceso de pago.</p>
+                <p class="text-muted">No se ha realizado ningún cargo a tu cuenta.</p>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                    <a href="{{ url_for('billing.get_plans') }}" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> Volver a Planes
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-home"></i> Ir al Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+</div>

@@ -1,0 +1,191 @@
+commit 3bd281f0c166c17ef6fb1979514243bb1c240d10
+Author: eduardnova <rubeneduardonova@gmail.com>
+Date:   Tue Mar 5 16:52:38 2024 -0700
+
+    update
+
+commit b891963f67b2b405faefb26480504f138a1aa57a
+Author: eduardnova <rubeneduardonova@gmail.com>
+Date:   Mon Mar 4 21:04:35 2024 -0700
+
+    update code
+
+commit 21079235845a9eb56bc68ade2d15a3d890568798
+Author: eduardnova <rubeneduardonova@gmail.com>
+Date:   Mon Mar 4 19:24:16 2024 -0700
+
+    update code
+
+commit 16789dec7c1e25c809278bcf0f56736b6b87e9e7
+Author: eduardnova <rubeneduardonova@gmail.com>
+Date:   Mon Mar 4 13:59:22 2024 -0700
+
+    update
+
+commit 2031f37935746183e876a5e21a175c9b99bee8c8
+Author: eduardnova <rubeneduardonova@gmail.com>
+Date:   Sun Mar 3 17:27:18 2024 -0700
+
+
+
+git reset --hard 3bd281f0c166c17ef6fb1979514243bb1c240d10
+git reset --hard b891963f67b2b405faefb26480504f138a1aa57a
+git reset --hard 21079235845a9eb56bc68ade2d15a3d890568798
+git reset --hard 16789dec7c1e25c809278bcf0f56736b6b87e9e7
+git reset --hard 2031f37935746183e876a5e21a175c9b99bee8c8
+
+
+
+
+analysis_search(full_search,select_insitute, only_my_documents,img_source,img_ai) 
+
+    full_search        = data.get('full_search')
+    select_insitute    = data.get('select_insitute')
+    only_my_documents  = data.get('only_my_documents')
+    img_source         = data.get('img_source')
+    img_ai             = data.get('img_ai')
+
+    is full_search is True:
+
+
+    elif full_search is False:
+
+         if only_my_documents  is True:
+
+
+         elif only_my_documents is False:
+
+            if isinstance(select_insitute, list):
+               return jsonify({'lista': select_insitute})
+        
+        if img_source is True:
+
+        elif img_source is False:
+
+        if img_ai  is True:
+
+        elif img_ai is False:
+
+
+
+
+
+
+
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name xplagiax.ca;
+    return 301 https://$server_name$request_uri;
+}
+
+# Servidor HTTPS para xplagiax.ca
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name xplagiax.ca;
+    root /var/www/html;
+    index index.html index.htm index.nginx-debian.html;
+
+    # Certificados SSL
+    ssl_certificate /etc/letsencrypt/live/xplagiax.ca/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/xplagiax.ca/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Configuración principal del sitio
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Redireccionar /adm sin slash final
+    location = /adm {
+        return 301 $scheme://$server_name/adm/;
+    }
+
+    # Proxy para SocketIO específicamente (DEBE estar antes de /adm/)
+    location /adm/socket.io/ {
+        proxy_pass http://localhost:5001/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Proxy para archivos estáticos - Flask los sirve internamente
+    location /adm/static/ {
+        proxy_pass http://localhost:5001/static/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Headers para caching
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+
+        # Configuración para archivos estáticos
+        proxy_buffering on;
+        proxy_cache_valid 200 1y;
+    }
+
+    location /adm/assets/ {
+        proxy_pass http://localhost:5001/assets/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Headers para caching
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+
+        # Configuración para archivos estáticos
+        proxy_buffering on;
+        proxy_cache_valid 200 1y;
+    }
+
+    # Proxy principal para el contenedor Docker en /adm
+    location /adm/ {
+        proxy_pass http://localhost:5001/;
+        proxy_ssl_verify off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Script-Name /adm;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # CRÍTICO: Estos headers le dicen a Flask que está bajo /adm
+        proxy_set_header X-Script-Name /adm;
+        proxy_set_header X-Forwarded-Prefix /adm;
+
+        proxy_buffering off;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+
+        # Configuración para SocketIO
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Reescribir redirects de Flask
+        proxy_redirect http://localhost:5001/ /adm/;
+        proxy_redirect http://$host/ /adm/;
+        proxy_redirect https://$host/ /adm/;
+    }
+
+    # Denegar acceso a archivos .htaccess
+    location ~ /\.ht {
+        deny all;
+    }
+}
+
+

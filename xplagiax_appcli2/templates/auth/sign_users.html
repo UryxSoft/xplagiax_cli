@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Descripción de la página web">
+    <meta name="keywords" content="palabras clave, SEO, optimización">
+    <meta name="Xplagiax ltd" content="Uryx technologies">
+    <meta name="robots" content="index, follow">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>XplagiaX - Sign In / Sign Up</title>
+    <!-- Favicon optimizado -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32"
+        href="{{ url_for('static', filename='img/icon/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16"
+        href="{{ url_for('static', filename='img/icon/favicon-16x16.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/enhanced_login.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/enhanced_signup.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/brand.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css') }}" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/floatingicon.css') }}" />
+    <style>
+        /* Estilos para el panel deslizante */
+        .auth-container {
+            position: relative;
+            width: 100%;
+            max-width: 1000px;
+            min-height: 600px;
+            margin: 0 auto;
+            display: flex;
+            overflow: hidden;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            /* Asegura que esté por encima de los íconos flotantes */
+        }
+
+        /* Panel visual deslizante */
+        .sliding-panel {
+            position: absolute;
+            width: 45%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.5), rgba(37, 99, 235, 0.4)),
+            url("{{ url_for('static', filename='img/academic_integrity_bg.webp') }}");
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 60px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 100;
+            border-radius: 20px;
+        }
+
+        .auth-container.register-mode .sliding-panel {
+            transform: translateX(122%);
+        }
+
+        .sliding-panel h2 {
+            font-size: 2.2rem;
+            line-height: 1.2;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .sliding-panel .small-text {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .sliding-panel .partners {
+            margin-top: auto;
+        }
+
+        .sliding-panel .partners p {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-bottom: 15px;
+        }
+
+        .sliding-panel .icons-row {
+            display: flex;
+            gap: 15px;
+            opacity: 0.8;
+            font-size: 0.8rem;
+            font-weight: bold;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Panel LOGIN (derecha inicialmente) */
+        .login-panel {
+            position: absolute;
+            width: 55%;
+            height: 100%;
+            right: 0;
+            top: 0;
+            padding: 40px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            opacity: 1;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            z-index: 2;
+        }
+
+        .auth-container.register-mode .login-panel {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(30px);
+        }
+
+        /* Panel REGISTER (izquierda, oculto inicialmente) */
+        .register-panel {
+            position: absolute;
+            width: 55%;
+            height: 100%;
+            left: 0;
+            top: 0;
+            padding: 40px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(-30px);
+            transition: opacity 0.4s ease 0.3s, transform 0.4s ease 0.3s;
+            z-index: 1;
+        }
+
+        .auth-container.register-mode .register-panel {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateX(0);
+            z-index: 2;
+        }
+
+        /* Ajustes para los formularios dentro del contenedor */
+        .login-panel .form,
+        .register-panel .form {
+            background: #ffffff;
+            backdrop-filter: blur(10px);
+            border-radius: 12.8px;
+            padding: 1.5rem;
+            max-width: 100%;
+            width: 100%;
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Responsive Tablet */
+        @media (max-width: 1024px) {
+
+            .login-panel,
+            .register-panel {
+                padding: 30px 40px;
+            }
+
+            .sliding-panel h2 {
+                font-size: 1.8rem;
+            }
+        }
+
+        /* Responsive Mobile - Ocultar panel deslizante */
+        @media (max-width: 768px) {
+            .auth-container {
+                height: auto;
+                min-height: auto;
+                border-radius: 0;
+            }
+
+            .sliding-panel {
+                display: none;
+            }
+
+            .login-panel,
+            .register-panel {
+                width: 100%;
+                left: 0;
+                right: auto;
+                padding: 20px;
+                position: relative;
+            }
+
+            .auth-container.register-mode .login-panel {
+                display: none;
+            }
+
+            .register-panel {
+                display: none;
+            }
+
+            .auth-container.register-mode .register-panel {
+                display: flex;
+                opacity: 1;
+                pointer-events: all;
+                transform: none;
+            }
+        }
+
+        /* Asegurar que el contenedor principal esté centrado */
+        .auth-section {
+            position: relative;
+            z-index: 500;
+            /* Asegura que esté por encima de los íconos flotantes */
+            min-height: calc(100vh - 120px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body class="cont bg-primary" id="myDiv">
+    <!-- header -->
+    <header class="header header-sticky header-transparent">
+        <div class="" style="padding: 3px;">
+            <div class="">
+                <nav class="navbar navbar-expand-lg navbar-dark">
+                    <a href="{{ url_for('x_apps.index') }}" class="tech-brand">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor"
+                            stroke="currentColor" class="bi bi-chevron-contract" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708"
+                                stroke-width="0.8" />
+                        </svg>
+                        <span>plagia</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor"
+                            stroke="currentColor" class="bi bi-chevron-contract" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708"
+                                stroke-width="0.8" />
+                        </svg>
+                    </a>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse"
+                        data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                        <ul class="navbar-nav mr-auto"></ul>
+                        <ul class="navbar-nav"></ul>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </header>
+    <!-- / header -->
+
+    <section class="auth-section">
+        <div class="auth-container" id="authContainer">
+
+            <!-- Panel visual deslizante -->
+            <div class="sliding-panel">
+                <div>
+                    <span class="small-text">Protect originality. Safeguard authenticity.</span>
+                    <h2 style="color: #ffffff;">Strengthen trust<br>with the Xplagiax Platform</h2>
+                </div>
+                <div class="partners">
+                    <p>Advanced detection against plagiarism, AI content & fraud</p>
+                    <div class="icons-row">
+                        <span>Detector</span>
+                        <span>AI Check</span>
+                        <span>Patents</span>
+                        <span>Integrity</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulario LOGIN (derecha inicialmente) -->
+            <div class="login-panel">
+                <form class="form" id="loginForm">
+                    <div class="form-header">
+                        <h2>Welcome Back</h2>
+                        <p>Sign in to your account</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="login_email">Email</label>
+                        <div class="input-container">
+                            <div class="input-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M12 12.713l-11.985-9.713h23.971l-11.986 9.713zm-5.425-1.822l-6.575-5.329v12.501l6.575-7.172zm10.85 0l6.575 7.172v-12.501l-6.575 5.329zm-1.557 1.261l-3.868 3.135-3.868-3.135-8.11 8.848h23.956l-8.11-8.848z" />
+                                </svg>
+                            </div>
+                            <input type="email" class="input" id="login_email" placeholder="Enter your email" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="login_password">Password</label>
+                        <div class="input-container">
+                            <div class="input-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M18 10v-4c0-3.313-2.687-6-6-6s-6 2.687-6 6v4h-2v14h16v-14h-2zm-10-4c0-2.206 1.794-4 4-4s4 1.794 4 4v4h-8v-4z" />
+                                </svg>
+                            </div>
+                            <input type="password" class="input" id="login_password" placeholder="Enter your password"
+                                required>
+                            <div class="toggle-password" onclick="toggleLoginPassword()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="loginEyeIcon">
+                                    <path
+                                        d="M15 12c0 1.654-1.346 3-3 3s-3-1.346-3-3 1.346-3 3-3 3 1.346 3 3zm9-.449s-4.252 8.449-11.985 8.449c-7.18 0-12.015-8.449-12.015-8.449s4.446-7.551 12.015-7.551c7.694 0 11.985 7.551 11.985 7.551zm-7 .449c0-2.757-2.243-5-5-5s-5 2.243-5 5 2.243 5 5 5 5-2.243 5-5z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-options">
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="remember_me" name="remember_me">
+                            <label for="remember_me">Remember me</label>
+                        </div>
+                        <a href="{{ url_for('x_apps.forgot_password') }}" class="forgot-link">Forgot password?</a>
+                    </div>
+
+                    <button class="submit-btn" type="submit" id="loginSubmitBtn">
+                        <span id="loginBtnText">Sign In</span>
+                        <div class="progress-bar" id="loginProgressBar"></div>
+                    </button>
+
+                    <div class="divider">or continue with</div>
+
+                    <div class="social-buttons">
+                        <a href="{{ url_for('auth_bp.google_login') }}" class="social-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24">
+                                <path fill="#4285f4"
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                <path fill="#34a853"
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                <path fill="#fbbc05"
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                <path fill="#ea4335"
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                            </svg>
+                            Google
+                        </a>
+                        <a href="{{ url_for('auth_bp.microsoft_login') }}" class="social-btn">
+                            <svg width="24px" height="24px" viewBox="0 0 32 32" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <rect x="17" y="17" width="10" height="10" fill="#FEBA08"></rect>
+                                <rect x="5" y="17" width="10" height="10" fill="#05A6F0"></rect>
+                                <rect x="17" y="5" width="10" height="10" fill="#80BC06"></rect>
+                                <rect x="5" y="5" width="10" height="10" fill="#F25325"></rect>
+                            </svg>
+                            Microsoft
+                        </a>
+                    </div>
+
+                    <div class="signup-link">
+                        Don't have an account? <a href="javascript:void(0)" onclick="switchToRegister()">Sign up</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Formulario REGISTER (izquierda, oculto inicialmente) -->
+            <div class="register-panel">
+                <form class="form" id="signupForm">
+                    <div class="form-header">
+                        <h2>Welcome</h2>
+                    </div>
+                    <div id="alert-container"></div>
+
+                    <div class="social-buttons">
+                        <a href="{{ url_for('auth_bp.google_login') }}" class="social-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24">
+                                <path fill="#4285f4"
+                                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                <path fill="#34a853"
+                                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                <path fill="#fbbc05"
+                                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                <path fill="#ea4335"
+                                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                            </svg>
+                            Google
+                        </a>
+                        <a href="{{ url_for('auth_bp.microsoft_login') }}" class="social-btn">
+                            <svg width="24px" height="24px" viewBox="0 0 32 32" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <rect x="17" y="17" width="10" height="10" fill="#FEBA08"></rect>
+                                <rect x="5" y="17" width="10" height="10" fill="#05A6F0"></rect>
+                                <rect x="17" y="5" width="10" height="10" fill="#80BC06"></rect>
+                                <rect x="5" y="5" width="10" height="10" fill="#F25325"></rect>
+                            </svg>
+                            Microsoft
+                        </a>
+                    </div>
+
+                    <div class="divider">
+                        <span>or continue with</span>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="name">Name</label>
+                            <div class="input-container">
+                                <div class="input-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        class="bi bi-person-fill" viewBox="0 0 16 16">
+                                        <path
+                                            d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6" />
+                                    </svg>
+                                </div>
+                                <input type="text" class="input" id="name" placeholder="Enter your name" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lastname">Last name</label>
+                            <div class="input-container">
+                                <div class="input-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        class="bi bi-person-fill" viewBox="0 0 16 16">
+                                        <path
+                                            d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6" />
+                                    </svg>
+                                </div>
+                                <input type="text" class="input" id="lastname" placeholder="Your last name" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signup_email">Email</label>
+                        <div class="input-container">
+                            <div class="input-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M12 12.713l-11.985-9.713h23.971l-11.986 9.713zm-5.425-1.822l-6.575-5.329v12.501l6.575-7.172zm10.85 0l6.575 7.172v-12.501l-6.575 5.329zm-1.557 1.261l-3.868 3.135-3.868-3.135-8.11 8.848h23.956l-8.11-8.848z" />
+                                </svg>
+                            </div>
+                            <input type="email" class="input" id="signup_email" placeholder="Enter your email" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="input-container">
+                            <div class="input-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M18 10v-4c0-3.313-2.687-6-6-6s-6 2.687-6 6v4h-2v14h16v-14h-2zm-10-4c0-2.206 1.794-4 4-4s4 1.794 4 4v4h-8v-4z" />
+                                </svg>
+                            </div>
+                            <input type="password" class="input" id="password" placeholder="Enter your password"
+                                required>
+                            <div class="toggle-password" onclick="togglePassword('password', 'eyeIcon1')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="eyeIcon1">
+                                    <path
+                                        d="M15 12c0 1.654-1.346 3-3 3s-3-1.346-3-3 1.346-3 3-3 3 1.346 3 3zm9-.449s-4.252 8.449-11.985 8.449c-7.18 0-12.015-8.449-12.015-8.449s4.446-7.551 12.015-7.551c7.694 0 11.985 7.551 11.985 7.551zm-7 .449c0-2.757-2.243-5-5-5s-5 2.243-5 5 2.243 5 5 5 5-2.243 5-5z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password_confirm">Repeat Password *</label>
+                        <div class="input-container">
+                            <div class="input-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M18 10v-4c0-3.313-2.687-6-6-6s-6 2.687-6 6v4h-2v14h16v-14h-2zm-10-4c0-2.206 1.794-4 4-4s4 1.794 4 4v4h-8v-4z" />
+                                </svg>
+                            </div>
+                            <input type="password" class="input" id="password_confirm"
+                                placeholder="Re-enter your password" required>
+                            <div class="toggle-password" onclick="togglePassword('password_confirm', 'eyeIcon2')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="eyeIcon2">
+                                    <path
+                                        d="M15 12c0 1.654-1.346 3-3 3s-3-1.346-3-3 1.346-3 3-3 3 1.346 3 3zm9-.449s-4.252 8.449-11.985 8.449c-7.18 0-12.015-8.449-12.015-8.449s4.446-7.551 12.015-7.551c7.694 0 11.985 7.551 11.985 7.551zm-7 .449c0-2.757-2.243-5-5-5s-5 2.243-5 5 2.243 5 5 5 5-2.243 5-5z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="submit-btn" type="submit" id="signupSubmitBtn">
+                        <span id="signupBtnText">Sign Up</span>
+                        <div class="progress-bar" id="signupProgressBar"></div>
+                    </button>
+
+                    <div class="signup-link">
+                        Do you have an account? <a href="javascript:void(0)" onclick="switchToLogin()">Sign in</a>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Footer transparente -->
+    <footer class="footer">
+        Powered by
+        <img src="{{ url_for('static', filename='img/uryx.png') }}" alt="XplagiaX" />
+        Uryx Technologies | All Rights Reserved 2025
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/enhanced_signin.js')}}"></script>
+    <script src="{{ url_for('static', filename='js/enhanced_signup.js')}}"></script>
+    <script src="{{ url_for('static', filename='js/floatingicon.js')}}"></script>
+    <script>
+        const authContainer = document.getElementById('authContainer');
+
+        function switchToRegister() {
+            authContainer.classList.add('register-mode');
+        }
+
+        function switchToLogin() {
+            authContainer.classList.remove('register-mode');
+        }
+
+        function toggleLoginPassword() {
+            const passwordInput = document.getElementById('login_password');
+            const eyeIcon = document.getElementById('loginEyeIcon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.innerHTML = '<path d="M11.885 14.988l3.104-3.098.011.11c0 1.654-1.346 3-3 3l-.115-.012zm8.048-8.032l-3.274 3.268c.212.554.341 1.149.341 1.776 0 2.757-2.243 5-5 5-.631 0-1.229-.13-1.785-.344l-2.377 2.372c1.276.588 2.671.972 4.177.972 7.733 0 11.985-7.551 11.985-7.551s-1.415-2.478-4.067-5.493zm-1.465-1.455c2.652 3.015 4.067 5.493 4.067 5.493s-4.252 8.449-11.985 8.449c-1.506 0-2.901-.384-4.177-.972l-1.47 1.467-1.414-1.414 18.393-18.353 1.414 1.414-4.828 4.816zm-6.468-2.501c-7.733 0-11.985 7.551-11.985 7.551s1.415 2.478 4.067 5.493l1.456-1.455c-2.652-3.015-4.067-5.493-4.067-5.493s4.252-8.449 11.985-8.449c1.506 0 2.901.384 4.177.972l1.47-1.467-1.414-1.414-4.177.972c-1.276-.588-2.671-.972-4.177-.972-.519 0-1.035.043-1.546.122z"/>';
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.innerHTML = '<path d="M15 12c0 1.654-1.346 3-3 3s-3-1.346-3-3 1.346-3 3-3 3 1.346 3 3zm9-.449s-4.252 8.449-11.985 8.449c-7.18 0-12.015-8.449-12.015-8.449s4.446-7.551 12.015-7.551c7.694 0 11.985 7.551 11.985 7.551zm-7 .449c0-2.757-2.243-5-5-5s-5 2.243-5 5 2.243 5 5 5 5-2.243 5-5z"/>';
+            }
+        }
+
+        // Check URL parameter for initial mode
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('mode') === 'register') {
+            switchToRegister();
+        }
+    </script>
+</body>
+
+</html>

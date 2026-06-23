@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XplagiaX - Error pages</title>
+    <link href="{{ url_for('static', filename='css/error_page.css')}}">
+</head>
+<body>
+    <div class="particles"></div>
+    <div class="floating-elements">
+        <div class="floating-icon" style="left: 10%; animation-delay: 0s;">🔍</div>
+        <div class="floating-icon" style="left: 20%; animation-delay: 2s;">🤖</div>
+        <div class="floating-icon" style="left: 30%; animation-delay: 4s;">📝</div>
+        <div class="floating-icon" style="left: 40%; animation-delay: 6s;">⚡</div>
+        <div class="floating-icon" style="left: 50%; animation-delay: 8s;">🛡️</div>
+        <div class="floating-icon" style="left: 60%; animation-delay: 10s;">🔬</div>
+        <div class="floating-icon" style="left: 70%; animation-delay: 12s;">💻</div>
+        <div class="floating-icon" style="left: 80%; animation-delay: 14s;">📊</div>
+        <div class="floating-icon" style="left: 90%; animation-delay: 16s;">🎯</div>
+    </div>
+    {% block content %}
+    
+
+
+    {% endblock %}
+    <div class="btn-container">
+        <button class="btn" onclick="goHome()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="66" height="66" fill="currentColor" class="bi bi-house-fill" viewBox="0 0 16 16">
+                <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L8 2.207l6.646 6.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293z"/>
+                <path d="m8 3.293 6 6V13.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5V9.293z"/>
+            </svg>
+            Volver al Inicio
+        </button>
+        <button class="btn" onclick="tryAgain()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+            </svg> 
+            Intentar de Nuevo
+        </button>
+    </div>
+    {% block body %}    
+    {% endblock %}
+    <script src="{{ url_for('static', filename='js/error_pages.js')}}"></script>
+</body>
+</html>

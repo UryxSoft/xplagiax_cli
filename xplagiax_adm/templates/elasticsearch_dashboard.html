@@ -1,0 +1,138 @@
+{% extends "adm_base.html" %}
+{% block content %}
+    <!-- ECharts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <!-- ECharts GL para gráficas 3D y de red avanzadas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts-gl/2.0.9/echarts-gl.min.js"></script>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="title">📊 Elasticsearch Data Visualizer</h1>
+            <div class="controls">
+                <div class="control-group">
+                    <label class="control-label">Max Nodes</label>
+                    <select id="maxNodesSelect">
+                        <option value="100">100 nodos</option>
+                        <option value="250" selected>250 nodos</option>
+                        <option value="500">500 nodos</option>
+                        <option value="1000">1000 nodos</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Layout</label>
+                    <select id="layoutSelect">
+                        <option value="force">Force Layout</option>
+                        <option value="circular">Circular</option>
+                        <option value="graph">Graph</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="refreshData()">
+                    🔄 Actualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- Index Selector -->
+        <div class="index-selector">
+            <h3>Seleccionar Índice de Elasticsearch</h3>
+            <div class="indices-grid" id="indicesGrid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Cargando índices...
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar" id="statsBar" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-value" id="totalDocs">-</div>
+                <div class="stat-label">Total Documentos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="indexSize">-</div>
+                <div class="stat-label">Tamaño del Índice</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalNodes">-</div>
+                <div class="stat-label">Nodos en Gráfica</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalConnections">-</div>
+                <div class="stat-label">Conexiones</div>
+            </div>
+        </div>
+
+        <!-- Visualization Container -->
+        <div class="visualization-container" id="chartsContainer" style="display: none;">
+            <!-- Network Graph -->
+            <div class="chart-container full-width-chart">
+                <div class="chart-header">
+                    <h3 class="chart-title">🕸️ Gráfica de Red de Datos</h3>
+                    <div class="chart-controls">
+                        <button class="chart-control-btn active" onclick="setGraphType('force')">Force</button>
+                        <button class="chart-control-btn" onclick="setGraphType('circular')">Circular</button>
+                        <button class="chart-control-btn" onclick="setGraphType('graph')">Graph GL</button>
+                    </div>
+                </div>
+                <div class="chart-body" id="networkChart">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Cargando gráfica de red...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distribution Chart -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">📈 Distribución de Datos</h3>
+                </div>
+                <div class="chart-body" id="distributionChart">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Cargando distribución...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories Chart -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3 class="chart-title">🎯 Categorías</h3>
+                </div>
+                <div class="chart-body" id="categoriesChart">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Cargando categorías...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="data-table-container" id="dataTableContainer" style="display: none;">
+            <div class="chart-header">
+                <h3 class="chart-title">📋 Datos del Índice</h3>
+                <div class="controls">
+                    <input type="text" id="searchInput" placeholder="Buscar..." style="min-width: 200px;">
+                    <button class="btn btn-secondary" onclick="searchData()">Buscar</button>
+                </div>
+            </div>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="data-table" id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Score</th>
+                            <th>Datos</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

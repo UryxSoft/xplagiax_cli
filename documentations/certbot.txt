@@ -1,0 +1,53 @@
+
+Para instalar y configurar Certbot en un servidor Debian con Nginx para proporcionar 
+certificados SSL, sigue estos pasos:
+
+1-Instala Certbot:
+
+    --> sudo apt update
+    --> sudo apt install certbot python3-certbot-nginx
+
+2-Obtén un certificado SSL:
+Utiliza Certbot para obtener un certificado SSL para tu dominio. Reemplaza tudominio.com 
+con tu propio dominio.
+
+
+    --> sudo certbot --nginx -d tudominio.com
+    ejemplo: sudo certbot --nginx -d xplagiax.ca
+
+Certbot te guiará a través de un proceso interactivo para obtener y configurar 
+los certificados SSL. Puedes elegir configurar redirecciones HTTP a HTTPS durante
+ este proceso si lo deseas.
+
+3-Configura la renovación automática:
+Verifica que la renovación automática esté configurada correctamente ejecutando:
+
+
+    --> sudo certbot renew --dry-run
+
+Si no está configurada, puedes agregar un cron job para ejecutar la renovación 
+automáticamente. Para ello, edita el cron tab:
+
+
+    --> sudo crontab -e
+Agrega la siguiente línea al archivo:
+
+css
+Copy code
+0 0 * * * certbot renew --quiet
+Esto renovará automáticamente tus certificados SSL todos los días a la medianoche.
+
+4-Verifica la configuración de Nginx:
+Asegúrate de que la configuración de Nginx esté correctamente actualizada para usar los 
+certificados SSL. Puedes encontrar la configuración en archivos dentro del 
+directorio /etc/nginx/sites-available/.
+
+Reinicia Nginx:
+Después de instalar y configurar los certificados SSL, reinicia Nginx para aplicar los cambios.
+
+
+    --> sudo systemctl restart nginx
+
+Con estos pasos, habrás instalado y configurado correctamente un certificado SSL para tu 
+dominio en Nginx utilizando Certbot en Debian. Tu sitio web ahora debería estar accesible 
+de forma segura a través de HTTPS.

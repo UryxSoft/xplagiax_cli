@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings · XplagiaX</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app_style_1.css') }}">
+  {% block head %}{% endblock %}
+  <style>
+    /* ── Embed shell — matches the dark glass modal interior ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      display: flex;
+      align-items: stretch;
+      background: #0d1117;
+      color: #f0f4ff;
+      font-family: 'Work Sans', -apple-system, sans-serif;
+      padding: 0;
+    }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
+    * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.1) transparent; }
+  </style>
+</head>
+
+<body class="acct-embed">
+  {% block content %}{% endblock %}
+  {% block body %}{% endblock %}
+  {% block scripts %}{% endblock %}
+</body>
+
+</html>

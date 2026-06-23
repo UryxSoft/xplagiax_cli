@@ -1,0 +1,38 @@
+
+
+
+
+##################SSH SERVER CONNECTIONS##############
+
+--SERVER 1 (4 GB ram 100 de disk):
+
+    server :  ssh root@192.53.123.70
+    pass   :  eza9bjn2YPX@gtk-tbw
+
+--SERVER 2 (16 GB ram 320 de disk) :
+
+    server :  ssh root@172.105.102.130     
+    pass   :  yev1jfu0gpz7djx*YCX
+
+    COMAND_MYSQL_LINE:        
+              access  :  mysql -u root -p
+              pass    :  yev1jfu0gpz7djx*YCX
+              show databases;
+              USE xplagiax_db;
+              show tables;
+
+
+    USER_MICROSERVICES       :  nova
+    PASS_MICROSERVICES       :  xplagiax_2024
+
+    ADMIN_USR_MICROSERVICES  :  admininsideout
+    PASS_MICROSERVICES       :  insideout_2024
+
+
+
+    for create a user in mysql server database
+       CREATE USER 'admininsideout'@'%' IDENTIFIED BY 'insideout_2024';
+       GRANT ALL PRIVILEGES ON *.* TO 'admininsideout'@'%';
+       FLUSH PRIVILEGES;
+
+       SHOW GRANTS FOR 'admininsideout'@'localhost';

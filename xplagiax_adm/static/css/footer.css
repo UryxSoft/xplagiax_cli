@@ -1,0 +1,15 @@
+/* Estilos para el pie de página */
+.footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0); /* Fondo transparente */
+    text-align: center;
+    padding: 10px 0;
+    font-size: 18px; /* Tamaño de fuente más grande */
+    color: #32353c; /* Color blanco para el texto */
+}
+.footer img {
+    width: 45px;
+    vertical-align: middle; /* Centra la imagen verticalmente con el texto */
+}

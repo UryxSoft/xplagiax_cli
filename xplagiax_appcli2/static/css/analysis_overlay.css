@@ -1,0 +1,220 @@
+/* ========================================
+    GLASS LOADING OVERLAY - Nombres únicos
+    ======================================== */
+.glass-loading-overlay-custom {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    z-index: 500 !important;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.glass-loading-overlay-custom.is-active-loading {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+}
+
+/* Efecto glass mejorado */
+.glass-loading-overlay-custom::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.1) 100%);
+    border-radius: var(--radius);
+    z-index: -1;
+}
+
+/* ========================================
+    PAGE FLIP LOADER - Nombres únicos
+    ======================================== */
+.page-flip-loader-custom {
+    --loader-bg-gradient: linear-gradient(135deg, #23C4F8, #275EFE);
+    --loader-shadow-color: rgba(39, 94, 254, 0.28);
+    --loader-text-color: #2c3e50;
+    --loader-page-color: rgba(255, 255, 255, 0.36);
+    --loader-page-fold-color: rgba(255, 255, 255, 0.52);
+    --loader-animation-duration: 3s;
+    width: 200px;
+    height: 140px;
+    position: relative;
+}
+
+.page-flip-loader-custom:before,
+.page-flip-loader-custom:after {
+    --rotation-angle: -6deg;
+    content: "";
+    position: absolute;
+    bottom: 8px;
+    width: 120px;
+    top: 80%;
+    box-shadow: 0 16px 12px var(--loader-shadow-color);
+    transform: rotate(var(--rotation-angle));
+}
+
+.page-flip-loader-custom:before {
+    left: 4px;
+}
+
+.page-flip-loader-custom:after {
+    --rotation-angle: 6deg;
+    right: 4px;
+}
+
+.page-flip-loader-book {
+    width: 100%;
+    height: 100%;
+    border-radius: 13px;
+    position: relative;
+    z-index: 1;
+    perspective: 600px;
+    box-shadow: 0 4px 6px var(--loader-shadow-color);
+    background-image: var(--loader-bg-gradient);
+}
+
+.page-flip-loader-pages {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    position: relative;
+}
+
+.page-flip-loader-page {
+    --page-rotation: 180deg;
+    --page-opacity: 0;
+    --page-color: var(--loader-page-color);
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    transform-origin: 100% 50%;
+    color: var(--page-color);
+    opacity: var(--page-opacity);
+    transform: rotateY(var(--page-rotation));
+    animation: var(--loader-animation-duration) ease infinite;
+}
+
+.page-flip-loader-page:nth-child(2) {
+    --page-color: var(--loader-page-fold-color);
+    animation-name: page-flip-anim-2;
+}
+
+.page-flip-loader-page:nth-child(3) {
+    --page-color: var(--loader-page-fold-color);
+    animation-name: page-flip-anim-3;
+}
+
+.page-flip-loader-page:nth-child(4) {
+    --page-color: var(--loader-page-fold-color);
+    animation-name: page-flip-anim-4;
+}
+
+.page-flip-loader-page:nth-child(5) {
+    --page-color: var(--loader-page-fold-color);
+    animation-name: page-flip-anim-5;
+}
+
+.page-flip-loader-page svg {
+    width: 90px;
+    height: 120px;
+    display: block;
+}
+
+.page-flip-loader-page:first-child {
+    --page-rotation: 0deg;
+    --page-opacity: 1;
+}
+
+.page-flip-loader-page:last-child {
+    --page-opacity: 1;
+}
+
+.page-flip-loader-text {
+    display: block;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 20px;
+    text-align: center;
+    color: var(--loader-text-color);
+    font-weight: 600;
+    font-size: 16px;
+}
+
+@keyframes page-flip-anim-2 {
+    0% {
+    transform: rotateY(180deg);
+    opacity: 0;
+    }
+    20% {
+    opacity: 1;
+    }
+    35%, 100% {
+    opacity: 0;
+    }
+    50%, 100% {
+    transform: rotateY(0deg);
+    }
+}
+
+@keyframes page-flip-anim-3 {
+    15% {
+    transform: rotateY(180deg);
+    opacity: 0;
+    }
+    35% {
+    opacity: 1;
+    }
+    50%, 100% {
+    opacity: 0;
+    }
+    65%, 100% {
+    transform: rotateY(0deg);
+    }
+}
+
+@keyframes page-flip-anim-4 {
+    30% {
+    transform: rotateY(180deg);
+    opacity: 0;
+    }
+    50% {
+    opacity: 1;
+    }
+    65%, 100% {
+    opacity: 0;
+    }
+    80%, 100% {
+    transform: rotateY(0deg);
+    }
+}
+
+@keyframes page-flip-anim-5 {
+    45% {
+    transform: rotateY(180deg);
+    opacity: 0;
+    }
+    65% {
+    opacity: 1;
+    }
+    80%, 100% {
+    opacity: 0;
+    }
+    95%, 100% {
+    transform: rotateY(0deg);
+    }
+}

@@ -1,0 +1,225 @@
+{% extends "base/adm_base.html" %}
+{% block content %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/document1.css') }}">
+    <!-- Bootstrap CDN for modals and offcanvas -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- ECharts CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/aianalysis.css') }}">
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <div class="page-header">
+            <h1 class="page-title">Análisis de Documentos IA vs Humano</h1>
+            <div class="header-actions">
+                <button class="btn btn-action btn-primary" id="refreshBtn">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    Actualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- Estadísticas Generales -->
+        <div class="filters-section">
+            <h3>Estadísticas Generales</h3>
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalAnalyses">0</div>
+                        <div class="stat-label">Total Análisis</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="stat-card">
+                        <div class="stat-value" id="successRate">0%</div>
+                        <div class="stat-label">Tasa Éxito</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalParagraphs">0</div>
+                        <div class="stat-label">Total Párrafos</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="stat-card">
+                        <div class="stat-value" id="humanPercentage">0%</div>
+                        <div class="stat-label">Contenido Humano</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="stat-card">
+                        <div class="stat-value" id="aiPercentage">0%</div>
+                        <div class="stat-label">Contenido IA</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgConfidence">0%</div>
+                        <div class="stat-label">Confianza Promedio</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filters-section">
+            <h3>Filtros de Búsqueda</h3>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label">Buscar</label>
+                    <input type="text" class="filter-input" id="searchInput" placeholder="Título, autor, tema...">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Formato</label>
+                    <select class="filter-input" id="formatFilter">
+                        <option value="">Todos los formatos</option>
+                        <option value="PDF">PDF</option>
+                        <option value="DOCX">DOCX</option>
+                        <option value="TXT">TXT</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Fecha Desde</label>
+                    <input type="date" class="filter-input" id="dateFromFilter">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Fecha Hasta</label>
+                    <input type="date" class="filter-input" id="dateToFilter">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">&nbsp;</label>
+                    <button class="btn btn-action btn-primary" id="applyFiltersBtn">Aplicar</button>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">&nbsp;</label>
+                    <button class="btn btn-action btn-info" id="clearFiltersBtn">Limpiar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Estadísticas -->
+        <div class="chart-container">
+            <h4>Distribución de Contenido</h4>
+            <div id="contentChart" style="height: 300px;"></div>
+        </div>
+        <br>
+
+        <!-- Tabla de Análisis -->
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">Análisis de Documentos</div>
+                <div>
+                    <span id="paginationInfo">Mostrando 0 de 0 resultados</span>
+                </div>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Formato</th>
+                        <th>Páginas</th>
+                        <th>Párrafos</th>
+                        <th>Humano/IA</th>
+                        <th>Confianza</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="analysesTable">
+                    <!-- Llenado por JavaScript -->
+                </tbody>
+            </table>
+            
+            <!-- Paginación -->
+            <div class="pagination-container" id="paginationContainer">
+                <!-- Llenado por JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Detalles del Análisis -->
+    <div class="modal fade" id="analysisModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalles del Análisis</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="analysisModalBody">
+                    <!-- Llenado por JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-action btn-info" id="viewParagraphsBtn">Ver Párrafos</button>
+                    <button type="button" class="btn btn-action btn-success" id="exportAnalysisBtn">Exportar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Offcanvas para Párrafos Clasificados -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="paragraphsOffcanvas" style="width: 60%;">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title">Párrafos Clasificados</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body">
+            <!-- Filtros para párrafos -->
+            <div class="filters-section mb-3">
+                <h6>Filtros de Párrafos</h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="filter-label">Página</label>
+                        <select class="filter-input" id="paragraphPageFilter">
+                            <option value="">Todas las páginas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="filter-label">Clasificación</label>
+                        <select class="filter-input" id="paragraphClassificationFilter">
+                            <option value="">Todas</option>
+                            <option value="human">Humano</option>
+                            <option value="ai">IA</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="filter-label">Confianza Mín.</label>
+                        <input type="number" class="filter-input" id="minConfidenceFilter" step="0.1" min="0" max="1">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="filter-label">&nbsp;</label>
+                        <button class="btn btn-action btn-primary" id="applyParagraphFiltersBtn">Aplicar</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="paragraphsList">
+                <!-- Llenado por JavaScript -->
+            </div>
+            
+            <div class="text-center">
+                <button class="btn btn-action btn-primary" id="loadMoreParagraphsBtn" style="display: none;">Cargar Más</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 30px; border-radius: 12px; text-align: center;">
+            <div style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
+            <div id="loadingMessage">Cargando...</div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
+    <script src="{{ url_for('static', filename='js/aianalisis.js') }}"></script>
+{% endblock %}

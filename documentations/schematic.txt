@@ -1,0 +1,265 @@
+
+
+
+
+
+
+
+
+Una plataforma de microservicios suele estar compuesta por varios microservicios que
+ brindan funcionalidades específicas y se comunican entre sí para crear una aplicación 
+ completa. Aquí hay una lista de microservicios comunes que
+ podrías encontrar en una plataforma estándar:
+
+Servicio de Autenticación (Auth Service):
+Encargado de gestionar la autenticación y autorización de usuarios. Proporciona 
+funciones como registro, inicio de sesión, generación y validación de tokens JWT, y recuperación de contraseña.
+
+Servicio de Usuarios (User Service):
+Responsable de gestionar la información de los usuarios, como la creación, 
+actualización y eliminación de cuentas de usuario. También puede manejar perfiles de usuario y detalles personales.
+
+Servicio de Perfiles (Profile Service):
+Puede manejar información adicional sobre los usuarios, como fotos de perfil, biografías y
+ otras características. Este servicio puede ser opcional dependiendo de la aplicación.
+
+Servicio de Publicaciones (Post Service):
+Maneja la creación, edición y eliminación de publicaciones o entradas de usuarios. Puede 
+permitir la agregación de medios como imágenes y videos.
+
+Servicio de Amigos/Seguidores (Friend/Follower Service):
+Administra las relaciones entre usuarios, como la solicitud y confirmación de amistades o 
+seguidores. Puede brindar la capacidad de ver actualizaciones de amigos y seguidores.
+
+Servicio de Comentarios (Comment Service):
+Gestiona la capacidad de agregar comentarios a las publicaciones o a otros elementos de la aplicación.
+
+Servicio de Notificaciones (Notification Service):
+Proporciona notificaciones a los usuarios sobre eventos importantes, como menciones, nuevos 
+seguidores o interacciones con sus publicaciones.
+
+Servicio de Mensajería (Messaging Service):
+Ofrece la posibilidad de enviar mensajes directos entre usuarios. Puede manejar conversaciones
+ individuales o en grupo.
+
+Servicio de Búsqueda (Search Service):
+Brinda capacidades de búsqueda para encontrar usuarios, publicaciones y otros elementos en la aplicación.
+
+Servicio de Contenido Multimedia (Media Service):
+Gestiona el almacenamiento y la entrega de contenido multimedia, como imágenes y videos, para su visualización en la aplicación.
+
+
+##########################################################################
+##########################################################################
+
+-------------------IMPLEMENTED
+microservices/
+|-- auth_service/
+|   |-- app/
+|   |   |-- __init__.py
+|   |   |-- models.py
+|   |   |-- routes.py
+|   |   |-- utilities.py
+|   |   |-- Dockerfile
+|   |   |-- config.py
+|   |   |-- uploads/
+|   |       |-- uploads_save/
+|   |
+|-- dbanalysis_service/
+|   |-- app/
+|   |   |-- datamodels/
+|   |   |   |-- "university id"/
+|   |   |   |   |-- "user id"/
+|   |   |   |   |   |-- "idiom id"/
+|   |   |   |   |   |    |-- "xplagiax_data_en_tfidf_vectorizador_.pkl"
+|   |   |   |   |   |    |-- "xplagiax_data_en_X_train_.joblib"
+|   |   |   |   |   |    |-- "xplagiax_en_model_.pkl"
+|   |   |   |   |   |-- "idiom id"/
+|   |   |   |   |   |    |-- "xplagiax_data_en_tfidf_vectorizador_.pkl"
+|   |   |   |   |   |    |-- "xplagiax_data_en_X_train_.joblib"
+|   |   |   |   |   |    |-- "xplagiax_en_model_.pkl"
+|   |   |   |   |   |-- "idiom id"/
+|   |   |   |   |   |    |-- "xplagiax_data_en_tfidf_vectorizador_.pkl"
+|   |   |   |   |   |    |-- "xplagiax_data_en_X_train_.joblib"
+|   |   |   |   |   |    |-- "xplagiax_en_model_.pkl"
+|   |   |   |-- "university id"/
+|   |   |   |   |-- "user id"/
+|   |   |   |   |   |-- "idiom id"/
+|   |   |   |   |   |    |-- "xplagiax_data_en_tfidf_vectorizador_.pkl"
+|   |   |   |   |   |    |-- "xplagiax_data_en_X_train_.joblib"
+|   |   |   |   |   |    |-- "xplagiax_en_model_.pkl"
+|   |   |   |   |   |-- "idiom id"/
+|   |   |   |   |   |    |-- "xplagiax_data_en_tfidf_vectorizador_.pkl"
+|   |   |   |   |   |    |-- "xplagiax_data_en_X_train_.joblib"
+|   |   |   |   |   |    |-- "xplagiax_en_model_.pkl"
+|   |   |   |   |   |-- "idiom id"/
+|   |   |   |   |   |    |-- "xplagiax_data_en_tfidf_vectorizador_.pkl"
+|   |   |   |   |   |    |-- "xplagiax_data_en_X_train_.joblib"
+|   |   |   |   |   |    |-- "xplagiax_en_model_.pkl"
+|   |   |   |-- "university id"/
+|   |   |   |   |-- "user id"/
+|   |   |   |   |   |-- "idiom id"/
+|   |   |   |   |   |    |-- "xplagiax_data_en_tfidf_vectorizador_.pkl"
+|   |   |   |   |   |    |-- "xplagiax_data_en_X_train_.joblib"
+|   |   |   |   |   |    |-- "xplagiax_en_model_.pkl"
+|   |   |   |   |   |-- "idiom id"/
+|   |   |   |   |   |    |-- "xplagiax_data_en_tfidf_vectorizador_.pkl"
+|   |   |   |   |   |    |-- "xplagiax_data_en_X_train_.joblib"
+|   |   |   |   |   |    |-- "xplagiax_en_model_.pkl"
+|   |   |   |   |   |-- "idiom id"/
+|   |   |   |   |   |    |-- "xplagiax_data_en_tfidf_vectorizador_.pkl"
+|   |   |   |   |   |    |-- "xplagiax_data_en_X_train_.joblib"
+|   |   |   |   |   |    |-- "xplagiax_en_model_.pkl"
+|   |   |-- __init__.py
+|   |   |-- models.py
+|   |   |-- routes.py
+|   |
+|   |-- config.py
+|   |-- utilities.py
+|   |-- Dockerfile
+|
+|-- docanalysis_service/
+|   |-- app/
+|   |   |-- __init__.py
+|   |   |-- models.py
+|   |   |-- routes.py
+|   |   |-- config.py
+|   |   |-- utilities.py
+|
+|-- patent_analysis_service/
+|   |-- app/
+|   |   |-- __init__.py
+|   |   |-- models.py
+|   |   |-- routes.py
+|   |   |-- config.py
+|   |   |-- utilities.py
+|  
+|
+| 
+|-- notification_messaging_service/  <--- NOT IMPLEMENTED
+|   |-- app/
+|   |   |-- __init__.py
+|   |   |-- models.py
+|   |   |-- routes.py
+|   |
+|   |-- config.py
+|   |-- utilities.py
+|   |-- Dockerfile
+|
+|-- account_recovery_service/  <---NOT IMPLEMENTED
+|   |-- app/
+|   |   |-- __init__.py
+|   |   |-- models.py
+|   |   |-- routes.py
+|   |
+|   |-- config.py
+|   |-- utilities.py
+|   |-- Dockerfile
+|
+|-- common/
+|   |-- utilities.py
+|
+|-- app.py
+|-- .env
+
+
+
+
+##########################################################################
+##########################################################################
+
+# Crea el directorio raíz del proyecto
+mkdir microservices_app
+
+# Navega al directorio del proyecto
+cd microservices_app
+
+# Crea el directorio auth_service y sus subdirectorios
+mkdir -p auth_service/app
+touch auth_service/app/__init__.py
+touch auth_service/app/models.py
+touch auth_service/app/routes.py
+touch auth_service/config.py
+touch auth_service/utilities.py
+touch auth_service/Dockerfile
+
+# Crea el directorio account_service y sus subdirectorios
+
+mkdir -p account_service/app
+touch account_service/app/__init__.py
+touch account_service/app/models.py
+touch account_service/app/routes.py
+touch account_service/config.py
+touch account_service/utilities.py
+touch account_service/Dockerfile
+
+# Crea el directorio transactions_service y sus subdirectorios
+
+mkdir -p transactions_service/app
+touch transactions_service/app/__init__.py
+touch transactions_service/app/models.py
+touch transactions_service/app/routes.py
+touch transactions_service/config.py
+touch transactions_service/utilities.py
+touch transactions_service/Dockerfile
+
+
+# Crea el directorio notification_messaging_service y sus subdirectorios
+
+mkdir -p notification_messaging_service/app
+touch notification_messaging_service/app/__init__.py
+touch notification_messaging_service/app/models.py
+touch notification_messaging_service/app/routes.py
+touch notification_messaging_service/config.py
+touch notification_messaging_service/utilities.py
+touch notification_messaging_service/Dockerfile
+
+
+
+
+# Crea el directorio common
+mkdir common
+touch common/utilities.py
+
+# Crea los archivos en el directorio raíz
+touch app.py
+touch .env
+
+
+
+Para ejecutar los microservicios en Google Cloud Compute Engine, sigue estos pasos:
+
+    Crea una cuenta de Google Cloud Platform (GCP) si aún no tienes una.
+
+    Crea un nuevo proyecto en la consola de GCP si aún no tienes uno.
+
+    Habilita la facturación para tu proyecto y configura los detalles de facturación.
+
+    Instala la herramienta de línea de comandos de Google Cloud SDK en tu computadora local. Esto te permitirá interactuar con los servicios de Google Cloud desde la línea de comandos.
+
+    Configura la herramienta de línea de comandos de Google Cloud SDK ejecutando el siguiente comando y siguiendo las instrucciones:
+
+gcloud init
+```
+
+Crea las imágenes de Docker para cada microservicio. Asegúrate de tener un archivo Dockerfile en el directorio de cada microservicio que especifique cómo se debe construir la imagen.
+
+Sube las imágenes de Docker a Google Container Registry (GCR), que es un registro de contenedores administrado por Google Cloud. Puedes usar el siguiente comando para enviar una imagen a GCR:
+
+gcloud builds submit --tag gcr.io/[PROJECT-ID]/[IMAGE-NAME]
+
+Reemplaza [PROJECT-ID] con el ID de tu proyecto en GCP y [IMAGE-NAME] con el nombre de la imagen de Docker para cada microservicio.
+
+Crea instancias de Compute Engine para cada microservicio. Puedes usar el siguiente comando para crear una instancia:
+
+gcloud compute instances create [INSTANCE-NAME] --image-family=cos-stable --image-project=cos-cloud --tags=http-server --metadata-from-file startup-script=[STARTUP-SCRIPT-FILE]
+
+Reemplaza [INSTANCE-NAME] con el nombre de la instancia, [STARTUP-SCRIPT-FILE] con la ruta al archivo de script de inicio para cada microservicio. El script de inicio deberá contener los comandos necesarios para ejecutar el microservicio en la instancia.
+
+Configura las reglas de firewall para permitir el tráfico HTTP en las instancias de Compute Engine. Puedes usar el siguiente comando para crear una regla:
+
+    gcloud compute firewall-rules create allow-http --allow tcp:80
+
+    Una vez que las instancias estén en funcionamiento, puedes acceder a cada microservicio a través de la dirección IP pública asignada a cada instancia.
+
+Estos son los pasos básicos para ejecutar los microservicios en Google Cloud Compute Engine. Ten en cuenta que cada microservicio puede tener requisitos y configuraciones adicionales dependiendo de las tecnologías y herramientas específicas que estés utilizando. Asegúrate de consultar la documentación correspondiente y seguir las mejores prácticas recomendadas para implementar y administrar microservicios en Google Cloud.

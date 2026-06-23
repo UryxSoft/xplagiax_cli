@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Descripción de la página web">
+    <meta name="keywords" content="palabras clave, SEO, optimización">
+    <meta name="Xplagiax ltd" content="Uryx technologies">
+    <meta name="robots" content="index, follow">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!-- Favicon optimizado -->
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/icon/favicon-32x32.png') }}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/icon/favicon-16x16.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/enhanced_login.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/brand.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css') }}" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet"   href="{{ url_for('static', filename='css/floatingicon.css') }}" />
+  </head>
+  <body class="cont bg-primary"  id="myDiv">
+    <!-- header -->
+    <header class="header header-sticky header-transparent">
+      <div class="" style="padding: 3px;">
+        <div class="">
+          <nav class="navbar navbar-expand-lg navbar-dark">
+            <a href="{{ url_for('x_apps.index') }}" class="tech-brand">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" stroke="currentColor" class="bi bi-chevron-contract" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708" stroke-width="0.8"/>
+              </svg>
+              <span>plagia</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" stroke="currentColor" class="bi bi-chevron-contract" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708" stroke-width="0.8"/>
+            </svg>
+          </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+              <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+              <ul class="navbar-nav mr-auto">
+                <li class="nav-item dropdown">
+                    <a class="nav-link" href="{{ url_for('x_apps.index') }}" id="dropdown-2" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      Return
+                    </a>
+                </li>
+              </ul>
+              <ul class="navbar-nav">
+           
+                <!--<li class="nav-item">
+                  <a class="nav-link" href="">Support</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('x_apps.register') }}">Sign up</a>
+                  </li>-->
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </header>
+    <!-- / header -->
+    <section class="cont" style="height: 100vh; display: flex; justify-content: center; align-items: center;" >
+        <!-- From Uiverse.io by micaelgomestavares --> 
+         {% block content %}
+         
+         {% endblock %}
+    </section>
+      <!-- Footer transparente -->
+    <footer class="footer">
+      Powered by 
+      <img src="{{ url_for('static', filename='img/uryx.png') }}" alt="XplagiaX" />
+      Uryx Technologies | All Rights Reserved 2025
+    </footer>
+    <script src="{{ url_for('static', filename='js/enhanced_signin.js')}}"></script>
+    <script src="{{ url_for('static', filename='js/enhanced_signup.js')}}"></script>
+    <script src="{{ url_for('static', filename='js/floatingicon.js')}}"></script>
+    </body>
+</html>

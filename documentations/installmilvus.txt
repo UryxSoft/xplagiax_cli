@@ -1,0 +1,21 @@
+Milvus en Docker con un solo comando:
+
+docker run -d --name milvus -p 19530:19530 -p 9091:9091 milvusdb/milvus:latest
+
+Explicación:
+
+    docker run -d → Ejecuta el contenedor en modo detached (en segundo plano).
+    --name milvus → Nombra el contenedor como milvus.
+    -p 19530:19530 → Expone el puerto principal de Milvus.
+    -p 9091:9091 → Expone el puerto de métricas (opcional).
+    milvusdb/milvus:latest → Usa la última versión oficial de Milvus.
+
+Verifica que el contenedor está corriendo con:
+
+docker ps
+
+Si necesitas detener y eliminar Milvus:
+
+docker rm -f milvus
+
+🔹 ¡Listo! Milvus está corriendo en tu Docker. 🚀

@@ -1,0 +1,304 @@
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@x_search.route('/upload_document', methods=['POST'])
+def upload_document():
+    """
+    Ruta para subir documentos individuales
+    """
+    if 'filepond' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    file = request.files['filepond']
+    
+    # Verificar si no hay archivo seleccionado
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    # Verificar si el archivo es de un tipo permitido
+    if file and allowed_file(file.filename):
+        # Crear un nombre de archivo seguro y único
+        original_filename = secure_filename(file.filename)
+        file_extension = original_filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
+        
+        # Metadata del documento
+        title = request.form.get('title', original_filename)
+        author = request.form.get('author', 'Unknown')
+        theme = request.form.get('theme', 'General')
+        description = request.form.get('description', '')
+        
+        # Guardar el archivo
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        file_path = os.path.join(upload_folder, unique_filename)
+        file.save(file_path)
+        
+        # Crear registro en la base de datos
+        try:
+            new_document = Document(
+                title=title,
+                author=author,
+                theme=theme,
+                description=description,
+                filename=original_filename,
+                filepath=file_path,
+                rena='/uploads/' + unique_filename,  # URL para acceder al archivo
+                upload_date=datetime.now(),
+                user_id=request.form.get('user_id', 1)  # Ajustar según tu modelo de autenticación
+            )
+            
+            # Devolver respuesta exitosa con información del documento
+            return jsonify({
+                'success': True,
+                'message': 'Document uploaded successfully',
+                'document': {
+                    'id': new_document.id,
+                    'title': new_document.title,
+                    'author': new_document.author,
+                    'theme': new_document.theme,
+                    'filepath': new_document.rena
+                }
+            }), 200
+            
+        except Exception as e:
+            # En caso de error al guardar en la base de datos, eliminar el archivo
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            return jsonify({'error': f'Database error: {str(e)}'}), 500
+    
+    return jsonify({'error': 'File type not allowed'}), 400
+
+@x_search.route('/upload_collection', methods=['POST'])
+def upload_collection():
+    """
+    Ruta para subir colecciones de documentos
+    """
+    if 'filepond' not in request.files:
+        return jsonify({'error': 'No files part'}), 400
+    
+    # FilePond envía múltiples archivos como múltiples entradas con el mismo nombre
+    files = request.files.getlist('filepond')
+    
+    # Verificar si hay archivos
+    if not files or len(files) == 0:
+        return jsonify({'error': 'No files selected'}), 400
+    
+    # Obtener metadata de la colección
+    collection_name = request.form.get('collection_name', f'Collection {datetime.now().strftime("%Y-%m-%d %H:%M")}')
+    collection_description = request.form.get('collection_description', '')
+    
+    # Crear la colección en la base de datos
+    try:
+        new_collection = Collection(
+            name=collection_name,
+            description=collection_description,
+            created_date=datetime.now(),
+            user_id=request.form.get('user_id', 1)  # Ajustar según tu modelo de autenticación
+        )
+        
+        db.session.add(new_collection)
+        db.session.flush()  # Para obtener el ID antes de hacer commit
+        
+        collection_id = new_collection.id
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        
+        # Lista para almacenar documentos procesados
+        processed_documents = []
+        
+        # Procesar cada archivo
+        for file in files:
+            if file.filename == '':
+                continue
+                
+            if allowed_file(file.filename):
+                # Crear un nombre de archivo seguro y único
+                original_filename = secure_filename(file.filename)
+                file_extension = original_filename.rsplit('.', 1)[1].lower()
+                unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
+                
+                # Guardar el archivo
+                file_path = os.path.join(upload_folder, unique_filename)
+                file.save(file_path)
+                
+                # Crear registro de documento en la base de datos
+                new_document = Document(
+                    title=original_filename,  # Usar nombre original como título por defecto
+                    author='Unknown',         # Valores por defecto que pueden ser actualizados después
+                    theme='General',
+                    description='',
+                    filename=original_filename,
+                    filepath=file_path,
+                    rena='/uploads/' + unique_filename,
+                    upload_date=datetime.now(),
+                    user_id=request.form.get('user_id', 1),
+                    collection_id=collection_id  # Asociar con la colección
+                )
+                
+                db.session.add(new_document)
+                processed_documents.append({
+                    'filename': original_filename,
+                    'filepath': '/uploads/' + unique_filename
+                })
+        
+        # Commit a la base de datos
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Collection "{collection_name}" with {len(processed_documents)} documents uploaded successfully',
+            'collection_id': collection_id,
+            'documents': processed_documents
+        }), 200
+        
+    except Exception as e:
+        # Rollback en caso de error
+        db.session.rollback()
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+
+@x_search.route('/collection/<int:collection_id>/documents', methods=['GET'])
+def get_collection_documents(collection_id):
+    """
+    Obtener todos los documentos de una colección
+    """
+    try:
+        documents = Document.query.filter_by(collection_id=collection_id).all()
+        docs_data = [{
+            'id': doc.id,
+            'title': doc.title,
+            'author': doc.author,
+            'theme': doc.theme,
+            'filepath': doc.rena,
+            'upload_date': doc.upload_date.strftime('%Y-%m-%d %H:%M:%S')
+        } for doc in documents]
+        
+        return jsonify({
+            'success': True,
+            'collection_id': collection_id,
+            'documents': docs_data
+        }), 200
+    except Exception as e:
+        return jsonify({'error': f'Error: {str(e)}'}), 500
+
+@x_search.route('/documents/<int:document_id>', methods=['GET'])
+def get_document(document_id):
+    """
+    Obtener información de un documento específico
+    """
+    try:
+        document = Document.query.get(document_id)
+        if not document:
+            return jsonify({'error': 'Document not found'}), 404
+            
+        doc_data = {
+            'id': document.id,
+            'title': document.title,
+            'author': document.author,
+            'theme': document.theme,
+            'description': document.description,
+            'filepath': document.rena,
+            'upload_date': document.upload_date.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        return jsonify({
+            'success': True,
+            'document': doc_data
+        }), 200
+    except Exception as e:
+        return jsonify({'error': f'Error: {str(e)}'}), 500
+
+# Ruta para renderizar la página de documentos
+@x_search.route('/documents', methods=['GET'])
+def documents_page():
+    """
+    Renderiza la página de documentos
+    """
+    return render_template('profile.html')
+
+
+
+Entendido. Si estás ejecutando Elasticsearch en Docker, el proceso para habilitar la seguridad es un poco diferente. Vamos a ajustar los pasos para tu entorno Docker:
+
+Detén el contenedor actual de Elasticsearch:
+
+Copiar
+docker stop nombre_de_tu_contenedor_elasticsearch
+Crea un nuevo archivo de configuración elasticsearch.yml en tu máquina host. Puedes llamarlo custom_elasticsearch.yml:
+yaml
+
+Copiar
+xpack.security.enabled: true
+discovery.type: single-node
+Inicia un nuevo contenedor de Elasticsearch con la configuración personalizada:
+awk
+
+Copiar
+docker run -d \
+  --name elasticsearch \
+  -p 9200:9200 \
+  -p 9300:9300 \
+  -e "ES_JAVA_OPTS=-Xms512m -Xmx512m" \
+  -v /ruta/completa/a/tu/custom_elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml \
+  docker.elastic.co/elasticsearch/elasticsearch:7.17.24
+Asegúrate de reemplazar /ruta/completa/a/tu/ con la ruta real donde guardaste el archivo custom_elasticsearch.yml.
+Una vez que el contenedor esté en funcionamiento, ejecuta el siguiente comando para configurar las contraseñas:
+
+Copiar
+docker exec -it elasticsearch /usr/share/elasticsearch/bin/elasticsearch-setup-passwords auto
+Este comando generará contraseñas automáticamente para los usuarios incorporados. Asegúrate de guardar estas contraseñas, especialmente las de los usuarios elastic y kibana_system.
+Si estás usando Kibana, necesitarás actualizar su configuración también. Crea un archivo kibana.yml en tu máquina host:
+yaml
+
+Copiar
+elasticsearch.username: "kibana_system"
+elasticsearch.password: "la_contraseña_generada_para_kibana_system"
+Inicia el contenedor de Kibana con la nueva configuración:
+awk
+
+Copiar
+docker run -d \
+  --name kibana \
+  --link elasticsearch:elasticsearch \
+  -p 5601:5601 \
+  -v /ruta/completa/a/tu/kibana.yml:/usr/share/kibana/config/kibana.yml \
+  docker.elastic.co/kibana/kibana:7.17.24
+Ahora, cuando te conectes a Elasticsearch, necesitarás proporcionar credenciales. Actualiza tu código de conexión para incluir el nombre de usuario y la contraseña:
+python
+
+Copiar
+from elasticsearch import Elasticsearch
+
+es = Elasticsearch(
+    ['http://localhost:9200'],
+    http_auth=('elastic', 'la_contraseña_generada_para_elastic')
+)
+
+print(es.info())
+Después de seguir estos pasos, deberías tener Elasticsearch ejecutándose en Docker con la seguridad básica habilitada. Ya no deberías ver la advertencia de seguridad cuando te conectes.
+
+Recuerda que esta es una configuración básica. Para un entorno de producción, deberías considerar medidas de seguridad adicionales, como configurar TLS para las comunicaciones y usar secretos de Docker para manejar las contraseñas de manera más segura.
+
+
+Para ver todos los índices en Elasticsearch, puedes usar una solicitud HTTP GET en el endpoint _cat/indices o directamente consultar por un índice específico como example_index. Aquí te muestro dos formas:
+
+Ver todos los índices:
+Usa el siguiente comando en tu terminal o cliente de Elasticsearch (como cURL):
+
+bash
+Copiar código
+curl -X GET "http://localhost:9200/_cat/indices?v"
+Esto te devolverá una lista de todos los índices con detalles como el estado, número de documentos, etc.
+
+Ver un índice específico (example_index):
+Si solo deseas ver los detalles del índice example_index, puedes usar:
+
+bash
+Copiar código
+curl -X GET "http://localhost:9200/_cat/indices/example_index?v"
+Esto te dará la información solo del índice example_index.
+
+Si estás utilizando Kibana, también puedes acceder a los índices visualmente a través de la consola de Dev Tools, usando las mismas consultas.
+
+
+INSTALAR ELATICSEARCH:  
+
+docker run -d --name elasticsearch --net somenetwork -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:7.17.24

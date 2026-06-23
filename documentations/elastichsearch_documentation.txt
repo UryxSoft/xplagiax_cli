@@ -1,0 +1,355 @@
+# Documentación de la API de Elasticsearch
+
+Esta API proporciona una interfaz RESTful para interactuar con Elasticsearch a través de la clase ElasticsearchManager, permitiendo gestionar índices, documentos, realizar búsquedas y monitorear el rendimiento.
+
+## Requisitos
+
+- Flask
+- Redis (opcional, para caché)
+- Elasticsearch
+
+## Configuración
+
+Por defecto, la API se conecta a:
+- Elasticsearch: http://localhost:9200
+- Redis: localhost:6379
+
+## Endpoints
+
+### Estado del Servicio
+
+#### Obtener Estado
+```
+GET /api/status
+```
+
+Ejemplo:
+```bash
+curl -X GET http://localhost:5000/api/status
+```
+
+Respuesta:
+```json
+{
+  "elasticsearch": "connected",
+  "redis_cache": "connected",
+  "service": "running"
+}
+```
+
+### Gestión de Índices
+
+#### Listar Índices
+```
+GET /api/indices
+```
+
+Ejemplo:
+```bash
+curl -X GET http://localhost:5000/api/indices
+```
+
+#### Eliminar Índice
+```
+DELETE /api/indices/<index_name>
+```
+
+Ejemplo:
+```bash
+curl -X DELETE http://127.0.0.1/:5000/api/indices/essays_index
+```
+
+### Gestión de Documentos
+
+#### Añadir Documento
+```
+POST /api/documents/<index_name>
+```
+
+Parámetros opcionales:
+- `doc_id`: ID específico para el documento (query parameter)
+
+Ejemplo:
+```bash
+curl -X POST http://localhost:5000/api/documents/essays_index?doc_id=1001 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Inteligencia Artificial y su Futuro",
+    "author": "Juan Pérez",
+    "content": "La inteligencia artificial está transformando...",
+    "date_published": "2023-05-15",
+    "language": "es"
+  }'
+```
+
+#### Obtener Documento
+```
+GET /api/documents/<index_name>/<doc_id>
+```
+
+Ejemplo:
+```bash
+curl -X GET http://localhost:5000/api/documents/essays_index/1001
+```
+
+#### Actualizar Documento
+```
+PATCH /api/documents/<index_name>/<doc_id>
+```
+
+Ejemplo:
+```bash
+curl -X PATCH http://localhost:5000/api/documents/essays_index/1001 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "author": "Juan A. Pérez",
+    "keywords": ["IA", "futuro", "tecnología"]
+  }'
+```
+
+#### Eliminar Documento
+```
+DELETE /api/documents/<index_name>/<doc_id>
+```
+
+Ejemplo:
+```bash
+curl -X DELETE http://localhost:5000/api/documents/essays_index/1001
+```
+
+### Carga Masiva de Documentos
+
+#### Indexación Masiva
+```
+POST /api/bulk/<index_name>
+```
+
+Ejemplo:
+```bash
+curl -X POST http://localhost:5000/api/bulk/essays_index \
+  -H "Content-Type: application/json" \
+  -d '{
+    "documents": [
+      {
+        "title": "Documento 1",
+        "content": "Contenido del documento 1"
+      },
+      {
+        "title": "Documento 2",
+        "content": "Contenido del documento 2"
+      }
+    ],
+    "batch_size": 500
+  }'
+```
+
+### Búsquedas
+
+#### Búsqueda Difusa
+```
+POST /api/search/fuzzy/<index_name>
+```
+
+Ejemplo:
+```bash
+curl -X POST http://localhost:5000/api/search/fuzzy/essays_index \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "This paper presents Fractal-ANS, a novel lossless compression algorithm that synergizes fractal geometry with asymmetric numeral systems (ANS) to achieve unprecedented compression efficiency.",
+    "languages": ["es", "en"]
+  }'
+
+
+  curl -X POST  http://127.0.0.1:5000/x_search/api/search/fuzzy/essays_index \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "This paper presents Fractal-ANS, a novel lossless compression algorithm that synergizes fractal geometry with asymmetric numeral systems (ANS) to achieve unprecedented compression efficiency.",
+    "languages": ["es", "en"]
+  }'
+```
+
+#### Búsqueda Paralela
+```
+POST /api/search/parallel
+```
+
+Ejemplo:
+```bash
+curl -X POST http://localhost:5000/api/search/parallel \
+  -H "Content-Type: application/json" \
+  -d '{
+    "texts": [
+      "inteligencia artificial",
+      "cambio climático",
+      "aprendizaje automático"
+    ],
+    "index_name": "essays_index",
+    "languages": ["es"],
+    "max_workers": 3
+  }'
+```
+
+#### Búsqueda "More Like This"
+```
+POST /api/search/morelike
+```
+
+Ejemplo:
+```bash
+curl -X POST http://localhost:5000/api/search/morelike \
+  -H "Content-Type: application/json" \
+  -d '{
+    "texts": [
+      "La inteligencia artificial está transformando todos los sectores de la economía"
+    ],
+    "index_name": "essays_index"
+  }'
+
+  curl -X POST http://127.0.0.1:5000/x_search/api/search/morelike \
+  -H "Content-Type: application/json" \
+  -d '{
+    "texts": [
+      "This paper presents Fractal-ANS, a novel lossless compression algorithm that synergizes fractal geometry with asymmetric numeral systems (ANS) to achieve unprecedented compression efficiency."
+    ],
+    "index_name": "essays_index"
+  }'
+```
+
+### Métricas y Monitoreo
+
+#### Obtener Métricas de Rendimiento
+```
+GET /api/metrics
+```
+
+Ejemplo:
+```bash
+curl -X GET http://localhost:5000/api/metrics
+```
+
+#### Reiniciar Métricas
+```
+POST /api/metrics/reset
+```
+
+Ejemplo:
+```bash
+curl -X POST http://localhost:5000/api/metrics/reset
+```
+
+#### Obtener Estadísticas de Caché
+```
+GET /api/cache/stats
+```
+
+Ejemplo:
+```bash
+curl -X GET http://localhost:5000/api/cache/stats
+```
+
+#### Limpiar Caché
+```
+POST /api/cache/clear
+```
+
+Ejemplo:
+```bash
+curl -X POST http://localhost:5000/api/cache/clear \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pattern": "es_cache:*"
+  }'
+```
+
+## Ejemplos de Uso con Python
+
+### Añadir un documento
+
+```python
+import requests
+import json
+
+# Definir el documento
+document = {
+    "title": "Inteligencia Artificial y su Futuro",
+    "author": "Juan Pérez",
+    "content": "La inteligencia artificial está transformando...",
+    "date_published": "2023-05-15",
+    "language": "es"
+}
+
+# Enviar la solicitud
+response = requests.post(
+    "http://localhost:5000/api/documents/essays_index",
+    json=document
+)
+
+# Verificar respuesta
+if response.status_code == 200:
+    result = response.json()
+    print(f"Documento añadido con ID: {result['id']}")
+else:
+    print(f"Error: {response.json()['error']}")
+```
+
+### Búsqueda Paralela
+
+```python
+import requests
+import json
+
+# Definir los textos de búsqueda
+data = {
+    "texts": [
+        "inteligencia artificial",
+        "cambio climático",
+        "aprendizaje automático"
+    ],
+    "index_name": "essays_index",
+    "languages": ["es", "en"]
+}
+
+# Enviar la solicitud
+response = requests.post(
+    "http://localhost:5000/api/search/parallel",
+    json=data
+)
+
+# Verificar y procesar los resultados
+if response.status_code == 200:
+    results = response.json()['results']
+    
+    for text_result in results:
+        print(f"Resultados para: {text_result['text']}")
+        print(f"Cantidad de documentos encontrados: {text_result['count']}")
+        
+        for doc in text_result['documents'][:3]:  # Mostrar solo los primeros 3
+            print(f"  - {doc.get('title', 'Sin título')}")
+        
+        print("---")
+else:
+    print(f"Error: {response.json()['error']}")
+```
+
+### Obtener Métricas
+
+```python
+import requests
+
+response = requests.get("http://localhost:5000/api/metrics")
+
+if response.status_code == 200:
+    metrics = response.json()
+    
+    print(f"Tiempo de actividad: {metrics['uptime_seconds'] / 3600:.2f} horas")
+    print(f"Total de operaciones: {metrics['operations']['total']}")
+    
+    # Mostrar rendimiento por tipo de operación
+    for op_type, stats in metrics['performance'].items():
+        print(f"Operación: {op_type}")
+        print(f"  Conteo: {stats['count']}")
+        print(f"  Tiempo promedio: {stats['avg_time_ms']:.2f} ms")
+        print(f"  Tasa de éxito: {stats['success_rate'] * 100:.2f}%")
+else:
+    print(f"Error: {response.json()['error']}")
+```

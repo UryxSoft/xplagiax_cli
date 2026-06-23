@@ -1,0 +1,48 @@
+# ============================================
+# DEPENDENCIAS PRINCIPALES
+# ============================================
+
+# Framework
+Flask==3.0.0
+flask-login==0.6.3
+flask-mail==0.9.1
+
+# Base de datos
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.23
+
+# Pagos
+stripe==7.8.0
+paypalrestsdk==1.13.1
+
+# Seguridad y autenticación
+werkzeug==3.0.1
+email-validator==2.1.0
+
+# Variables de entorno (opcional pero recomendado)
+python-dotenv==1.0.0
+
+# Utilidades
+requests==2.31.0
+
+# ============================================
+# INSTALACIÓN
+# ============================================
+
+# Para instalar todas las dependencias:
+# pip install -r requirements.txt
+
+# O instalar individualmente:
+# pip install stripe paypalrestsdk
+
+# ============================================
+# NOTAS IMPORTANTES
+# ============================================
+
+# 1. Stripe requiere Python 3.7+
+# 2. PayPal SDK es compatible con Python 2.7+ y 3.4+
+# 3. Asegúrate de tener pip actualizado: pip install --upgrade pip
+# 4. En producción, considera usar un entorno virtual:
+#    python -m venv venv
+#    source venv/bin/activate  # En Windows: venv\Scripts\activate
+#    pip install -r requirements.txt

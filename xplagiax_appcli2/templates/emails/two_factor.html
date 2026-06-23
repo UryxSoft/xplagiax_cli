@@ -1,0 +1,9 @@
+{% extends 'emails/base.html' %}
+{% block content %}
+<h2>Tu código de verificación</h2>
+<p>Hola {{ user.username }},</p>
+<p>Tu código de autenticación de dos factores es:</p>
+<h3 style="color: #007bff;">{{ token }}</h3>
+<p>Ingresa este código en la aplicación para continuar.</p>
+<p>Este código expirará en pocos minutos.</p>
+{% endblock %}

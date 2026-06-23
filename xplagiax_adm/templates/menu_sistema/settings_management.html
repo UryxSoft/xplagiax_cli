@@ -1,0 +1,338 @@
+{% extends "base/adm_base.html" %}
+{% block content %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/document1.css') }}" />
+    
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <div class="page-header">
+            <h1 class="page-title">Gestión de Servicios</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="exportServices()">
+                    <i class="bi bi-file-earmark-arrow-up"></i>
+                    Exportar
+                </button>
+                <button class="btn btn-primary" onclick="openCreateModal()">
+                    <i class="bi bi-plus-square"></i>
+                    Nuevo Servicio
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-section">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-search"></i> Buscar</label>
+                    <input type="text" class="filter-input" id="searchInput" placeholder="Nombre, host, tipo...">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-hdd-network"></i> Tipo de Servicio</label>
+                    <select class="filter-input" id="serviceTypeFilter">
+                        <option value="">Todos los tipos</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-calendar3"></i> Fecha desde</label>
+                    <input type="date" class="filter-input" id="dateFromFilter">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-toggle-on"></i> Estado</label>
+                    <select class="filter-input" id="isActiveFilter">
+                        <option value="">Todos</option>
+                        <option value="true">Activo</option>
+                        <option value="false">Inactivo</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="bi bi-eye"></i> Monitoreado</label>
+                    <select class="filter-input" id="isMonitoredFilter">
+                        <option value="">Todos</option>
+                        <option value="true">Sí</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filters-actions">
+                <button class="btn btn-primary btn-filter" onclick="applyFilters()">
+                    <i class="bi bi-funnel"></i>
+                    Filtrar
+                </button>
+                <button class="btn btn-secondary btn-filter" onclick="clearFilters()">
+                    <i class="bi bi-eraser"></i>
+                    Limpiar
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Total Servicios</div>
+                    <div class="stat-icon" style="background: #e3f2fd; color: #1976d2;"><i class="bi bi-hdd-network"></i></div>
+                </div>
+                <div class="stat-value" id="totalServices">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Servicios Activos</div>
+                    <div class="stat-icon" style="background: #e8f5e8; color: #2e7d32;"><i class="bi bi-check-circle"></i></div>
+                </div>
+                <div class="stat-value" id="activeServices">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Monitoreados</div>
+                    <div class="stat-icon" style="background: #fff3e0; color: #f57c00;"><i class="bi bi-eye"></i></div>
+                </div>
+                <div class="stat-value" id="monitoredServices">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Este Mes</div>
+                    <div class="stat-icon" style="background: #f3e5f5; color: #7b1fa2;"><i class="bi bi-calendar3"></i></div>
+                </div>
+                <div class="stat-value" id="monthlyServices">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">Tipo Más Común</div>
+                    <div class="stat-icon" style="background: #e1f5fe; color: #0277bd;"><i class="bi bi-pie-chart"></i></div>
+                </div>
+                <div class="stat-value" id="commonType">-</div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-container">
+            <div class="table-header">
+                <h3 class="table-title">Lista de Servicios</h3>
+                <span class="table-stats" id="tableStats">Cargando...</span>
+            </div>
+
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                Cargando servicios...
+            </div>
+
+            <table class="data-table" id="servicesTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('id')">ID</th>
+                        <th onclick="sortTable('name')">Servicio</th>
+                        <th onclick="sortTable('host')">Host/Puerto</th>
+                        <th onclick="sortTable('service_type')">Tipo</th>
+                        <th onclick="sortTable('is_active')">Estado</th>
+                        <th onclick="sortTable('is_monitored')">Monitoreado</th>
+                        <th onclick="sortTable('created_at')">Fecha Creación</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="servicesTableBody">
+                    <!-- Data will be loaded here -->
+                </tbody>
+            </table>
+
+            <div class="pagination">
+                <div class="pagination-info" id="paginationInfo">
+                    Mostrando 0 de 0 servicios
+                </div>
+                <div class="pagination-controls" id="paginationControls">
+                    <!-- Pagination buttons will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Service Modal -->
+    <div class="modal" id="serviceModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle"><i class="bi bi-plus-square"></i> Nuevo Servicio</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="serviceForm">
+                    <input type="hidden" id="serviceId">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Nombre del Servicio *</label>
+                            <input type="text" class="form-input" id="serviceName" required placeholder="Ej: web-server-01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nombre de Visualización *</label>
+                            <input type="text" class="form-input" id="displayName" required placeholder="Ej: Servidor Web Principal">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Host/IP *</label>
+                            <input type="text" class="form-input" id="serviceHost" required placeholder="Ej: 192.168.1.100">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Puerto *</label>
+                            <input type="number" class="form-input" id="servicePort" required min="1" max="65535" placeholder="Ej: 80">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Tipo de Servicio *</label>
+                            <select class="form-input" id="serviceType" required>
+                                <option value="">Seleccionar tipo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Timeout (segundos)</label>
+                            <input type="number" class="form-input" id="serviceTimeout" min="1" max="60" value="5" placeholder="5">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Endpoint (opcional)</label>
+                            <input type="text" class="form-input" id="serviceEndpoint" placeholder="Ej: /api/health">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Icono</label>
+                            <input type="text" class="form-input" id="serviceIcon" placeholder="Ej: fas fa-server" value="fas fa-server">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Usuario (opcional)</label>
+                            <input type="text" class="form-input" id="serviceUsername" placeholder="Usuario para autenticación">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Contraseña (opcional)</label>
+                            <input type="password" class="form-input" id="servicePassword" placeholder="Contraseña para autenticación">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Configuración Extra (JSON)</label>
+                            <textarea class="form-input" id="extraConfig" rows="3" placeholder='{"key": "value"}'></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="isActive" checked>
+                                Servicio Activo
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="isMonitored" checked>
+                                Servicio Monitoreado
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeModal()"><i class="bi bi-x-square"></i> Cancelar</button>
+                <button class="btn btn-primary" onclick="saveService()"><i class="bi bi-save"></i> Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSS para status badges -->
+    <style>
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-badge.active {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .status-badge.inactive {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .status-badge.monitored {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .status-badge.not-monitored {
+            background-color: #f5f5f5;
+            color: #757575;
+        }
+        
+        .actions-menu {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .actions-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            color: #6c757d;
+            transition: all 0.2s;
+        }
+        
+        .actions-btn:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+        
+        .actions-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            min-width: 180px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .actions-dropdown.show {
+            display: block;
+        }
+        
+        .dropdown-item {
+            display: block;
+            padding: 8px 12px;
+            color: #495057;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .dropdown-item.danger {
+            color: #dc3545;
+        }
+        
+        .dropdown-item.danger:hover {
+            background-color: #f8d7da;
+        }
+        
+        .dropdown-item i {
+            margin-right: 8px;
+            width: 16px;
+        }
+    </style>
+
+    <script src="{{ url_for('static', filename='js/settings.js')}}"></script>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base/adm_base.html" %}
+{% block content %}
+    <link rel="stylesheet"   href="{{ url_for('static', filename='css/document1.css') }}" />
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="page-header">
+            <h1 class="page-title">Gestión de Sesiones SSH</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" id="newSessionBtn">
+                    <span>➕</span> Nueva Sesión
+                </button>
+            </div>
+        </div>
+
+        <!-- Sessions List -->
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">Sesiones Configuradas</div>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Host</th>
+                        <th>Usuario</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="sessionsList">
+                    <!-- Filled by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- New Session Modal -->
+    <div class="modal" id="sessionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Nueva Sesión SSH</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="sessionForm">
+                    <div class="form-group">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-input" name="name" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Hostname</label>
+                            <input type="text" class="form-input" name="hostname" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Puerto</label>
+                            <input type="number" class="form-input" name="port" value="22" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Usuario</label>
+                        <input type="text" class="form-input" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Método de Autenticación</label>
+                        <select class="form-select" name="auth_type" id="authTypeSelect">
+                            <option value="password">Contraseña</option>
+                            <option value="key">Clave SSH</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="passwordGroup">
+                        <label class="form-label">Contraseña</label>
+                        <input type="password" class="form-input" name="password">
+                    </div>
+                    <div class="form-group" id="keyGroup" style="display:none;">
+                        <label class="form-label">Ruta de Clave SSH</label>
+                        <input type="text" class="form-input" name="key_path">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+                <button class="btn btn-primary" id="saveSessionBtn">Guardar</button>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/sessions_ssh.js')}}"></script>
+{% endblock %}

@@ -1,0 +1,27 @@
+.float-container {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .floating-icon {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    animation: floatUp 6s ease-in-out forwards;
+    color: #ffffff;
+  }
+
+  @keyframes floatUp {
+    0% {
+      transform: translate(0, 0) scale(0.8) rotate(0deg);
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+      transform: translate(10px, -10px) scale(1.1) rotate(20deg);
+    }
+    100% {
+      transform: translate(-10px, 20px) scale(0.8) rotate(-20deg);
+      opacity: 0;
+    }
+  }

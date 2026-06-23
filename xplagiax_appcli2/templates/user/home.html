@@ -1,0 +1,254 @@
+{% extends "user/user_base.html" %}
+
+{% block head %}
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/home_dashboard.css') }}">
+  <style>
+    /* prefer Plus Jakarta Sans for the home dashboard headings */
+    .hd, .hd h1, .hd h2, .hd h3 { font-family: 'Plus Jakarta Sans', 'Work Sans', sans-serif; }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="hd">
+
+  <!-- ═════════ GREETING ═════════ -->
+  <div class="hd-intro">
+    <div>
+      <h1>Welcome back, <span class="hd-name">{{ user_data.name or 'Researcher' }}</span></h1>
+      <p>Your academic integrity workspace — AI detection, plagiarism analysis, source discovery and document traceability, all in one place.</p>
+    </div>
+    <div class="hd-date" id="hdDate">—</div>
+  </div>
+
+  <!-- ═════════ BENTO BOARD ═════════ -->
+  <div class="hd-bento" id="hdBento">
+
+    <!-- ───── HERO ───── -->
+    <section class="hd-card hd-hero w3" style="--d:0ms">
+      <div class="hd-hero__particles" id="hdParticles"></div>
+      <div>
+        <span class="hd-hero__badge"><span class="dot"></span> Enterprise Academic Suite</span>
+        <h2>Analyze with <b>confidence</b>.<br>Publish with integrity.</h2>
+        <p>XplagiaX combines AI text detection, semantic plagiarism analysis and multimodal verification to protect the originality of your scholarly work.</p>
+      </div>
+      <div>
+        <div class="hd-hero__row">
+          <a href="{{ url_for('x_users.analysis') }}" class="hd-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            New Analysis
+          </a>
+          <a href="https://xplagiax.ca" target="_blank" class="hd-btn hd-btn--ghost">
+            Explore platform
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+          </a>
+        </div>
+        <div class="hd-hero__stats">
+          <div class="hd-hero__stat"><div class="n" data-count="40" data-suffix="+">0</div><div class="l">AI models</div></div>
+          <div class="hd-hero__stat"><div class="n" data-count="13">0</div><div class="l">Formats</div></div>
+          <div class="hd-hero__stat"><div class="n" data-count="50" data-suffix="M">0</div><div class="l">Sources</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───── AUTO IMAGE SLIDER ───── -->
+    <section class="hd-card hd-slider w3" style="--d:60ms; min-height:300px;">
+      <div class="hd-slider__track">
+        <div class="hd-slide">
+          <div class="hd-slide__scene" style="background-image:url('{{ url_for('static', filename='img/hd/research.webp') }}')"></div>
+          <div class="hd-slide__tag">Research</div>
+          <h3>Knowledge, verified at the source</h3>
+          <p>Deep semantic search across 50M+ academic references.</p>
+        </div>
+        <div class="hd-slide">
+          <div class="hd-slide__scene" style="background-image:url('{{ url_for('static', filename='img/hd/ai-detect.webp') }}')"></div>
+          <div class="hd-slide__tag">Artificial Intelligence</div>
+          <h3>Detect AI-assisted writing precisely</h3>
+          <p>Perplexity and burstiness modeling across 40+ models.</p>
+        </div>
+        <div class="hd-slide">
+          <div class="hd-slide__scene" style="background-image:url('{{ url_for('static', filename='img/hd/university.webp') }}')"></div>
+          <div class="hd-slide__tag">Universities</div>
+          <h3>Built for academic institutions</h3>
+          <p>Standards-aligned reporting your faculty can trust.</p>
+        </div>
+        <div class="hd-slide">
+          <div class="hd-slide__scene" style="background-image:url('{{ url_for('static', filename='img/hd/deepfake.webp') }}')"></div>
+          <div class="hd-slide__tag">Image Forensics</div>
+          <h3>Multimodal verification</h3>
+          <p>Text, images and structure — analyzed together.</p>
+        </div>
+        <div class="hd-slide">
+          <div class="hd-slide__scene" style="background-image:url('{{ url_for('static', filename='img/hd/human-ai.webp') }}')"></div>
+          <div class="hd-slide__tag">AI Text Detection</div>
+          <h3>Human vs. machine, told apart</h3>
+          <p>Distinguish authentic authorship from generated prose.</p>
+        </div>
+        <div class="hd-slide">
+          <div class="hd-slide__scene" style="background-image:url('{{ url_for('static', filename='img/hd/analysis.webp') }}')"></div>
+          <div class="hd-slide__tag">Document Analysis</div>
+          <h3>Analyze every source with precision</h3>
+          <p>Trace claims back to their original references.</p>
+        </div>
+      </div>
+      <div class="hd-slider__dots" id="hdSliderDots"></div>
+    </section>
+
+    <!-- ───── FEATURE ROW · FinderX · MarkTrack · AI Image Detect (aligned 3-up) ───── -->
+    <div class="hd-card hd-featrow w6" style="--d:120ms">
+
+      <article class="hd-feat hd-feat-tile">
+        <div class="hd-card__glow" style="background:#2f7bff; top:-60px; left:-40px;"></div>
+        <div class="hd-feat__top">
+          <span class="ic3d v-blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6"/><line x1="21" y1="21" x2="15" y2="15"/><path d="M10 7v6M7 10h6"/></svg>
+          </span>
+        </div>
+        <h3>FinderX</h3>
+        <p>Deep source discovery engine that traces ideas back to their original references with semantic precision.</p>
+        <a href="https://xplagiax.ca/finderx" target="_blank" class="hd-feat__link">Explore module
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </article>
+
+      <article class="hd-feat hd-feat-tile">
+        <div class="hd-card__glow" style="background:#8b6dff; bottom:-60px; left:-30px;"></div>
+        <div class="hd-feat__top">
+          <span class="ic3d v-violet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </span>
+          <span class="hd-feat__soon">Soon</span>
+        </div>
+        <h3>MarkTrack</h3>
+        <p>Real-time assisted writing with full document traceability — every revision builds a defensible authorship record.</p>
+        <a href="https://xplagiax.ca/marktrack" target="_blank" class="hd-feat__link">Explore module
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </article>
+
+      <article class="hd-feat hd-feat-tile">
+        <div class="hd-card__glow" style="background:#ff5d7a; bottom:-60px; right:-30px;"></div>
+        <div class="hd-feat__top">
+          <span class="ic3d v-rose">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.8"/><path d="m21 15-5-5L5 21"/></svg>
+          </span>
+        </div>
+        <h3>AI Image Detect</h3>
+        <p>Multimodal forensics that exposes synthetic and AI-generated imagery through frequency and artefact analysis.</p>
+        <a href="https://xplagiax.ca/aiimagedetect" target="_blank" class="hd-feat__link">Explore module
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </article>
+
+      <article class="hd-feat hd-feat-tile">
+        <div class="hd-card__glow" style="background:#1fd0e0; top:-60px; right:-40px;"></div>
+        <div class="hd-feat__top">
+          <span class="ic3d v-cyan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6M9 13h6M9 17h3"/><circle cx="17" cy="6" r="2" fill="currentColor" stroke="none"/></svg>
+          </span>
+        </div>
+        <h3>AI Test Pro</h3>
+        <p>Advanced AI text detection that distinguishes human authorship from machine generation across 40+ models.</p>
+        <a href="https://xplagiax.ca/aitestpro" target="_blank" class="hd-feat__link">Explore module
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </article>
+
+    </div>
+
+    <!-- ───── BLOG / KNOWLEDGE ───── -->
+    <article class="hd-card hd-blog w2" id="hdBlogCard" style="--d:320ms">
+      <div class="hd-card__head">
+        <span class="hd-eyebrow">From the Blog</span>
+        <button class="hd-refresh" id="hdBlogRefresh" title="Another article">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+        </button>
+      </div>
+      <div class="hd-blog__media"><div class="scene"></div><span class="cat">—</span></div>
+      <h3>—</h3>
+      <p>—</p>
+      <div class="hd-blog__foot">
+        <span class="meta">—</span>
+        <a href="https://xplagiax.ca/blog" target="_blank" class="hd-pill-link">Read on blog
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+    </article>
+
+    <!-- ───── GUIDES ───── -->
+    <section class="hd-card w2" style="--d:360ms">
+      <div class="hd-card__head">
+        <span class="ic3d ic3d--sm v-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg></span>
+        <div><div class="hd-card__title">Learning Guides</div><div class="hd-card__sub">Master every module</div></div>
+        <button class="hd-refresh" id="hdGuideRefresh" title="Shuffle guides">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+        </button>
+      </div>
+      <div id="hdGuideList"></div>
+      <a href="https://xplagiax.ca/guides" target="_blank" class="hd-pill-link" style="margin-top:12px;">Browse all guides
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </section>
+
+    <!-- ───── PLATFORM BENEFITS ───── -->
+    <section class="hd-card w2" style="--d:400ms">
+      <div class="hd-card__head">
+        <span class="ic3d ic3d--sm v-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.4 8.4 8 10 4.6-1.6 8-5 8-10V6Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+        <div><div class="hd-card__title">Why XplagiaX</div><div class="hd-card__sub">Built for academic rigor</div></div>
+      </div>
+      <div class="hd-benefit">
+        <span class="ic3d ic3d--sm v-cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6v6H9z"/></svg></span>
+        <div class="hd-benefit__txt"><div class="t">Advanced AI detection</div><div class="d">40+ generative models recognized</div></div>
+      </div>
+      <div class="hd-benefit">
+        <span class="ic3d ic3d--sm v-violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8.5 8.5 15.5 15.5"/></svg></span>
+        <div class="hd-benefit__txt"><div class="t">Semantic comparison</div><div class="d">Catches meaning, not just words</div></div>
+      </div>
+      <div class="hd-benefit">
+        <span class="ic3d ic3d--sm v-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8"/><rect x="13" y="6" width="3" height="12"/></svg></span>
+        <div class="hd-benefit__txt"><div class="t">Stylometric analysis</div><div class="d">Authorship fingerprinting</div></div>
+      </div>
+      <div class="hd-benefit">
+        <span class="ic3d ic3d--sm v-rose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 7v5l3 3"/></svg></span>
+        <div class="hd-benefit__txt"><div class="t">Document traceability</div><div class="d">Defensible authorship records</div></div>
+      </div>
+    </section>
+
+    <!-- ───── ACTIVITY FEED ───── -->
+    <section class="hd-card w2" style="--d:440ms">
+      <div class="hd-card__head">
+        <span class="ic3d ic3d--sm v-slate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+        <div><div class="hd-card__title">Recent Activity</div><div class="hd-card__sub">Your latest actions</div></div>
+      </div>
+      <div class="hd-feed" id="hdFeed">
+        <div class="hd-feed__empty">Loading activity…</div>
+      </div>
+    </section>
+
+    <!-- ───── TIPS ROTATOR ───── -->
+    <section class="hd-card hd-rotate w3" style="--d:480ms">
+      <span class="ic3d v-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/></svg></span>
+      <div class="hd-rotate__body">
+        <div class="hd-rotate__eyebrow">Originality Tip</div>
+        <div class="hd-rotate__text" id="hdTipText">—</div>
+        <div class="hd-rotate__dots" id="hdTipDots"></div>
+      </div>
+    </section>
+
+    <!-- ───── AI FACTS ───── -->
+    <section class="hd-card hd-rotate w3" style="--d:520ms">
+      <span class="ic3d v-violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 0 0-3 3 3 3 0 0 0-1 5.8V17a2 2 0 0 0 4 0 2 2 0 0 0 4 0v-3.2A3 3 0 0 0 15 8a3 3 0 0 0-3-3Z"/><path d="M12 5V3"/></svg></span>
+      <div class="hd-rotate__body">
+        <div class="hd-rotate__eyebrow">Did you know</div>
+        <div class="hd-rotate__text" id="hdFactText">—</div>
+        <div class="hd-rotate__dots" id="hdFactDots"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var el = document.getElementById('hdDate');
+    if (el) el.textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  })();
+</script>
+<script src="{{ url_for('static', filename='js/home_dashboard.js') }}"></script>
+{% endblock %}

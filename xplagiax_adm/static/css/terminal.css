@@ -1,0 +1,378 @@
+/* Estilos mejorados para el terminal */
+#terminalLayout {
+    display: flex;
+    height: calc(100vh - 120px);
+    margin-top: 20px;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+#terminalSidebar {
+    width: 300px;
+    background: #fff;
+    border-right: 1px solid #e9ecef;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+#terminalMain {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    position: relative;
+}
+
+#terminalHeader {
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #2c2c2c, #404040);
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #444;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+#terminalTitle {
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+    animation: pulse-red 2s infinite;
+}
+
+.status-indicator.connected {
+    background: #10b981;
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+#terminalControls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.terminal-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    background: #3b82f6;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.terminal-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.terminal-btn.danger {
+    background: #ef4444;
+}
+
+.terminal-btn.danger:hover {
+    background: #dc2626;
+}
+
+.terminal-btn.secondary {
+    background: #6b7280;
+}
+
+.terminal-btn.secondary:hover {
+    background: #4b5563;
+}
+
+#terminalContainer {
+    flex: 1;
+    padding: 10px;
+    position: relative;
+}
+
+/* Panel lateral de herramientas */
+#terminalToolbar {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 1000;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+#terminalToolbar:hover {
+    opacity: 1;
+}
+
+.tool-btn {
+    background: transparent;
+    border: 1px solid #555;
+    color: #fff;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.tool-btn:hover {
+    background: #3b82f6;
+    border-color: #3b82f6;
+}
+
+/* Panel de historial de comandos */
+#commandHistory {
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.history-item {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.history-item:hover {
+    background: #e3f2fd;
+    border-color: #2196f3;
+}
+
+.history-time {
+    color: #6b7280;
+    font-size: 10px;
+}
+
+/* Panel de transferencia de archivos */
+#fileTransfer {
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 12px;
+    display: none;
+}
+
+.upload-area {
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.upload-area:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.upload-area.dragover {
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+/* Búsqueda mejorada */
+#terminalSearch {
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 12px;
+    border-radius: 6px;
+    display: none;
+    z-index: 1001;
+    min-width: 300px;
+}
+
+#terminalSearch input {
+    width: 100%;
+    padding: 8px 12px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.search-controls {
+    display: flex;
+    gap: 4px;
+    justify-content: space-between;
+}
+
+.search-btn {
+    background: #444;
+    color: #fff;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.search-btn:hover {
+    background: #555;
+}
+
+/* Panel de configuración */
+#terminalSettings {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+
+.setting-group {
+    margin-bottom: 16px;
+}
+
+.setting-label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.setting-input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.setting-range {
+    width: 100%;
+}
+
+/* Notificaciones mejoradas */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    color: white;
+    font-weight: 500;
+    z-index: 10000;
+    max-width: 400px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification.success {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.notification.error {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.notification.warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #terminalLayout {
+        flex-direction: column;
+        height: calc(100vh - 100px);
+    }
+    
+    #terminalSidebar {
+        width: 100%;
+        max-height: 200px;
+    }
+    
+    #terminalToolbar {
+        flex-direction: row;
+        top: auto;
+        bottom: 10px;
+        right: 50%;
+        transform: translateX(50%);
+    }
+}
+
+/* Fullscreen mode */
+.fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    background: #000 !important;
+}
+
+.fullscreen #terminalSidebar {
+    display: none !important;
+}
+
+/* Temas del terminal */
+.terminal-theme-dark {
+    --terminal-bg: #000000;
+    --terminal-fg: #ffffff;
+}
+
+.terminal-theme-light {
+    --terminal-bg: #ffffff;
+    --terminal-fg: #000000;
+}
+
+.terminal-theme-matrix {
+    --terminal-bg: #000000;
+    --terminal-fg: #00ff00;
+}
+
+.terminal-theme-cyberpunk {
+    --terminal-bg: #0d1117;
+    --terminal-fg: #ff79c6;
+}

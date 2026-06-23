@@ -1,0 +1,130 @@
+<!-- ====== SIGNUP TEMPLATE (auth/signup.html) ====== -->
+<div style="" id="signup-template">
+{% extends "base.html" %}
+
+{% block title %}Registrarse - Mi App{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4">
+                    <i class="fas fa-user-plus"></i> Crear Cuenta
+                </h2>
+
+                <!-- OAuth Buttons -->
+                <div class="mb-3">
+                    <a href="{{ url_for('auth_bp.google_login') }}" class="oauth-btn google-btn w-100 text-decoration-none">
+                        <i class="fab fa-google me-2"></i>
+                        Registrarse con Google
+                    </a>
+                </div>
+
+                <!-- OAuth Buttons -->
+                <div class="mb-3">
+                    <a href="{{ url_for('auth_bp.google_login') }}" class="oauth-btn google-btn w-100 text-decoration-none">
+                        <i class="fab fa-google me-2"></i>
+                        Registrarse con Google
+                    </a>
+                </div>
+
+                <div class="text-center mb-3">
+                    <span class="text-muted">o</span>
+                </div>
+
+                <!-- Signup Form -->
+                <form id="signupForm">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="name">
+                    </div>
+                        <div class="mb-3">
+                        <label for="lastname" class="form-label">Last name</label>
+                        <input type="text" class="form-control" id="lastname">
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password *</label>
+                        <input type="password" class="form-control" id="password" required>
+                        <div class="form-text">
+                            Mínimo 8 caracteres, incluir mayúscula, minúscula y número
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password_confirm" class="form-label">Repet Password *</label>
+                        <input type="password" class="form-control" id="password_confirm" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-user-plus"></i> Crear Cuenta
+                    </button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <span class="text-muted">Do you have an account?</span>
+                    <a href="{{ url_for('x_apps.login') }}" class="text-decoration-none">Sign in</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="alert-container"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('signupForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('password_confirm').value;
+        
+        if (password !== confirmPassword) {
+            showAlert('Las contraseñas no coinciden', 'danger');
+            return;
+        }
+
+        const formData = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            password: password
+        };
+
+        try {
+            const response = await fetch('/auth/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showAlert(data.message, 'success');
+                document.getElementById('signupForm').reset();
+            } else {
+                showAlert(data.error || 'Error en el registro', 'danger');
+            }
+        } catch (error) {
+            showAlert('Error de conexión', 'danger');
+        }
+    });
+
+    function showAlert(message, type) {
+        const alertContainer = document.getElementById('alert-container');
+        alertContainer.innerHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show mt-3" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+    }
+</script>
+{% endblock %}
+</div>

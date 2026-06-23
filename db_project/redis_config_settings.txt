@@ -1,0 +1,94 @@
+
+
+
+
+##################REDIS SERVER CONNECTIONS##############
+
+
+---- INSTALLING REDIS SERVER ON DB THE SERVER HOST
+     
+    IN TEMRINAL:
+
+        DEBIAN:
+            sudo apt update
+            sudo apt install redis-server
+            sudo systemctl status redis
+        
+        MAC:
+            brew install redis
+            brew services start redis
+            brew services stop redis
+
+            pip install mysql-connector-python==<8.3.0>
+
+
+            redis-cli get <clave>
+
+
+
+
+    AFTET INSTALLED GO TO:
+
+       sudo nano /etc/redis/redis.conf
+      
+    ADD THIS SETTINGS TO FILE CONFIG:
+
+        # Persistencia de datos
+        save 900 1
+        save 300 10
+        save 60 10000
+
+        appendonly yes
+        appendfilename "appendonly.aof"
+
+        # Configuración de la memoria
+        maxmemory 100mb
+        maxmemory-policy volatile-lru
+
+        # Seguridad de la red
+        bind 127.0.0.1
+
+        # Optimización y ajustes adicionales
+        tcp-backlog 511
+        timeout 0
+        tcp-keepalive 300
+
+
+
+     sudo systemctl restart redis
+
+
+Verificar si Redis está instalado:
+Abre una terminal en tu sistema Debian.
+
+Ejecuta el siguiente comando para verificar si Redis está instalado:
+
+
+       --> redis-server --version
+
+
+Si Redis está instalado, este comando te mostrará la versión de Redis que está instalada en tu sistema. Si no está instalado, recibirás un mensaje de error indicando que el comando no se encontró.
+
+Verificar si Redis está en funcionamiento:
+Ejecuta el siguiente comando para verificar si el servicio de Redis está en funcionamiento:
+
+
+        --> sudo systemctl status redis
+
+
+Este comando mostrará el estado actual del servicio de Redis. Si el servicio está en funcionamiento, verás un mensaje indicando que está activo y ejecutándose.
+
+También puedes intentar conectarte a Redis utilizando el cliente de Redis. Ejecuta el siguiente comando para abrir el cliente de Redis:
+
+
+          -->  redis-cli
+
+
+Si Redis está en funcionamiento, se abrirá el cliente de Redis y podrás interactuar con la base de datos de Redis utilizando comandos como SET, GET, etc.
+
+Si Redis está instalado y en funcionamiento, podrás ver su versión y estado utilizando los comandos anteriores. Si no está instalado, puedes instalarlo utilizando el administrador de paquetes de Debian, por ejemplo:
+
+
+      -->  sudo apt update
+      -->  sudo apt install redis-server
+Espero que esto te ayude a verificar si Redis está instalado y funcionando en tu sistema Debian. Si tienes alguna pregunta adicional, no dudes en preguntar.

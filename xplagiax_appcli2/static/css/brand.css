@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap');
+
+.tech-brand {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0px;
+    color: #ffffff;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.tech-brand:hover {
+    color: #1a202c;
+}
+
+.tech-brand span {
+    font-size: 1.7rem;
+    position: relative;
+    top: 1px;
+}

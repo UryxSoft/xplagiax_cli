@@ -1,0 +1,87 @@
+/* Stats Side Panel Styles - Professional Update */
+#stats-panel {
+    background: #ffffff;
+    border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.stats-header {
+    padding: 1rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.provider-info {
+    max-width: 100%;
+}
+
+.stats-provider-text {
+    flex: 1;
+    min-width: 0;
+    /* Critical for truncation inside flex item */
+}
+
+#stats-provider-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+#stats-account-info {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+.provider-icon-large {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    font-size: 1.5rem;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.provider-icon-large img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.storage-section {
+    padding: 1.5rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Thicker Progress Bar */
+.progress {
+    height: 20px !important;
+    /* Force thick height */
+    border-radius: 8px !important;
+    background-color: #f0f2f5;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.stats-progress-bar {
+    background: linear-gradient(90deg, #2563eb 0%, #4f46e5 100%);
+    border-radius: 8px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 100%;
+}
+
+.distribution-section {
+    padding-top: 1.5rem;
+}
+
+#file-distribution-chart {
+    min-height: 300px;
+}

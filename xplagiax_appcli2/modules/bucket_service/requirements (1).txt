@@ -1,0 +1,49 @@
+# Core Flask
+Flask==3.0.0
+flask-login==0.6.3
+flask-sqlalchemy==3.1.1
+flask-cors==4.0.0
+
+# Database
+SQLAlchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# SeaweedFS (usa requests HTTP nativo, no necesita cliente especial)
+requests==2.31.0
+
+# File handling
+Werkzeug==3.0.1
+python-magic==0.4.27
+
+# Security
+bcrypt==4.1.2
+cryptography==41.0.7
+
+# Utilities
+python-dotenv==1.0.0
+unicodedata2==15.1.0
+
+# Optional: Performance improvements
+# Flask-Compress==1.14  # Compresión de respuestas
+# Flask-Caching==2.1.0  # Cache distribuido con Redis
+# Flask-Limiter==3.5.0  # Rate limiting
+# redis==5.0.1  # Si usas Flask-Caching con Redis
+
+# Optional: Async processing
+# celery==5.3.4  # Para procesamiento en background
+# redis==5.0.1  # Broker para Celery
+
+# Optional: Monitoring
+# prometheus-client==0.19.0  # Métricas de Prometheus
+# sentry-sdk[flask]==1.39.1  # Error tracking
+
+# Development
+pytest==7.4.3
+pytest-flask==1.3.0
+pytest-cov==4.1.0
+black==23.12.1
+flake8==6.1.0
+mypy==1.7.1
+
+# Load testing
+# locust==2.20.0

@@ -1,0 +1,372 @@
+<!-- ====== BASE TEMPLATE COMPLETO (base.html) ====== -->
+<div style="page-break-before: always;"></div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block description %}Plataforma segura para gestión de archivos{% endblock %}">
+    <title>{% block title %}Mi App{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #6c757d;
+            --success-color: #198754;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #0dcaf0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: none;
+            border-radius: 0.5rem;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        .oauth-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            color: white;
+            margin: 8px 0;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .oauth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            color: white;
+        }
+
+        .google-btn {
+            background: linear-gradient(135deg, #db4437, #c23321);
+        }
+
+        .google-btn:hover {
+            background: linear-gradient(135deg, #c23321, #a02622);
+        }
+
+        .microsoft-btn {
+            background: linear-gradient(135deg, #0078d4, #106ebe);
+        }
+
+        .microsoft-btn:hover {
+            background: linear-gradient(135deg, #106ebe, #005a9e);
+        }
+
+        .btn {
+            border-radius: 0.5rem;
+            font-weight: 500;
+            padding: 0.5rem 1.5rem;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .alert {
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-control, .form-select {
+            border-radius: 0.5rem;
+            border: 1px solid #dee2e6;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+
+        .jumbotron {
+            border-radius: 1rem;
+            background: linear-gradient(135deg, var(--primary-color), #0056b3);
+        }
+
+        footer {
+            margin-top: auto;
+            background-color: #f8f9fa !important;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .spinner-border {
+            color: var(--primary-color);
+        }
+
+        /* Loading states */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* Responsive improvements */
+        @media (max-width: 768px) {
+            .container {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+            
+            .oauth-btn {
+                font-size: 0.9rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #212529;
+                color: #fff;
+            }
+            
+            .card {
+                background-color: #343a40;
+                color: #fff;
+            }
+            
+            .form-control, .form-select {
+                background-color: #495057;
+                border-color: #6c757d;
+                color: #fff;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand" >
+                <i class="fas fa-shield-alt me-2"></i>Mi App
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+ 
+                    {% if current_user.is_authenticated %}
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('x_apps.plans_test') }}">
+                            <i class="fas fa-credit-card me-1"></i>Planes
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i>
+                            {{ current_user.name or current_user.email.split('@')[0] }}
+                            {% if current_user.is_on_trial %}
+                                <span class="badge bg-warning text-dark ms-1">Trial</span>
+                            {% elif current_user.subscription_status == 'active' %}
+                                <span class="badge bg-success ms-1">Pro</span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="editProfile()">
+                                <i class="fas fa-user-edit me-2"></i>Perfil
+                            </a></li>
+                            <li><a class="dropdown-item" href="/billing/subscription-status">
+                                <i class="fas fa-credit-card me-2"></i>Suscripción
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('auth_bp.logout') }}">
+                                <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('x_apps.login') }}">
+                            <i class="fas fa-sign-in-alt me-1"></i>Iniciar Sesión
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('x_apps.register_test') }}">
+                            <i class="fas fa-user-plus me-1"></i>Registrarse
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container mt-3">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'info-circle' if category == 'info' else 'check-circle' if category == 'success' else 'exclamation-triangle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="container flex-grow-1 mt-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-light text-center py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h6 class="fw-bold">Mi App</h6>
+                    <p class="text-muted small mb-0">
+                        Plataforma segura para gestión de archivos
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="fw-bold">Enlaces</h6>
+                    <div class="d-flex flex-column">
+                        <a href="#" class="text-decoration-none text-muted small">Términos de Servicio</a>
+                        <a href="#" class="text-decoration-none text-muted small">Política de Privacidad</a>
+                        <a href="#" class="text-decoration-none text-muted small">Soporte</a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="fw-bold">Síguenos</h6>
+                    <div>
+                        <a href="#" class="text-decoration-none text-muted me-3">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="text-decoration-none text-muted me-3">
+                            <i class="fab fa-facebook"></i>
+                        </a>
+                        <a href="#" class="text-decoration-none text-muted">
+                            <i class="fab fa-linkedin"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-3">
+            <p class="text-muted small mb-0">&copy; 2025 Mi App. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Global JavaScript -->
+    <script>
+        // Global utility functions
+        window.showAlert = function(message, type = 'info', duration = 5000) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'danger' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const container = document.querySelector('main') || document.body;
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.remove();
+                    }
+                }, duration);
+            }
+        };
+
+        // Global loading state
+        window.setLoading = function(element, loading = true) {
+            if (loading) {
+                element.classList.add('loading');
+                if (element.tagName === 'BUTTON') {
+                    element.disabled = true;
+                    element.dataset.originalText = element.innerHTML;
+                    element.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Cargando...';
+                }
+            } else {
+                element.classList.remove('loading');
+                if (element.tagName === 'BUTTON') {
+                    element.disabled = false;
+                    element.innerHTML = element.dataset.originalText || element.innerHTML;
+                }
+            }
+        };
+
+        // Handle network errors globally
+        window.addEventListener('offline', () => {
+            showAlert('Conexión perdida. Verifica tu internet.', 'warning', 0);
+        });
+
+        window.addEventListener('online', () => {
+            const offlineAlert = document.querySelector('.alert-warning');
+            if (offlineAlert) offlineAlert.remove();
+            showAlert('Conexión restaurada.', 'success');
+        });
+
+        // CSRF token handling for AJAX requests
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (csrfToken) {
+            // Set default headers for fetch requests
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options = {}) {
+                if (options.method && options.method.toUpperCase() !== 'GET') {
+                    options.headers = options.headers || {};
+                    options.headers['X-CSRFToken'] = csrfToken;
+                }
+                return originalFetch(url, options);
+            };
+        }
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

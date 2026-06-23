@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Pages - AI Antiplagio Platform</title>
+    <style>
+
+    </style>
+</head>
+<body>
+    <div class="error-selector">
+        <select id="errorSelect" onchange="changeError()">
+            <option value="400">400 - Bad Request</option>
+            <option value="401">401 - No Autorizado</option>
+            <option value="403">403 - Prohibido</option>
+            <option value="500">500 - Error del Servidor</option>
+            <option value="501">501 - No Implementado</option>
+            <option value="502">502 - Bad Gateway</option>
+            <option value="503">503 - Servicio No Disponible</option>
+            <option value="504">504 - Gateway Timeout</option>
+        </select>
+    </div>
+
+    <div class="particles"></div>
+    
+    <div class="floating-elements">
+        <div class="floating-icon" style="left: 10%; animation-delay: 0s;">🔍</div>
+        <div class="floating-icon" style="left: 20%; animation-delay: 2s;">🤖</div>
+        <div class="floating-icon" style="left: 30%; animation-delay: 4s;">📝</div>
+        <div class="floating-icon" style="left: 40%; animation-delay: 6s;">⚡</div>
+        <div class="floating-icon" style="left: 50%; animation-delay: 8s;">🛡️</div>
+        <div class="floating-icon" style="left: 60%; animation-delay: 10s;">🔬</div>
+        <div class="floating-icon" style="left: 70%; animation-delay: 12s;">💻</div>
+        <div class="floating-icon" style="left: 80%; animation-delay: 14s;">📊</div>
+        <div class="floating-icon" style="left: 90%; animation-delay: 16s;">🎯</div>
+    </div>
+
+    <div class="error-container">
+        <div class="error-card" id="errorCard">
+            <div class="ai-icon" id="errorIcon">🤖</div>
+            <div class="error-code" id="errorCode">400</div>
+            <h1 class="error-title" id="errorTitle">Solicitud Incorrecta</h1>
+            <p class="error-message" id="errorMessage">
+                Nuestro sistema de IA detectó un problema con tu solicitud. 
+                Por favor, verifica los datos y vuelve a intentarlo.
+            </p>
+            <div class="btn-container">
+                <button class="btn" onclick="goHome()">🏠 Volver al Inicio</button>
+                <button class="btn" onclick="tryAgain()">🔄 Intentar de Nuevo</button>
+                <button class="btn" onclick="contact()">💬 Soporte</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const errorData = {
+            400: {
+                icon: '🚫',
+                title: 'Solicitud Incorrecta',
+                message: 'Nuestro sistema de IA detectó un problema con tu solicitud. Por favor, verifica los datos y vuelve a intentarlo.'
+            },
+            401: {
+                icon: '🔐',
+                title: 'Acceso No Autorizado',
+                message: 'Se requiere autenticación para acceder al sistema de detección de IA. Por favor, inicia sesión para continuar.'
+            },
+            403: {
+                icon: '🛡️',
+                title: 'Acceso Prohibido',
+                message: 'No tienes permisos suficientes para realizar esta acción en nuestro sistema de antiplagio. Contacta al administrador.'
+            },
+            500: {
+                icon: '⚡',
+                title: 'Error del Servidor',
+                message: 'Nuestros algoritmos de IA están experimentando dificultades técnicas. Estamos trabajando para solucionarlo.'
+            },
+            501: {
+                icon: '🔧',
+                title: 'Función No Implementada',
+                message: 'Esta característica de detección aún no está disponible en nuestro sistema de IA. Próximamente estará activa.'
+            },
+            502: {
+                icon: '🌐',
+                title: 'Error de Conexión',
+                message: 'Hay un problema de comunicación entre nuestros servidores de IA. Intentando reconectar automáticamente...'
+            },
+            503: {
+                icon: '🔄',
+                title: 'Servicio No Disponible',
+                message: 'El sistema de detección de IA está temporalmente fuera de servicio por mantenimiento. Volveremos pronto.'
+            },
+            504: {
+                icon: '⏰',
+                title: 'Tiempo de Respuesta Agotado',
+                message: 'El análisis de IA está tomando más tiempo del esperado. Por favor, intenta con un documento más pequeño.'
+            }
+        };
+
+        function changeError() {
+            const select = document.getElementById('errorSelect');
+            const selectedError = select.value;
+            const data = errorData[selectedError];
+            
+            const card = document.getElementById('errorCard');
+            card.style.animation = 'none';
+            card.offsetHeight; // Trigger reflow
+            card.style.animation = 'fadeInUp 0.8s ease-out';
+            
+            document.getElementById('errorIcon').textContent = data.icon;
+            document.getElementById('errorCode').textContent = selectedError;
+            document.getElementById('errorTitle').textContent = data.title;
+            document.getElementById('errorMessage').textContent = data.message;
+        }
+
+        function goHome() {
+            showNotification('Redirigiendo al inicio...');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+        }
+
+        function tryAgain() {
+            showNotification('Reintentando análisis de IA...');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        }
+
+        function contact() {
+            showNotification('Abriendo soporte técnico...');
+            setTimeout(() => {
+                window.open('mailto:support@aiantiplagio.com', '_blank');
+            }, 1000);
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #667eea;
+                color: white;
+                padding: 15px 25px;
+                border-radius: 10px;
+                z-index: 9999;
+                animation: slideIn 0.5s ease-out;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function createParticles() {
+            const container = document.querySelector('.particles');
+            
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.width = particle.style.height = (Math.random() * 4 + 2) + 'px';
+                particle.style.animationDelay = Math.random() * 8 + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        // Initialize particles
+        createParticles();
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'h' || e.key === 'H') goHome();
+            if (e.key === 'r' || e.key === 'R') tryAgain();
+            if (e.key === 's' || e.key === 'S') contact();
+        });
+
+        // Add CSS animation for notifications
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

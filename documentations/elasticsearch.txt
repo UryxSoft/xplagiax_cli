@@ -1,0 +1,169 @@
+
+
+
+
+
+KIBANA TOKEN:
+
+     eyJ2ZXIiOiI4LjEzLjIiLCJhZHIiOlsiMTAuOTEuMjAzLjA6OTIwMCJdLCJmZ3IiOiIyYjczMmJkYzgwYzg2NjUyN2VjNGVjMzE1MGIyZTNhNmFkYjIyNjQ5ZTY3ZmMzMmUxNWFkYzU3NjhhZTc3MjNkIiwia2V5IjoiU0oxczZJNEJQMldlQlFpVklHcEc6eTBIdThoQ1JUS2FCNV90Q2N2cGZPZyJ9
+
+Intentar ejecutar de nuevo Elasticsearch
+Una vez descargada la imagen, intenta nuevamente iniciar Elasticsearch:
+
+sh
+Copiar
+Editar
+docker run -d --name elasticsearch-server -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:8.12.2
+Verifica que esté corriendo con:
+
+
+Se ejecuta en segundo plano (-d)
+
+Se llama elasticsearch-server
+
+Expone los puertos 9200 y 9300
+
+Está configurado como nodo único
+
+Se reinicia automáticamente al arrancar el servidor (a menos que tú lo detengas manualmente)
+
+
+docker run -d --restart unless-stopped --name elasticsearch-server -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:8.12.2
+
+Para verificar que el contenedor esté corriendo:
+docker ps
+
+Para detener el contenedor manualmente:
+docker stop elasticsearch-server
+
+Para iniciarlo nuevamente manualmente:
+docker start elasticsearch-server
+
+ver status del contenedor docker: sudo systemctl status docker
+
+
+sh
+Copiar
+Editar
+docker ps
+Si todo está bien, prueba la conexión con:
+
+sh
+Copiar
+Editar
+curl -X GET "http://localhost:9200"
+Si sigue sin funcionar, dime qué error exacto aparece y lo resolvemos. 🚀
+
+Si deseas quitar la contraseña de Elasticsearch y desactivar la autenticación, puedes hacerlo deshabilitando la seguridad en su archivo de configuración. Aquí te dejo los pasos para hacerlo:
+
+Pasos para deshabilitar la autenticación en Elasticsearch:
+Accede al contenedor de Elasticsearch (si estás usando Docker):
+
+bash
+Copiar
+Editar
+docker exec -it elasticsearch-server bash
+Edita el archivo de configuración de Elasticsearch: El archivo de configuración se encuentra generalmente en /usr/share/elasticsearch/config/elasticsearch.yml.
+
+Puedes editarlo usando un editor de texto, como nano o vi. Por ejemplo:
+
+bash
+Copiar
+Editar
+nano /usr/share/elasticsearch/config/elasticsearch.yml
+Desactiva la seguridad de Elasticsearch: Dentro de este archivo, busca las siguientes líneas (o agrégalas si no existen) y configúralas para desactivar la seguridad:
+
+yaml
+Copiar
+Editar
+xpack.security.enabled: false
+xpack.security.transport.ssl.enabled: false
+Reinicia Elasticsearch: Después de guardar los cambios, reinicia Elasticsearch para que se apliquen las configuraciones:
+
+bash
+Copiar
+Editar
+docker restart elasticsearch-server
+O si estás ejecutando Elasticsearch directamente en tu máquina sin Docker, simplemente reinicia el servicio de Elasticsearch:
+
+bash
+Copiar
+Editar
+systemctl restart elasticsearch
+Confirmar que la autenticación ha sido deshabilitada:
+Una vez que Elasticsearch se haya reiniciado, intenta hacer una solicitud curl sin autenticación:
+
+bash
+Copiar
+Editar
+curl -X GET "http://localhost:9200"
+Si todo está correcto, ahora deberías poder acceder sin que te pida usuario y contraseña.
+
+------------------------MINIO----------------
+
+
+docker run -d --restart unless-stopped --name minio-server \
+  -p 9500:9000 -p 9501:9001 \
+  -e MINIO_ROOT_USER=minioadminxplagiax \
+  -e MINIO_ROOT_PASSWORD=minioadminxplagiax \
+  minio/minio:RELEASE.2023-03-20T20-16-18Z server /data --console-address ":9001"
+
+
+----------------------QDRANT-------------------
+docker run -d --restart unless-stopped --name qdrant-server \
+  -p 6333:6333 \
+  -v qdrant_data:/qdrant/storage \
+  qdrant/qdrant:latest
+
+
+
+
+-------------------COMANDOS DOCKER-------------
+
+Opción 1: Detener todos los contenedores en ejecución
+
+docker stop $(docker ps -q)
+docker ps -q: obtiene solo los IDs de los contenedores en ejecución.
+
+docker stop: los detiene.
+
+🧨 Opción 2: Detener y eliminar todos los contenedores (¡con cuidado!)
+
+docker rm -f $(docker ps -aq)
+-f: fuerza el stop antes de eliminar.
+
+-a: incluye contenedores parados también.
+
+⚠️ Esto elimina los contenedores, pero no borra los volúmenes ni las imágenes.
+
+🧘 Opción 3: Detener contenedores específicos
+Por ejemplo:
+
+docker stop qdrant-server minio-server redis-server elasticsearch-server
+🧼 ¿Y si quiero también eliminar los contenedores (pero no los datos)?
+
+docker rm qdrant-server minio-server redis-server elasticsearch-server
+Como ya usaste --restart unless-stopped, los contenedores no se volverán a iniciar automáticamente después de ser eliminados.
+
+Si usaste volúmenes (como -v qdrant_data:/qdrant/storage), los datos se conservarán.
+
+
+
+
+---------------- MYSQL ------------------------
+
+docker run --name mysql-container \
+  --restart=always \
+  -e MYSQL_ROOT_PASSWORD=xplagiax2019 \
+  -e MYSQL_DATABASE=xplagiax_db \
+  -e MYSQL_USER=xplagiaxadminuser \
+  -e MYSQL_PASSWORD=xplagiax001 \
+  -p 3306:3306 \
+  -d mysql:8
+
+
+PARA DOCKENIZAR EL ADM XPLAGIAX:
+
+
+
+docker run -d --restart always --name xplagiax_container -p 5000:5000 xplagiax_adm

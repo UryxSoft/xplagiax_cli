@@ -1,0 +1,95 @@
+
+
+
+
+1--  Para verificar si tienes instalado Nginx u otro servidor web en Debian 11, puedes utilizar el siguiente 
+     comando en la línea de comandos:
+
+    copy code -> sudo systemctl status nginx
+
+
+2--  Este comando verificará si el servicio de Nginx está en ejecución. Si devuelve información sobre el estado del
+     servicio, significa que Nginx está instalado y en funcionamiento. Si no tienes Nginx instalado, puedes intentar
+     con otro servidor web común como Apache:
+
+    copy code -> sudo systemctl status nginx
+
+3 --  Para actualizar tu sistema Debian 11, puedes usar el gestor de paquetes apt. Aquí tienes los pasos para realizar
+      la actualización: Abre una terminal.
+      Actualiza la lista de paquetes disponibles y sus versiones ejecutando el siguiente comando:
+
+    Copy code -> sudo apt update
+
+4 --  Actualizar la lista de paquetes: Es una buena práctica comenzar actualizando la lista de paquetes disponibles en los repositorios:
+
+    Copy code -> sudo apt update
+
+5 --  Instalar Nginx: Una vez que la lista de paquetes está actualizada, puedes instalar Nginx ejecutando el siguiente comando:
+
+    Copy code -> sudo apt install nginx
+        
+6 --  Iniciar el servicio Nginx: Después de la instalación, puedes iniciar el servicio de Nginx utilizando el siguiente comando:
+
+    Copy code ->  sudo systemctl start nginx
+        
+7 --  Verificar el estado del servicio Nginx: Puedes verificar si Nginx se está ejecutando correctamente usando el siguiente comando:
+
+        Copy code ->  sudo systemctl status nginx
+        
+        Este comando te mostrará el estado actual del servicio Nginx y te permitirá confirmar si se ha iniciado correctamente.
+
+8 -- Habilitar Nginx para que se inicie en el arranque: Si deseas que Nginx se inicie automáticamente en el arranque del sistema, puedes habilitarlo utilizando el siguiente comando:
+
+     Copy code ->  sudo systemctl enable nginx
+
+
+9 -- config NGINX:
+
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name example.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name example.com;
+
+    ssl_certificate /ruta/al/tu/certificado.pem;
+    ssl_certificate_key /ruta/a/tu/clave-privada.pem;
+
+    location /app_client {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /app_admin {
+        proxy_pass http://127.0.0.1:5001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /auth_service {
+        proxy_pass http://127.0.0.1:5002;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /auth_service/static {
+        alias /Users/user/insideout_ms/microservice/docanalysis_service/app/uploads/uploads_save;
+    }
+}
+
+
+
+

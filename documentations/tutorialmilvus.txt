@@ -1,0 +1,56 @@
+
+Milvus no tiene una interfaz gráfica web a la que puedas acceder directamente desde el navegador. Es un servicio de base de datos vectorial al que normalmente se accede a través de APIs o mediante un cliente como pymilvus en Python.
+
+Si lo que quieres es interactuar con Milvus, puedes hacerlo usando el cliente pymilvus desde Python:
+1. Instalar pymilvus:
+Si no lo tienes instalado, usa el siguiente comando para instalarlo:
+
+bash
+Copiar código
+pip install pymilvus
+2. Conectar a Milvus desde Python:
+Puedes conectarte a Milvus en tu contenedor Docker de esta manera:
+
+python
+Copiar código
+from pymilvus import connections
+
+# Conectarse al servidor de Milvus
+connections.connect("default", host="localhost", port="19530")
+
+print("Conexión exitosa a Milvus")
+Si prefieres una forma más visual para interactuar con Milvus:
+Puedes usar Milvus Insight, que es una herramienta visual para gestionar Milvus. Aunque no se accede directamente desde el navegador sin configuraciones adicionales, podrías instalar esta herramienta para una gestión más fácil de tus datos.
+
+Instrucciones para Milvus Insight:
+Instalar Milvus Insight:
+
+Clona el repositorio de Milvus Insight:
+
+bash
+Copiar código
+git clone https://github.com/zilliztech/milvus-insight.git
+Levantar Milvus Insight con Docker:
+
+Dentro del directorio clonado de Milvus Insight, ejecuta el siguiente comando para levantar la interfaz:
+
+bash
+Copiar código
+docker-compose up -d
+Esto te permitirá acceder a una interfaz gráfica donde puedes gestionar Milvus.
+
+Acceder a Milvus Insight desde el navegador:
+
+Una vez que hayas levantado Milvus Insight, podrás acceder a la interfaz gráfica desde el navegador visitando la siguiente URL:
+
+arduino
+Copiar código
+http://localhost:8000
+Esta es una forma más amigable de interactuar con Milvus si prefieres evitar el uso directo de la API o de un cliente como pymilvus.
+
+
+PARA INSTALAR MILVIUS EN DOCKER:
+
+curl -sfL https://raw.githubusercontent.com/milvus-io/milvus/master/scripts/standalone_embed.sh -o standalone_embed.sh
+
+bash standalone_embed.sh start

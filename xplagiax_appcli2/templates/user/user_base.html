@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XplagiaX.ai</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/icon/favicon-32x32.png') }}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/icon/favicon-16x16.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Work+Sans&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app_style_1.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/logout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/miniprogress.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/welcome_guia_modal.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/trial_end_modal.css') }}">
+  {% block head %}{% endblock %}
+</head>
+
+<body>
+
+  <div class="app-shell">
+
+    <!-- ══════════════════════════════════════
+         NAV RAIL
+    ══════════════════════════════════════ -->
+    <nav class="nav-rail" style="justify-content: flex-start;">
+
+      <div class="app-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+          stroke="currentColor" stroke-width="0.85" stroke-linecap="round" stroke-linejoin="round"
+          class="bi bi-chevron-contract" style="color:white" viewBox="0 0 16 16">
+          <path fill-rule="evenodd"
+            d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708" />
+        </svg>
+      </div>
+
+      <a href="{{ url_for('x_users.home') }}"
+        class="nav-btn {{ 'active' if request.endpoint == 'x_users.home' else '' }}" data-tip="Home">
+        <svg viewBox="0 0 24 24">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      </a>
+
+      <a href="{{ url_for('x_users.analysis') }}"
+        class="nav-btn {{ 'active' if request.endpoint == 'x_users.analysis' else '' }}" data-tip="Analysis">
+        <svg viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </a>
+
+      {% if user_data.user_type != 'Starter' %}
+      <a href="{{ url_for('x_users.documents') }}"
+        class="nav-btn {{ 'active' if request.endpoint == 'x_users.documents' else '' }}" data-tip="Documents">
+        <svg viewBox="0 0 24 24">
+          <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+        </svg>
+      </a>
+
+      <a href="{{ url_for('x_users.history') }}"
+        class="nav-btn {{ 'active' if request.endpoint == 'x_users.history' else '' }}" data-tip="History">
+        <svg viewBox="0 0 24 24">
+          <polyline points="12 8 12 12 14 14" />
+          <path d="M3.05 11a9 9 0 1 0 .5-4.5" />
+          <polyline points="3 3 3 9 9 9" />
+        </svg>
+      </a>
+      {% endif %}
+
+      <div class="nav-spacer"></div>
+
+      <!-- Mini Progress (Analysis Quota) -->
+      <div class="mini-progress-container" id="miniProgress" title="Click to see details">
+        <div class="mini-circular-progress">
+          <svg class="mini-progress-circle" viewBox="0 0 50 50">
+            <circle class="mini-progress-background" cx="25" cy="25" r="20"></circle>
+            <circle class="mini-progress-bar green" cx="25" cy="25" r="20" stroke-dasharray="125.66"
+              stroke-dashoffset="0" id="miniProgressBar"></circle>
+          </svg>
+          <div class="mini-progress-text">
+            <div class="mini-progress-number" id="miniProgressNumber">--/--</div>
+            <div class="mini-progress-label">left</div>
+          </div>
+        </div>
+        <div class="critical-badge large" id="criticalBadge"></div>
+        <div class="progress-tooltip">
+          <div class="tooltip-content">
+            <div class="tooltip-title">Daily Analyses</div>
+            <div class="tooltip-stats">
+              <span class="remaining" id="tooltipRemaining">--</span> of
+              <span class="total" id="tooltipLimit">--</span> remaining
+            </div>
+            <div class="tooltip-reset">
+              Resets in <span id="tooltipReset">--:--:--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings → opens XL modal (below Mini-Progress) -->
+      <a href="" id="accountNavBtn" class="nav-settings-link" aria-label="Settings"
+         onclick="return false;">
+        <span class="nav-settings-link__icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"></path>
+          </svg>
+        </span>
+        <span class="nav-settings-link__label">Settings</span>
+      </a>
+
+    </nav>
+    <!-- END NAV RAIL -->
+
+    <!-- ══ ACCOUNT MODAL (XL) ══════════════════════════════════════════ -->
+    <div class="acct-modal-overlay" id="acctModalOverlay">
+      <div class="acct-modal" role="dialog" aria-modal="true" aria-label="Account">
+        <div class="acct-modal__bar">
+          <span class="acct-modal__title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            Settings
+          </span>
+          <button type="button" class="acct-modal__close" id="acctModalClose" aria-label="Close">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+        <div class="acct-modal__body">
+          <div class="acct-modal__spinner" id="acctModalSpinner"></div>
+          <iframe class="acct-modal__frame" id="acctModalFrame" title="Account" loading="lazy"></iframe>
+        </div>
+      </div>
+    </div>
+    <!-- ══ END ACCOUNT MODAL ═══════════════════════════════════════════ -->
+
+    <!-- ══════════════════════════════════════
+         DASHBOARD (marktrack design)
+    ══════════════════════════════════════ -->
+    <div class="dashboard" style="--sidebar-w:68px;" id="mainDashboard">
+
+      <!-- SIDEBAR PANEL -->
+      <aside class="sidebar-panel collapsed" id="sidebarPanel">
+        <div class="sidebar-header">
+          <div class="panel-title">Quick Access</div>
+          <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar" aria-label="Toggle Sidebar"
+            aria-expanded="false">
+            <svg viewBox="0 0 24 24" id="toggleIcon">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="panel-group">
+          <div class="p-item active" id="sidebarItemAll" data-filter="all" data-tip="All Documents">
+            <span class="p-ico">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+                <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+                <path d="M10 9H8" />
+                <path d="M16 13H8" />
+                <path d="M16 17H8" />
+              </svg>
+            </span>
+            <span class="p-label">All</span>
+            <span class="p-count" id="countAll">0</span>
+          </div>
+          <div class="p-item" id="sidebarItemArchive" data-sidebar-action="archive" data-tip="Archived Content">
+            <span class="p-ico">
+              <svg viewBox="0 0 24 24">
+                <rect width="20" height="5" x="2" y="3" rx="1" />
+                <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+                <path d="M10 12h4" />
+              </svg>
+            </span>
+            <span class="p-label">Archived</span>
+            <span class="p-count" id="realArchivedCount" data-empty="true">0</span>
+          </div>
+          <div class="p-item" id="sidebarItemTrash" data-sidebar-action="trash" data-tip="Trash Bin">
+            <span class="p-ico">
+              <svg viewBox="0 0 24 24">
+                <path d="M10 11v6" />
+                <path d="M14 11v6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                <path d="M3 6h18" />
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </span>
+            <span class="p-label">Trash</span>
+            <span class="p-count" id="archivedCount">0</span>
+          </div>
+        </div>
+
+        <div class="panel-div"></div>
+
+        <div class="panel-group">
+          <div class="panel-label">Status</div>
+          <div class="p-item" id="sidebarItemNewFolders" data-filter="new-folders" data-tip="Recent Folders">
+            <span class="p-ico">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
+              </svg>
+            </span>
+            <span class="p-label">New Folders</span>
+            <span class="p-count" id="countNewFolders" data-empty="true">0</span>
+          </div>
+          <div class="p-item" id="sidebarItemNewFiles" data-filter="new-files" data-tip="Recent Files">
+            <span class="p-ico">
+              <svg viewBox="0 0 24 24">
+                <path d="M15 2h-4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8" />
+                <path d="M16.706 2.706A2.4 2.4 0 0 0 15 2v5a1 1 0 0 0 1 1h5a2.4 2.4 0 0 0-.706-1.706z" />
+                <path d="M5 7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h8a2 2 0 0 0 1.732-1" />
+              </svg>
+            </span>
+            <span class="p-label">New Files</span>
+            <span class="p-count" id="countNewFiles" data-empty="true">0</span>
+          </div>
+          <div class="p-item" id="sidebarItemShared" data-filter="shared" style="display:none" aria-hidden="true">
+            <span class="p-ico"><svg viewBox="0 0 24 24">
+                <path d="M12 2v13" />
+                <path d="m16 6-4-4-4 4" />
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              </svg></span>
+            <span class="p-label">Shared</span>
+            <span class="p-count" id="countShared" data-empty="true">0</span>
+          </div>
+          <div class="p-item" id="sidebarItemSharedToMe" data-filter="shared-to-me" data-tip="Shared with me">
+            <span class="p-ico">
+              <svg viewBox="0 0 24 24">
+                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+                <path
+                  d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+              </svg>
+            </span>
+            <span class="p-label">Shared with me</span>
+            <span class="p-count" id="countSharedToMe" data-empty="true">0</span>
+          </div>
+          <div class="p-item" id="sidebarItemSharedWith" data-filter="shared-with" data-tip="Shared by me">
+            <span class="p-ico">
+              <svg viewBox="0 0 24 24">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
+                <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
+              </svg>
+            </span>
+            <span class="p-label">Shared by me</span>
+            <span class="p-count" id="countSharedWith" data-empty="true">0</span>
+          </div>
+        </div>
+
+        <div class="panel-div"></div>
+
+      </aside>
+      <!-- END SIDEBAR PANEL -->
+
+      <!-- ══════════════════════════════════════
+           MAIN
+      ══════════════════════════════════════ -->
+      <div class="main" id="homeMain">
+
+        <div class="main-head" id="homeHead">
+          <h1 id="homeGreeting">{% block page_title %}XplagiaX{% endblock %}</h1>
+          <div class="head-actions" id="homeActions">
+
+
+
+            <!-- App modules dropdown -->
+            <div class="white2-actions-dropdown">
+              <button class="white2-actions-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                  class="bi bi-app-indicator" viewBox="0 0 16 16">
+                  <path
+                    d="M5.5 2A3.5 3.5 0 0 0 2 5.5v5A3.5 3.5 0 0 0 5.5 14h5a3.5 3.5 0 0 0 3.5-3.5V8a.5.5 0 0 1 1 0v2.5a4.5 4.5 0 0 1-4.5 4.5h-5A4.5 4.5 0 0 1 1 10.5v-5A4.5 4.5 0 0 1 5.5 1H8a.5.5 0 0 1 0 1z" />
+                  <path d="M16 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
+                </svg>
+              </button>
+              <div class="white2-actions-menu">
+                <div class="white2-action-item">
+                  <div class="icon-container">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+                      class="bi bi-bookmark-check" viewBox="0 0 16 16">
+                      <path fill-rule="evenodd"
+                        d="M10.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0" />
+                      <path
+                        d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1z" />
+                    </svg>
+                  </div>
+                  <div class="content">
+                    <span class="link">MarkTrack</span>
+                    <span class="description">Real-time assisted writing
+                      <a href="https://xplagiax.ca/marktrack" target="_blank"
+                        style="margin-left:5px;text-decoration:none;">
+                        Soon <i class="bi bi-question-circle-fill" style="color:#007bff;"></i>
+                      </a>
+                    </span>
+                  </div>
+                </div>
+                <div class="white2-action-item">
+                  <div class="icon-container">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+                      class="bi bi-card-checklist" viewBox="0 0 16 16">
+                      <path
+                        d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2z" />
+                      <path
+                        d="M7 5.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0M7 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 0 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0" />
+                    </svg>
+                  </div>
+                  <div class="content">
+                    <span class="link">Review Studio</span>
+                    <span class="description">Automate academic review with precision.
+                      <a href="https://xplagiax.ca/reviewstudio" target="_blank"
+                        style="margin-left:5px;text-decoration:none;">
+                        Early <i class="bi bi-question-circle-fill" style="color:#007bff;"></i>
+                      </a>
+                    </span>
+                  </div>
+                </div>
+                <div class="white2-action-item">
+                  <div class="icon-container">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
+                      class="bi bi-check2-all" viewBox="0 0 16 16">
+                      <path
+                        d="M12.354 4.354a.5.5 0 0 0-.708-.708L5 10.293 1.854 7.146a.5.5 0 1 0-.708.708l3.5 3.5a.5.5 0 0 0 .708 0zm-4.208 7-.896-.897.707-.707.543.543 6.646-6.647a.5.5 0 0 1 .708.708l-7 7a.5.5 0 0 1-.708 0" />
+                      <path d="m5.354 7.146.896.897-.707.707-.897-.896a.5.5 0 1 1 .708-.708" />
+                    </svg>
+                  </div>
+                  <div class="content">
+                    <span class="link">Genuine</span>
+                    <span class="description">Explore the patent world with depth and reliability.
+                      <a href="https://xplagiax.ca/genuine" target="_blank"
+                        style="margin-left:5px;text-decoration:none;">
+                        Early <i class="bi bi-question-circle-fill" style="color:#007bff;"></i>
+                      </a>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Profile button + dropdown -->
+            <div class="navigation__group">
+              <button type="button" class="profile__btn">
+                <div class="profile-avatar-initials"
+                  data-initials="{{ (user_data.get('name','')[:1] ~ user_data.get('lastname','')[:1]) }}">
+                  {% if user_data.avatar %}
+                  <img src="{{ user_data.avatar }}" alt="Avatar"
+                    style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
+                  {% else %}
+                  {{ user_data.get('name','')[:1] }}{{ user_data.get('lastname','')[:1] }}
+                  {% endif %}
+                </div>
+              </button>
+
+              <!-- Profile dropdown (inside navigation__group for absolute positioning) -->
+              <div class="dropdown__wrapper_bar hide dropdown__wrapper_bar--fade-in none">
+                <nav>
+                  <div class="profile__wrapper">
+                    {% if current_user.is_authenticated %}
+                    <div class="avatar avatar-initials"
+                      data-initials="{{ current_user.name[:1] }}{{ current_user.lastname[:1] if current_user.lastname else '' }}">
+                      {% if user_data.avatar %}
+                      <img src="{{ user_data.avatar }}" alt="Avatar"
+                        style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
+                      {% else %}
+                      {{ current_user.name[:1] }}{{ current_user.lastname[:1] if current_user.lastname else '' }}
+                      {% endif %}
+                    </div>
+                    <div class="profile__info">
+                      <h2 class="profile__name">{{ current_user.name }} {{ current_user.lastname or '' }}</h2>
+                      <p class="profile__email">{{ current_user.email }}</p>
+                    </div>
+                    {% else %}
+                    <div class="avatar avatar-initials" data-initials="??">??</div>
+                    <div class="profile__info">
+                      <h2 class="profile__name">Not authenticated</h2>
+                    </div>
+                    {% endif %}
+                  </div>
+                  <hr class="divider">
+                  <ul>
+                    <li>
+                      <a href="" onclick="document.getElementById('accountNavBtn').click(); return false;" style="text-decoration:none;color:inherit;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                          <circle cx="12" cy="12" r="3" />
+                          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                        </svg>
+                        Settings
+                      </a>
+                    </li>
+                    <li>
+                      <a href="" onclick="manualShowModal(); return false;" style="text-decoration:none;color:inherit;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                          <path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
+                          <path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0" />
+                          <path d="M3 6l0 13" />
+                          <path d="M12 6l0 13" />
+                          <path d="M21 6l0 13" />
+                        </svg>
+                        Guide
+                      </a>
+                    </li>
+                  </ul>
+                  <hr class="divider">
+                  <div class="plan">
+                    <h2>Plan: {{ user_data.user_type }}</h2>
+                  </div>
+                  <hr class="divider">
+                  <ul>
+                    <li onclick="abrirModalLogout()" style="cursor:pointer;">
+                      <a
+                        style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0.75rem;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                          <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+                          <path d="M9 12h12l-3 -3" />
+                          <path d="M18 15l3 -3" />
+                        </svg>
+                        Sign Out
+                      </a>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <!-- END MAIN HEAD -->
+
+        <div class="content-scroll" id="homeContentScroll">
+          {% block content %}{% endblock %}
+          {% block body %}{% endblock %}
+        </div>
+
+      </div>
+      <!-- END MAIN -->
+
+    </div>
+    <!-- END DASHBOARD -->
+
+  </div>
+  <!-- END APP SHELL -->
+
+  <!-- ══════════════════════════════════════
+       GLOBAL MODALS (outside dashboard to avoid stacking issues)
+  ══════════════════════════════════════ -->
+
+  <!-- Logout Modal -->
+  <div id="logoutModal" class="logout-modal-overlay">
+    <div class="logout-modal-container">
+      <div class="logout-modal-header">
+        <div class="logout-modal-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+            <path d="M9 12h12l-3 -3" />
+            <path d="M18 15l3 -3" />
+          </svg>
+        </div>
+        <h3 class="logout-modal-title">Log Out</h3>
+        <p class="logout-modal-message">Are you sure you want to log out?</p>
+      </div>
+      <div class="logout-modal-footer">
+        <button class="logout-btn logout-btn-cancel" onclick="cerrarLogoutModal()">
+          <i class="bi bi-x-square"></i> Cancel
+        </button>
+        <button id="logoutConfirmBtn" class="logout-btn logout-btn-danger" onclick="confirmarLogout()">
+          <span id="logoutBtnText"><i class="bi bi-check2-square"></i> Close Session</span>
+          <div id="logoutBtnSpinner" class="logout-spinner" style="display:none;"></div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Welcome Modal -->
+  <div class="welcome-modal-overlay" id="welcomeModal">
+    <div class="welcome-modal-container">
+      <div class="slider-container">
+        <div class="slides-wrapper" id="slidesWrapper">
+          <div class="slide">
+            <div class="slide-content">
+              <span class="slide-number">Step 1 of 6</span>
+              <h2 class="slide-title">Welcome to XplagiaX!</h2>
+              <p class="slide-description">Your ideas deserve protection. Your trusted partner in academic integrity.
+              </p>
+              <ul class="slide-features">
+                <li>Built for educators, students, and researchers.</li>
+                <li>Promotes ethics, originality, and intellectual honesty.</li>
+                <li>Transparent, empowering document reviews.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="slide">
+            <div class="slide-content">
+              <span class="slide-number">Step 2 of 6</span>
+              <h2 class="slide-title">Advanced Plagiarism Detection</h2>
+              <p class="slide-description">Detect similarities, citations, and paraphrasing with advanced semantic
+                technology.</p>
+              <ul class="slide-features">
+                <li>Compares against millions of verified academic sources.</li>
+                <li>Delivers clear, visual similarity reports in seconds.</li>
+                <li>Ensures originality in essays, research papers, and theses.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="slide">
+            <div class="slide-content">
+              <span class="slide-number">Step 3 of 6</span>
+              <h2 class="slide-title">AI-Generated Content Detection</h2>
+              <p class="slide-description">Evaluate the authenticity of your content with unmatched reliability.</p>
+              <ul class="slide-features">
+                <li>Differentiates between human and AI-generated texts.</li>
+                <li>Protects academic work from artificial manipulation.</li>
+                <li>Encourages genuine learning and critical expression.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="slide">
+            <div class="slide-content">
+              <span class="slide-number">Step 4 of 6</span>
+              <h2 class="slide-title">Clear and Visual Reports</h2>
+              <p class="slide-description">Transform complex analysis into clarity with actionable academic insights.
+              </p>
+              <ul class="slide-features">
+                <li>View overall similarity and source details at a glance.</li>
+                <li>Share or export results for collaborative review.</li>
+                <li>Interpret findings through intuitive, visual summaries.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="slide">
+            <div class="slide-content">
+              <span class="slide-number">Step 5 of 6</span>
+              <h2 class="slide-title">Deep Semantic Analysis</h2>
+              <p class="slide-description">Goes beyond words — understands meaning and detects hidden reformulations.
+              </p>
+              <ul class="slide-features">
+                <li>Evaluates coherence and intent behind every paragraph.</li>
+                <li>Identifies AI-style rewriting and structural imitation.</li>
+                <li>Encourages critical thinking and original composition.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="slide">
+            <div class="slide-content">
+              <span class="slide-number">Step 6 of 6</span>
+              <h2 class="slide-title">Privacy, Ethics, and Trust</h2>
+              <p class="slide-description">Your documents remain yours, always. Highest standards of academic ethics.
+              </p>
+              <ul class="slide-features">
+                <li>End-to-end encryption with automatic data deletion.</li>
+                <li>Secure Canadian servers with full GDPR compliance.</li>
+                <li>Transparent policies — no data storage or document reuse.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <button class="nav-btn nav-btn-prev" onclick="prevSlide()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button class="nav-btn nav-btn-next" onclick="nextSlide()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+        <div class="pagination-dots" id="paginationDots"></div>
+      </div>
+      <div class="modal-footer">
+        <div class="checkbox-container">
+          <input type="checkbox" id="dontShowAgain">
+          <label for="dontShowAgain">Don't show again</label>
+        </div>
+        <button class="close-btn" id="closeBtn" onclick="closeWelcomeModal()">
+          <i class="bi bi-check2-square"></i> Got it
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upgrade Modal -->
+  <div class="modal-overlay" id="upgradeModal">
+    <div class="upgrade-modal">
+      <button class="modal-close" id="closeUpgradeModal">&times;</button>
+      <div class="modal-header">
+        <div class="limit-icon">
+          <svg width="56" height="56" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="#ef4444" stroke-width="4" />
+            <path d="M50 30 L50 55 M50 65 L50 70" stroke="#ef4444" stroke-width="6" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h2>Daily Analysis Limit Reached</h2>
+        <div class="countdown-container">
+          <div class="countdown-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor"
+              class="bi bi-clock-history" style="color:#1621ff;" viewBox="0 0 16 16">
+              <path
+                d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.302zm1.834 1.79a7 7 0 0 0-.653-.796l.724-.69q.406.429.747.91zm.744 1.352a7 7 0 0 0-.214-.468l.893-.45a8 8 0 0 1 .45 1.088l-.95.313a7 7 0 0 0-.179-.483m.53 2.507a7 7 0 0 0-.1-1.025l.985-.17q.1.58.116 1.17zm-.131 1.538q.05-.254.081-.51l.993.123a8 8 0 0 1-.23 1.155l-.964-.267q.069-.247.12-.501m-.952 2.379q.276-.436.486-.908l.914.405q-.24.54-.555 1.038zm-.964 1.205q.183-.183.35-.378l.758.653a8 8 0 0 1-.401.432z" />
+              <path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0z" />
+              <path
+                d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5" />
+            </svg>
+          </div>
+          <div class="countdown-info">
+            <div class="countdown-label">Resets in</div>
+            <div class="countdown-timer" id="countdownTimer">--:--:--</div>
+          </div>
+        </div>
+      </div>
+      <div class="upgrade-options">
+        <h3>Upgrade for More Analyses</h3>
+        <p class="upgrade-subtitle">Get instant access to more daily analyses</p>
+        <div class="pricing-cards" id="pricingCardsContainer">
+          <div class="loading-plans">
+            <div class="spinner"></div>
+            <p>Loading available plans...</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="guarantee">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L3 7v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7l-9-5z" />
+            <path d="M9 12l2 2 4-4" />
+          </svg>
+          <span>30-day money-back guarantee • Cancel anytime</span>
+        </div>
+        <button class="btn-continue-free" onclick="analysisTracker.hideUpgradeModal()">
+          Continue with Free Plan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trial Status Modal -->
+  <div class="trial-modal-overlay" id="trialModal">
+    <div class="trial-modal-container">
+      <div class="trial-modal-header">
+        <div class="trial-icon-container">
+          <i class="fas fa-clock trial-icon" id="modalTrialIcon" style="color:#667eea;"></i>
+        </div>
+        <h2 class="trial-modal-title" id="modalTitle">Trial Status</h2>
+        <p class="trial-modal-subtitle" id="modalSubtitle">Check your trial period</p>
+      </div>
+      <div class="trial-modal-body">
+        <div class="trial-progress-section">
+          <div class="trial-time-remaining">
+            <span class="trial-time-label">Time Remaining</span>
+            <span class="trial-time-value" id="modalTimeRemaining">Loading...</span>
+          </div>
+          <div class="settings-progress">
+            <div class="settings-progress-bar settings-progress-bar-animated progress-excellent" id="modalProgressBar"
+              style="width:80%;">
+              <span id="modalProgressText">80%</span>
+            </div>
+          </div>
+        </div>
+        <div class="trial-message-box trial-info-message" id="modalMessageBox">
+          <i class="fas fa-info-circle trial-message-icon"></i>
+          <div class="trial-message-content">
+            <strong>Your trial is active</strong>
+            Make the most of all the features available during your trial period.
+          </div>
+        </div>
+        <div class="trial-features">
+          <div class="trial-features-title">What you're getting:</div>
+          <div class="trial-feature-item">
+            <div class="trial-feature-icon"><i class="fas fa-check"></i></div>
+            <span class="trial-feature-text">Full access to all features</span>
+          </div>
+          <div class="trial-feature-item">
+            <div class="trial-feature-icon"><i class="fas fa-check"></i></div>
+            <span class="trial-feature-text">24/7 priority support</span>
+          </div>
+          <div class="trial-feature-item">
+            <div class="trial-feature-icon"><i class="fas fa-check"></i></div>
+            <span class="trial-feature-text">Unlimited projects</span>
+          </div>
+        </div>
+      </div>
+      <div class="trial-modal-footer" id="modalFooter">
+        <button class="trial-btn trial-btn-secondary" onclick="closeTrialModal()">
+          <i class="fas fa-times"></i> Close
+        </button>
+        <button class="trial-btn trial-btn-primary" id="upgradeBtn" onclick="handleUpgrade()">
+          <i class="fas fa-crown"></i> Upgrade Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {% block scripts %}{% endblock %}
+
+  <script src="{{ url_for('static', filename='js/base_page.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/sidebar_counts.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+  <script>
+    const white2ActionsBtn = document.querySelector('.white2-actions-btn');
+    const white2ActionsDropdown = document.querySelector('.white2-actions-dropdown');
+    if (white2ActionsBtn && white2ActionsDropdown) {
+      white2ActionsBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        white2ActionsDropdown.classList.toggle('active');
+      });
+      document.addEventListener('click', function (e) {
+        if (!white2ActionsDropdown.contains(e.target)) {
+          white2ActionsDropdown.classList.remove('active');
+        }
+      });
+    }
+  </script>
+  <script src="{{ url_for('static', filename='js/welcome_guia_modal.js') }}?v=off1"></script>
+  <script src="{{ url_for('static', filename='js/analysis_tracker.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dropdown_history.js') }}"></script>
+
+  <!-- ══ TRASH OFFCANVAS (global, all screens) ════════════════════════ -->
+  <div class="xp-oc-overlay" id="trashOcOverlay" onclick="closeTrashOc()"></div>
+  <aside class="xp-oc xp-oc--trash" id="trashOc" aria-label="Trash">
+
+    <div class="xp-oc-head">
+      <div class="xp-oc-head-left">
+        <div class="xp-oc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="xp-oc-title">Trash</div>
+          <div class="xp-oc-subtitle">Items here are permanently deleted after 30 days</div>
+        </div>
+      </div>
+      <button class="xp-oc-close" onclick="closeTrashOc()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="xp-oc-body" id="trashOcBody">
+      <div class="xp-oc-loading">
+        <div class="xp-oc-spinner xp-oc-spinner--red"></div>
+        <span>Loading trash…</span>
+      </div>
+    </div>
+
+    <div class="xp-oc-foot">
+      <span class="xp-oc-count" id="trashOcCount">0 items</span>
+    </div>
+  </aside>
+  <!-- ══ END TRASH OFFCANVAS ══════════════════════════════════════════ -->
+
+  <!-- ══ ARCHIVED OFFCANVAS (global, all screens) ══════════════════════ -->
+  <div class="xp-oc-overlay" id="archivedOcOverlay" onclick="closeArchivedOc()"></div>
+  <aside class="xp-oc" id="archivedOc" aria-label="Archived files">
+
+    <div class="xp-oc-head">
+      <div class="xp-oc-head-left">
+        <div class="xp-oc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="5" x="2" y="3" rx="1"/>
+            <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/>
+            <path d="M10 12h4"/>
+          </svg>
+        </div>
+        <div>
+          <div class="xp-oc-title">Archived Files</div>
+          <div class="xp-oc-subtitle">Auto-deleted after 10 days</div>
+        </div>
+      </div>
+      <button class="xp-oc-close" onclick="closeArchivedOc()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="xp-oc-body" id="archivedOcBody">
+      <div class="xp-oc-loading" id="archivedOcLoading">
+        <div class="xp-oc-spinner"></div>
+        <span>Loading archived files…</span>
+      </div>
+    </div>
+
+    <div class="xp-oc-foot">
+      <span class="xp-oc-count" id="archivedOcCount">0 files</span>
+    </div>
+  </aside>
+  <!-- ══ END ARCHIVED OFFCANVAS ════════════════════════════════════════ -->
+
+  <!-- Account modal controller -->
+  <script>
+    (function () {
+      var btn     = document.getElementById('accountNavBtn');
+      var overlay = document.getElementById('acctModalOverlay');
+      var closeBt = document.getElementById('acctModalClose');
+      var frame   = document.getElementById('acctModalFrame');
+      var body    = frame ? frame.parentNode : null;
+      if (!btn || !overlay || !frame) return;
+      var loaded = false;
+
+      function open(panel, connected) {
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        var src = '/account?embed=1';
+        if (panel)     src += '&panel='     + encodeURIComponent(panel);
+        if (connected) src += '&connected=' + encodeURIComponent(connected);
+        if (!loaded || panel || connected) {
+          loaded = true;
+          frame.addEventListener('load', function () { if (body) body.classList.add('loaded'); });
+          frame.src = src;
+        }
+      }
+      function close() {
+        overlay.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+      btn.addEventListener('click', function() { open(); });
+      closeBt && closeBt.addEventListener('click', close);
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && overlay.classList.contains('open')) close(); });
+
+      // Auto-open after OAuth redirect (?openSettings=integrations&connected=provider)
+      var params = new URLSearchParams(window.location.search);
+      var openPanel  = params.get('openSettings');
+      var connectedP = params.get('connected');
+      if (openPanel) {
+        open(openPanel, connectedP);
+        var url = new URL(window.location.href);
+        url.searchParams.delete('openSettings');
+        url.searchParams.delete('connected');
+        history.replaceState({}, '', url.toString());
+      }
+    })();
+  </script>
+</body>
+
+</html>

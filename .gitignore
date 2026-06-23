@@ -1,0 +1,200 @@
+# ════════════════════════════════════════════════════════════════════════════
+#  xplagiax — .gitignore
+#  Mantén solo el código fuente y la documentación útil.
+#  Descarta: entornos virtuales, modelos/binarios pesados, caches, secretos,
+#  datos de runtime (uploads/db/logs) y basura del sistema operativo.
+# ════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Python
+# ─────────────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+.installed.cfg
+MANIFEST
+pip-wheel-metadata/
+share/python-wheels/
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Entornos virtuales  (NUNCA versionar)
+# ─────────────────────────────────────────────────────────────────────────────
+venv/
+venv_*/
+.venv/
+env/
+.env.d/
+ENV/
+virtualenv/
+pyvenv.cfg
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Secretos / configuración local  (credenciales fuera del repo)
+# ─────────────────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.local.env
+secrets.*
+credentials*.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Modelos de ML y binarios pesados  (se distribuyen aparte, no por git)
+# ─────────────────────────────────────────────────────────────────────────────
+ai_detector_models/
+trained_models/
+*.bin
+*.pt
+*.pth
+*.onnx
+*.h5
+*.hdf5
+*.ckpt
+*.safetensors
+*.pkl
+*.pickle
+*.joblib
+*.npy
+*.npz
+*.model
+Model_groups_*
+modernbert*
+
+# Librerías nativas / binarios compilados (causan el límite de 100 MB de GitHub)
+*.dylib
+*.so
+*.so.*
+*.dll
+*.a
+*.lib
+*.o
+
+# Archivos comprimidos / imágenes de disco grandes
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+*.iso
+*.dmg
+
+# Multimedia pesada
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wav
+*.psd
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Datos de runtime / generados por la app
+# ─────────────────────────────────────────────────────────────────────────────
+uploads/
+uploads_analysis/
+uploads_save/
+**/doc_service/uploads/
+instance/
+tmp/
+temp/
+*.tmp
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Bases de datos locales
+# ─────────────────────────────────────────────────────────────────────────────
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.sql.gz
+*.dump
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Logs
+# ─────────────────────────────────────────────────────────────────────────────
+*.log
+logs/
+log/
+*.log.*
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Caches de herramientas
+# ─────────────────────────────────────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.ipynb_checkpoints/
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Node / front-end build (si aplica en algún subproyecto)
+# ─────────────────────────────────────────────────────────────────────────────
+node_modules/
+.npm/
+.parcel-cache/
+*.min.js.map
+*.min.css.map
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Editores / IDE
+# ─────────────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Claude Code: ignora ajustes locales, conserva config compartida del proyecto
+.claude/settings.local.json
+.claude/projects/
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Sistema operativo
+# ─────────────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Archivos scratch / volcados temporales en la raíz
+#  (dumps de depuración que no son código ni documentación)
+# ─────────────────────────────────────────────────────────────────────────────
+/H3.TXT
+/hh.txt
+/hit2.txt
+/hith.txt
+/jj.json
+/forgetpssw.txt
+/autthusrs.txt
+/in
+/h.html

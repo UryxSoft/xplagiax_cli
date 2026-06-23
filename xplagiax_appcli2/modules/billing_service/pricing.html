@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XplagiaX - Plans & Pricing</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/icon/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/icon/favicon-16x16.png') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+   <link rel="stylesheet"   href="{{ url_for('static', filename='css/plans_style.css') }}" />
+</head>
+<body>
+    {% block content %}
+    <nav class="navbar-fixed-top">
+        <div class="navbar-content">
+             <a href="https://xplagiax.ca" class="logo__wrapper" aria-label="Xplagiax Home">
+               <span class="company-name" style="font-size: 30px;">
+                <i class="bi bi-chevron-contract" aria-hidden="true"></i>
+                plagia
+                <i class="bi bi-chevron-contract" aria-hidden="true"></i>
+              </span>
+          </a>
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('x_users.home') }}">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/pricing">Pricing</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('auth_bp.logout') }}">Log Out</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1>Plans and Pricing</h1>
+            <p>Choose the perfect plan for your needs and start transforming the way you protect and validate your work.</p>
+        </div>
+
+        <div class="billing-toggle">
+            <div class="toggle-container">
+                <div class="toggle-option active" data-billing="monthly">
+                    Monthly
+                </div>
+                <div class="toggle-option" data-billing="annual">
+                    Annual
+                    <span class="save-badge">Save 20%</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="plans-container">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Preparing your plans...</p>
+            </div>
+        </div>
+
+        <!-- TABLA DE MÓDULOS -->
+        <div class="table-section">
+            <div class="section-header">
+                <h2 class="section-title">Modules</h2>
+            </div>
+            
+            <div class="table-wrapper">
+                <table class="comparison-table features-table">
+                    <thead>
+                        <tr>
+                            <th>Modules</th>
+                            <th>Starter</th>
+                            <th>Scholar Suite</th>
+                            <th>Individual</th>
+                            <th>Research Essentials</th>
+                            <th>Institutes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>AI-generated text detection</td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Similarity analysis</td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Web plagiarism detection</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Wikipedia database comparison</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Semantics analysis</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Paraphrasing analysis</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>AI-generated images detection</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Academic databases comparison</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Patents analysis</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Originality scoring</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TABLA DE FORMATOS -->
+        <div class="table-section">
+            <div class="section-header">
+                <h2 class="section-title">Formats</h2>
+            </div>
+            
+            <div class="table-wrapper">
+                <table class="comparison-table features-table">
+                    <thead>
+                        <tr>
+                            <th>Formats</th>
+                            <th>Starter</th>
+                            <th>Scholar Suite</th>
+                            <th>Individual</th>
+                            <th>Research Essentials</th>
+                            <th>Institutes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>DOCX</td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>PDF</td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>DOC</td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>TXT</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>PPTX</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>EPUB</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>XPS</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>PNG</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>JPEG</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>WEBP</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TABLA DE FUNCIONES -->
+        <div class="table-section">
+            <div class="section-header">
+                <h2 class="section-title">Features</h2>
+            </div>
+            
+            <div class="table-wrapper">
+                <table class="comparison-table features-table">
+                    <thead>
+                        <tr>
+                            <th>Features</th>
+                            <th>Starter</th>
+                            <th>Scholar Suite</th>
+                            <th>Individual</th>
+                            <th>Research Essentials</th>
+                            <th>Institutes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Support forums</td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Findex</td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>AI_TestPro</td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Documents storage</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Analysis history</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Grammatical corrections</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>APA citation support</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>MarkTrack</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Popular Cloud services integration</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Coherence analysis</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>SourceX</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Genuine</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Review Studio</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Centralized dashboard</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Sharable certified</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                        <tr>
+                            <td>Unlimited detection</td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-times cross-icon"></i></td>
+                            <td><i class="fas fa-check check-icon"></i></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="faq-section">
+            <h3 class="faq-title">Frequently Asked Questions</h3>
+            
+            <div class="faq-item">
+                <button class="faq-question">
+                    Can I switch plans at any time?
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="faq-answer">
+                    Yes, you can upgrade or downgrade your plan at any time. Changes will take effect in your next billing cycle.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question">
+                    Is there a minimum commitment?
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="faq-answer">
+                    No, there is no minimum commitment. You can cancel your subscription at any time from your dashboard.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question">
+                    What payment methods do you accept?
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="faq-answer">
+                    We accept credit/debit cards through Stripe and PayPal payments.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="modal" id="paymentModal">
+        <div class="modal-content">
+            <button class="close-button" onclick="closeModal()">&times;</button>
+            <div class="modal-header">
+                <div class="modal-title">Proceed to Checkout</div>
+                <div id="selected-plan-info"></div>
+            </div>
+            
+            <!-- Selector de método de pago -->
+            <div class="payment-method-selector" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <h5 style="margin-bottom: 15px; font-size: 14px; color: #6c757d;">Select payment method:</h5>
+                <label style="display: block; margin-bottom: 10px; padding: 10px; background: white; border-radius: 6px; cursor: pointer;">
+                    <input type="radio" name="payment-method" value="stripe" checked style="margin-right: 10px;">
+                    <i class="fas fa-credit-card"></i> Credit Card (Stripe)
+                </label>
+                <label style="display: block; padding: 10px; background: white; border-radius: 6px; cursor: pointer;">
+                    <input type="radio" name="payment-method" value="paypal" style="margin-right: 10px;">
+                    <i class="fab fa-paypal" style="color: #0070ba;"></i> PayPal
+                </label>
+            </div>
+            
+            <!-- Mensaje de advertencia -->
+            <div id="starter-warning" class="starter-warning" style="display: block;">
+                <i class="fas fa-info-circle"></i>
+                <p>You need to create a Starter account before you can proceed with payment or start a trial.</p>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <button id="checkout-button" class="plan-button primary">
+                    <i class="fas fa-credit-card"></i> Go to Payment
+                </button>
+                <button id="trial-button" class="plan-button secondary" style="display: none;">
+                    <i class="fas fa-gift"></i> Get Started Free
+                </button>
+            </div>
+        </div>
+    </div>
+   {% endblock %}
+    <script>
+        let plans = [];
+        let selectedPlan = null;
+        let billingCycle = 'monthly';
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadPlans();
+            
+            // Billing cycle toggle
+            document.querySelectorAll('.toggle-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelector('.toggle-option.active').classList.remove('active');
+                    this.classList.add('active');
+                    billingCycle = this.dataset.billing;
+                    displayPlans();
+                });
+            });
+
+            // FAQ accordion
+            document.querySelectorAll('.faq-question').forEach(question => {
+                question.addEventListener('click', function() {
+                    const answer = this.nextElementSibling;
+                    const icon = this.querySelector('i');
+                    
+                    if (answer.classList.contains('show')) {
+                        answer.classList.remove('show');
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        // Close all other answers
+                        document.querySelectorAll('.faq-answer.show').forEach(otherAnswer => {
+                            otherAnswer.classList.remove('show');
+                        });
+                        document.querySelectorAll('.faq-question i').forEach(otherIcon => {
+                            otherIcon.style.transform = 'rotate(0deg)';
+                        });
+                        
+                        answer.classList.add('show');
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+            
+            // Manejar retorno de PayPal
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            
+            if (token && sessionStorage.getItem('paypal_token') === token) {
+                executePayPalAgreement(token);
+            }
+        });
+
+        async function loadPlans() {
+            try {
+                const response = await fetch('/billing_bp/plans', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.error('Server returned HTML instead of JSON');
+                    
+                    if (response.status === 401 || response.status === 302) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    
+                    throw new Error('Server returned invalid response');
+                }
+                
+                const data = await response.json();
+                
+                if (response.ok && data.plans) {
+                    plans = data.plans;
+                    displayPlans();
+                } else if (response.status === 401) {
+                    window.location.href = data.redirect || '/login';
+                } else {
+                    throw new Error(data.error || 'Failed to load plans');
+                }
+                
+            } catch (error) {
+                console.error('Error loading plans:', error);
+                
+                const warningDiv = document.getElementById('starter-warning');
+                if (warningDiv) {
+                    warningDiv.style.display = 'none';
+                }
+            }
+        }
+
+        function displayPlans() {
+            const container = document.getElementById('plans-container');
+            let html = '<div class="plans-grid">';
+            
+            const planFeatures = {
+                'Starter': [
+                    '3 daily analyses',
+                    'AI-generated text detection',
+                    'Similarity analysis'
+                ],
+                'Scholar Suite': [
+                    '15 daily analyses',
+                    'Everything in Starter, plus:',
+                    'Web plagiarism detection',
+                    'Wikipedia database comparison',
+                    'Semantics analysis',
+                    'Documents storage'
+                ],
+                'Individual': [
+                    '30 daily analyses',
+                    'Everything in Scholar Suite, plus:',
+                    'Paraphrasing analysis', 
+                    'AI-generated images detection',
+                    'Cloud services(One Drive, Google Drive, DropBox, Box)'
+                ],
+                'Research Essentials': [
+                    '75 daily analyses',
+                    'Everything in Individual, plus:',
+                    'Academic databases comparison'
+                ],
+                'Institutes': [
+                    'Unlimited daily analysis',
+                    'Patents analysis',
+                    'Originality scoring'
+                ]
+            };
+            
+            plans.forEach(plan => {
+                const isPopular = plan.name === 'Individual';
+                const isInstitutes = plan.name === 'Institutes';
+                const price = billingCycle === 'annual' ? plan.price_annual : plan.price_monthly;
+                
+                // Usar PayPal plan IDs
+                const planId = billingCycle === 'annual' ? plan.paypal_plan_annual : plan.paypal_plan_monthly;
+                const hasValidPlanId = planId && planId !== 'null' && planId !== null;
+                const features = planFeatures[plan.name] || [];
+                
+                html += `
+                    <div class="plan-card ${isPopular ? 'popular' : ''}">
+                        ${isPopular ? '<div class="popular-badge"> Most Popular </div>' : ''}
+                        
+                        <div class="plan-header">
+                            <div class="plan-icon">
+                                ${getPlanIcon(plan.name)}
+                            </div>
+                            <div class="plan-name">${plan.name}</div>
+                            <div class="plan-description">${plan.description || ''}</div>
+                            ${isInstitutes ? 
+                                `<div class="plan-price">
+                                    <span class="price-amount" style="font-size: 1.5rem;">Contact Sales</span>
+                                </div>` :
+                                `<div class="plan-price">
+                                    <span class="price-currency">$</span>
+                                    <span class="price-amount">${price || 0}</span>
+                                    <span class="price-period">/${billingCycle === 'annual' ? 'year' : 'month'}</span>
+                                </div>`
+                            }
+                        </div>
+                        
+                        <ul class="features-list">
+                            <li>
+                                <div class="feature-icon">
+                                    <i class="fas fa-database"></i>
+                                </div>
+                                <strong>${plan.daily_analysis_limit}</strong> daily analyses
+                            </li>
+                            ${plan.trial_days > 0 ? 
+                                `<li>
+                                    <div class="feature-icon">
+                                        <i class="fas fa-gift"></i>
+                                    </div>
+                                    ${plan.trial_days} free trial days
+                                </li>` : ''
+                            }
+                            ${features.map(feature => `
+                                <li>
+                                    <div class="feature-icon">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    ${feature}
+                                </li>
+                            `).join('')}
+                        </ul>
+                        
+                        ${plan.name === 'Starter' ? 
+                            `<button class="plan-button disabled">
+                                Current Plan
+                            </button>` :
+                            plan.name === 'Institutes' ?
+                            `<button class="plan-button secondary">
+                                Contact Sales
+                            </button>` :
+                            !hasValidPlanId ?
+                            `<button class="plan-button disabled" title="Plan not configured">
+                                Coming Soon
+                            </button>` :
+                            `<button onclick="selectPlan('${plan.name}', '${planId}', ${plan.trial_days}, ${price})" 
+                                    class="plan-button ${isPopular ? 'primary' : 'secondary'}">
+                                ${plan.trial_days > 0 ? 'Try for free' : 'Choose'}
+                            </button>`
+                        }
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function selectPlan(planName, priceId, trialDays, price) {
+            selectedPlan = { planName, priceId, trialDays, price };
+            
+            const planInfo = document.getElementById('selected-plan-info');
+            planInfo.innerHTML = `
+                <div style="text-align: center; margin: 20px 0;">
+                    <h4>Plan ${planName}</h4>
+                    <p style="color: #7f8c8d;">$${price}/${billingCycle === 'annual' ? 'year' : 'month'}</p>
+                    ${trialDays > 0 ? `<div class="alert alert-info">Includes ${trialDays} days free trial</div>` : ''}
+                </div>
+            `;
+            
+            const checkoutBtn = document.getElementById('checkout-button');
+            const trialBtn = document.getElementById('trial-button');
+            
+            if (trialDays > 0) {
+                trialBtn.style.display = 'block';
+                checkoutBtn.innerHTML = '<i class="fas fa-credit-card"></i> Subscribe Now – Skip Free Trial';
+            } else {
+                trialBtn.style.display = 'none';
+                checkoutBtn.innerHTML = '<i class="fas fa-credit-card"></i> Go to Payment';
+            }
+            
+            document.getElementById('paymentModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('paymentModal').classList.remove('show');
+        }
+
+        // Payment button handler
+        document.getElementById('checkout-button').addEventListener('click', async function() {
+            if (!selectedPlan) return;
+
+            const warningDiv = document.getElementById('starter-warning');
+            if (warningDiv) {
+                warningDiv.style.display = 'none';
+            }
+            
+            const paymentMethod = document.querySelector('input[name="payment-method"]:checked')?.value || 'stripe';
+            
+            console.log('Payment method:', paymentMethod);
+            console.log('Selected Plan:', selectedPlan);
+            console.log('Price ID:', selectedPlan?.priceId);
+            console.log('Billing Cycle:', billingCycle);
+
+            if (!selectedPlan) {
+                showAlert('Por favor selecciona un plan válido', 'danger');
+                return;
+            }
+
+            // PAGO CON PAYPAL
+            if (paymentMethod === 'paypal') {
+                try {
+                    const response = await fetch('/billing_bp/paypal/create-order', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            plan: selectedPlan.planName,
+                            billing_cycle: billingCycle
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok && data.approval_url) {
+                        sessionStorage.setItem('paypal_token', data.token);
+                        sessionStorage.setItem('plan_name', selectedPlan.planName);
+                        sessionStorage.setItem('billing_cycle', billingCycle);
+                        
+                        window.location.href = data.approval_url;
+                    } else {
+                        showAlert(data.error || 'Error creando orden PayPal', 'danger');
+                    }
+                } catch (error) {
+                    console.error('PayPal error:', error);
+                    showAlert('Error de conexión con PayPal', 'danger');
+                }
+                return;
+            }
+
+            // PAGO CON STRIPE
+            if (!selectedPlan.priceId) {
+                showAlert('Por favor selecciona un plan válido', 'danger');
+                return;
+            }
+
+            try {
+                const response = await fetch('/billing_bp/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        price_id: selectedPlan.priceId,
+                        billing_cycle: billingCycle
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    window.location.href = data.url;
+                } else {
+                    showAlert(data.error || 'Error creando sesión de pago', 'danger');
+                }
+            } catch (error) {
+                showAlert('Error de conexión', 'danger');
+            }
+        });
+
+        document.getElementById('trial-button').addEventListener('click', async function() {
+            if (!selectedPlan) return;
+            
+            const warningDiv = document.getElementById('starter-warning');
+            const button = this;
+            
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            
+            if (warningDiv) {
+                warningDiv.style.display = 'none';
+            }
+            
+            try {
+                const response = await fetch('/auth_bp/start-trial', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        plan: selectedPlan.planName
+                    })
+                });
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    console.error('Server returned HTML instead of JSON');
+                    if (response.status === 401) {
+                        showAlert('Please login to continue', 'warning');
+                        setTimeout(() => window.location.href = '/login', 1500);
+                    } else {
+                        showAlert('Server error. Please refresh and try again.', 'danger');
+                    }
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-gift"></i> Get Started Free';
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert(data.message, 'success');
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/dashboard';
+                    }, 1500);
+                } else {
+                    if (warningDiv && data.needs_starter) {
+                        warningDiv.style.display = 'flex';
+                    }
+                    showAlert(data.error || 'Error starting trial', 'danger');
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-gift"></i> Get Started Free';
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Connection error. Please try again.', 'danger');
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-gift"></i> Get Started Free';
+            }
+        });
+
+        async function executePayPalAgreement(token) {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading';
+            loadingDiv.innerHTML = '<div class="spinner"></div><p>Processing your PayPal payment...</p>';
+            document.body.appendChild(loadingDiv);
+            
+            try {
+                const response = await fetch('/billing_bp/paypal/execute-agreement', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        token: token,
+                        plan_name: sessionStorage.getItem('plan_name'),
+                        billing_cycle: sessionStorage.getItem('billing_cycle')
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    sessionStorage.removeItem('paypal_token');
+                    sessionStorage.removeItem('plan_name');
+                    sessionStorage.removeItem('billing_cycle');
+                    
+                    showAlert(data.message, 'success');
+                    setTimeout(() => {
+                        window.location.href = data.redirect;
+                    }, 1500);
+                } else {
+                    showAlert(data.error || 'Error procesando pago PayPal', 'danger');
+                    document.body.removeChild(loadingDiv);
+                }
+            } catch (error) {
+                console.error('Error executing PayPal agreement:', error);
+                showAlert('Error procesando pago con PayPal', 'danger');
+                document.body.removeChild(loadingDiv);
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = message;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        document.getElementById('paymentModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        function getPlanIcon(planName) {
+            const icons = {
+            'Starter': `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="currentColor" class="bi bi-book" viewBox="0 0 16 16">
+                <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783"/>
+                </svg>`,
+            'Scholar Suite': `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="currentColor" class="bi bi-backpack2" viewBox="0 0 16 16">
+                <path d="M4.04 7.43a4 4 0 0 1 7.92 0 .5.5 0 1 1-.99.14 3 3 0 0 0-5.94 0 .5.5 0 1 1-.99-.14"/>
+                <path fill-rule="evenodd" d="M4 9.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5zm1 .5v3h6v-3h-1v.5a.5.5 0 0 1-1 0V10z"/>
+                <path d="M6 2.341V2a2 2 0 1 1 4 0v.341c2.33.824 4 3.047 4 5.659v1.191l1.17.585a1.5 1.5 0 0 1 .83 1.342V13.5a1.5 1.5 0 0 1-1.5 1.5h-1c-.456.607-1.182 1-2 1h-7a2.5 2.5 0 0 1-2-1h-1A1.5 1.5 0 0 1 0 13.5v-2.382a1.5 1.5 0 0 1 .83-1.342L2 9.191V8a6 6 0 0 1 4-5.659M7 2v.083a6 6 0 0 1 2 0V2a1 1 0 0 0-2 0M3 13.5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5V8A5 5 0 0 0 3 8zm-1-3.19-.724.362a.5.5 0 0 0-.276.447V13.5a.5.5 0 0 0 .5.5H2zm12 0V14h.5a.5.5 0 0 0 .5-.5v-2.382a.5.5 0 0 0-.276-.447L14 10.309Z"/>
+            </svg>`,
+            'Individual': `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="currentColor" class="bi bi-person-raised-hand" viewBox="0 0 16 16">
+                <path d="M6 6.207v9.043a.75.75 0 0 0 1.5 0V10.5a.5.5 0 0 1 1 0v4.75a.75.75 0 0 0 1.5 0v-8.5a.25.25 0 1 1 .5 0v2.5a.75.75 0 0 0 1.5 0V6.5a3 3 0 0 0-3-3H6.236a1 1 0 0 1-.447-.106l-.33-.165A.83.83 0 0 1 5 2.488V.75a.75.75 0 0 0-1.5 0v2.083c0 .715.404 1.37 1.044 1.689L5.5 5c.32.32.5.754.5 1.207"/>
+                <path d="M8 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/>
+                </svg>`,
+            'Research Essentials': `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="currentColor" class="bi bi-mortarboard" viewBox="0 0 16 16">
+                <path d="M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917zM8 8.46 1.758 5.965 8 3.052l6.242 2.913z"/>
+                <path d="M4.176 9.032a.5.5 0 0 0-.656.327l-.5 1.7a.5.5 0 0 0 .294.605l4.5 1.8a.5.5 0 0 0 .372 0l4.5-1.8a.5.5 0 0 0 .294-.605l-.5-1.7a.5.5 0 0 0-.656-.327L8 10.466zm-.068 1.873.22-.748 3.496 1.311a.5.5 0 0 0 .352 0l3.496-1.311.22.748L8 12.46z"/>
+                </svg>`,
+            'Institutes': `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="currentColor" class="bi bi-bank" viewBox="0 0 16 16">
+                    <path d="m8 0 6.61 3h.89a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5H15v7a.5.5 0 0 1 .485.38l.5 2a.498.498 0 0 1-.485.62H.5a.498.498 0 0 1-.485-.62l.5-2A.5.5 0 0 1 1 13V6H.5a.5.5 0 0 1-.5-.5v-2A.5.5 0 0 1 .5 3h.89zM3.777 3h8.447L8 1zM2 6v7h1V6zm2 0v7h2.5V6zm3.5 0v7h1V6zm2 0v7H12V6zM13 6v7h1V6zm2-1V4H1v1zm-.39 9H1.39l-.25 1h13.72z"/>
+                    </svg>`
+            };
+            return icons[planName] || '';
+        }
+
+        function contactSales() {
+            window.location.href = 'mailto:sales@yourdomain.com?subject=Institutes Plan Inquiry';
+        }
+    </script>
+</body>
+</html>

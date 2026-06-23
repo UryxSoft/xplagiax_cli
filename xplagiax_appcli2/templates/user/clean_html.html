@@ -1,0 +1,2393 @@
+<!-- templates/user_base.html -->
+{% extends "user/user_base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/test/clean_css.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/test/clean_animations_css.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/test/stats_panel.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/test/upload_modal_css.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/test/upload_toast.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/test/storage_manager_css.css') }}">
+<!-- FilePond CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<link href="https://unpkg.com/filepond@^4/dist/filepond.css" rel="stylesheet" />
+<link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet" />
+<link href="https://unpkg.com/filepond-plugin-file-poster/dist/filepond-plugin-file-poster.css" rel="stylesheet" />
+
+<!-- Document Manager Section -->
+<script>
+    // Global User Context
+    const currentUserData = {
+        id: {{ current_user.id if current_user.is_authenticated else 'null' }},
+    email: "{{ current_user.email if current_user.is_authenticated else '' }}",
+        plan: "{{ user_data.user_type if user_data else 'Starter' }}"
+    };
+</script>
+<div style="max-width: 100%; margin: 0 auto;">
+
+
+    <!-- Unified Header Navigation & Controls -->
+    <div class="dm-glass-toolbar mb-4" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 14px 16px; backdrop-filter: blur(10px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; gap: 10px;">
+
+        <!-- Row 1: Breadcrumbs + Tabs (left) | Search + Buttons (right) -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+
+            <!-- Left: Breadcrumbs & Tabs stacked -->
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- Breadcrumbs -->
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0" id="dm-breadcrumbs">
+                        <li class="breadcrumb-item active" data-folder-id="null" style="color: rgba(255,255,255,0.9); font-weight: 500; font-size: 0.92rem;"><i class="bi bi-house-door me-1"></i> My Documents</li>
+                    </ol>
+                </nav>
+
+                <!-- Storage Tabs — directly below breadcrumbs -->
+                <div id="storage-tabs-wrapper">
+                    <div class="storage-tabs-container" style="display: block; margin: 0; padding: 0;">
+                        <div class="storage-tabs" id="storageTabs" style="gap: 4px;">
+                            <div class="storage-tab active" data-storage="native" style="font-size: 0.78rem; padding: 3px 11px;">
+                                <i class="bi bi-hdd me-1"></i>
+                                <span>My Documents</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Search + View Toggle + Action Buttons -->
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+
+                <!-- Search Field -->
+                <div style="margin: 0; background: transparent; padding: 0;">
+                    <div class="search-field" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 5px 11px; display: flex; align-items: center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.6)" style="margin-right: 7px; flex-shrink:0;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" placeholder="Search documents..." class="search-input" id="searchInput" style="background: transparent; border: none; color: white; outline: none; width: 165px; font-size: 0.85rem; padding: 0;">
+                    </div>
+                </div>
+
+                <div style="width: 1px; height: 22px; background: rgba(255,255,255,0.15);"></div>
+
+                <!-- View Toggle -->
+                <div class="view-toggle" style="display: flex; gap: 3px; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); margin: 0;">
+                    <button class="toggle-btn active dm-tooltip-btn" data-view="card" data-tip="Card View" style="width: 30px; height: 30px; padding: 0; background: transparent; border: none; color: rgba(255,255,255,0.8); cursor: pointer; border-radius: 6px; display:flex; align-items:center; justify-content:center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                    </button>
+                    <button class="toggle-btn dm-tooltip-btn" data-view="list" data-tip="List View" style="width: 30px; height: 30px; padding: 0; background: transparent; border: none; color: rgba(255,255,255,0.8); cursor: pointer; border-radius: 6px; display:flex; align-items:center; justify-content:center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div style="width: 1px; height: 22px; background: rgba(255,255,255,0.15);"></div>
+
+                <!-- Action Buttons -->
+                <div class="breadcrumbs-buttons" style="margin: 0; display: flex; gap: 5px; align-items: center;">
+
+                    <!-- Refresh -->
+                    <button class="dm-glass-btn dm-tooltip-btn" id="refresh-storage-btn" data-tip="Refresh files">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+
+                    <!-- Stats -->
+                    <button class="dm-glass-btn dm-tooltip-btn" id="stats-storage-btn" data-tip="Storage Statistics">
+                        <i class="bi bi-pie-chart"></i>
+                    </button>
+
+                    <!-- Cloud Storage Dropdown -->
+                    <div class="white-actions-dropdown" style="position: relative;">
+                        <button class="dm-glass-btn dm-tooltip-btn" data-tip="Connect Storage">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M16 7.5a2.5 2.5 0 0 1-1.456 2.272 3.5 3.5 0 0 0-.65-.824 1.5 1.5 0 0 0-.789-2.896.5.5 0 0 1-.627-.421 3 3 0 0 0-5.22-1.625 5.6 5.6 0 0 0-1.276.088 4.002 4.002 0 0 1 7.392.91A2.5 2.5 0 0 1 16 7.5" />
+                                <path d="M7 5a4.5 4.5 0 0 1 4.473 4h.027a2.5 2.5 0 0 1 0 5H3a3 3 0 0 1-.247-5.99A4.5 4.5 0 0 1 7 5m3.5 4.5a3.5 3.5 0 0 0-6.89-.873.5.5 0 0 1-.51.375A2 2 0 1 0 3 13h8.5a1.5 1.5 0 1 0-.376-2.953.5.5 0 0 1-.624-.492z" />
+                            </svg>
+                        </button>
+                        <div class="white-actions-menu">
+                            <div class="storage-services-panel">
+                                <h6 class="storage-title">Cloud Storage</h6>
+                                <div class="storage-icons">
+                                    <div class="storage-icon" data-provider="google_drive" title="Connect Google Drive">
+                                        <img src="{{ url_for('static', filename='img/svg/google-drive.svg') }}" height="32px">
+                                        <span class="connection-status"></span>
+                                    </div>
+                                    <div class="storage-icon" data-provider="dropbox" title="Connect Dropbox">
+                                        <img src="{{ url_for('static', filename='img/svg/dropbox.svg') }}" height="32px">
+                                        <span class="connection-status"></span>
+                                    </div>
+                                    <div class="storage-icon" data-provider="box" title="Connect Box">
+                                        <img src="{{ url_for('static', filename='img/svg/box.svg') }}" height="32px">
+                                        <span class="connection-status"></span>
+                                    </div>
+                                    <div class="storage-icon" data-provider="onedrive" title="Connect OneDrive">
+                                        <img src="{{ url_for('static', filename='img/svg/onedrive.png') }}" height="32px">
+                                        <span class="connection-status"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions Dropdown -->
+                    <div class="actions-dropdown" style="position: relative;">
+                        <button class="actions-btn dm-glass-btn dm-tooltip-btn" data-tip="Actions">
+                            <i class="bi bi-grid-3x3-gap-fill"></i>
+                        </button>
+                        <div class="actions-menu">
+                            <div class="action-item" data-action="upload-document">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cloud-upload" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd" d="M4.406 1.342A5.53 5.53 0 0 1 8 0c2.69 0 4.923 2 5.166 4.579C14.758 4.804 16 6.137 16 7.773 16 9.569 14.502 11 12.687 11H10a.5.5 0 0 1 0-1h2.688C13.979 10 15 8.988 15 7.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 2.825 10.328 1 8 1a4.53 4.53 0 0 0-2.941 1.1c-.757.652-1.153 1.438-1.153 2.055v.448l-.445.049C2.064 4.805 1 5.952 1 7.318 1 8.785 2.23 10 3.781 10H6a.5.5 0 0 1 0 1H3.781C1.708 11 0 9.366 0 7.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383" />
+                                    <path fill-rule="evenodd" d="M7.646 4.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V14.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                </svg>
+                                Upload Document
+                            </div>
+                            <div class="action-item" data-action="create-folder">
+                                <i class="bi bi-folder-plus"></i>
+                                New Folder
+                            </div>
+                            <div class="action-item" data-action="view-trash">
+                                <i class="bi bi-trash"></i>
+                                View Trash
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content area with side panel -->
+    <style>
+        /* =============================================
+           GLASS TOOLBAR — Styles for Documents Toolbar
+           ============================================= */
+
+        /* Ensure the toolbar stacking context stays above cards */
+        .dm-glass-toolbar {
+            position: relative !important;
+            z-index: 1050 !important;
+        }
+
+
+        /* Glass icon-only button — sobrescribe .actions-btn y .white-actions-btn */
+        .dm-glass-btn,
+        .actions-btn.dm-glass-btn,
+        .white-actions-btn.dm-glass-btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 36px !important;
+            height: 36px !important;
+            padding: 0 !important;
+            border-radius: 10px !important;
+            border: 1px solid rgba(255, 255, 255, 0.18) !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
+            color: rgba(255, 255, 255, 0.88) !important;
+            cursor: pointer !important;
+            font-size: 15px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12) !important;
+            transition: background 0.18s, border-color 0.18s, transform 0.12s, box-shadow 0.18s !important;
+            position: relative !important;
+            gap: 0 !important;
+        }
+        .dm-glass-btn:hover,
+        .actions-btn.dm-glass-btn:hover,
+        .white-actions-btn.dm-glass-btn:hover {
+            background: rgba(255, 255, 255, 0.18) !important;
+            border-color: rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.28) !important;
+            transform: translateY(-1px) !important;
+            color: #fff !important;
+        }
+        .dm-glass-btn:active {
+            transform: scale(0.93) !important;
+        }
+
+        /* Blue tooltip that appears ABOVE the button */
+        .dm-tooltip-btn {
+            position: relative;
+        }
+        .dm-tooltip-btn::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: calc(100% + 9px);
+            left: 50%;
+            transform: translateX(-50%) scale(0.85);
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            color: #fff;
+            font-size: 11.5px;
+            font-weight: 500;
+            line-height: 1;
+            padding: 5px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(29, 78, 216, 0.4);
+            letter-spacing: 0.01em;
+        }
+        .dm-tooltip-btn::before {
+            content: '';
+            position: absolute;
+            bottom: calc(100% + 3px);
+            left: 50%;
+            transform: translateX(-50%) scale(0.85);
+            border: 5px solid transparent;
+            border-top-color: #1d4ed8;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            z-index: 9999;
+        }
+        .dm-tooltip-btn:hover::after,
+        .dm-tooltip-btn:hover::before {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+        }
+
+        /* View toggle active state */
+        .dm-glass-toolbar .toggle-btn.active {
+            background: rgba(255,255,255,0.22) !important;
+            border-color: rgba(255,255,255,0.4) !important;
+            color: #fff !important;
+            box-shadow: 0 2px 8px rgba(59,130,246,0.25) !important;
+        }
+
+        /* Breadcrumb item in dark context */
+        .dm-glass-toolbar .breadcrumb-item.active,
+        .dm-glass-toolbar .breadcrumb-item.active::before {
+            color: rgba(255,255,255,0.88);
+        }
+
+        /* Storage tabs compact override inside toolbar */
+        .dm-glass-toolbar #storageTabs {
+            display: flex;
+            gap: 4px;
+        }
+        .dm-glass-toolbar .storage-tab {
+            font-size: 0.76rem !important;
+            padding: 3px 10px !important;
+            border-radius: 6px !important;
+        }
+
+        /* ====== GLASS dropdown for Cloud Storage — white glass compact ====== */
+        .dm-glass-toolbar .white-actions-dropdown {
+            position: relative !important;
+        }
+        .dm-glass-toolbar .white-actions-dropdown .white-actions-menu {
+            position: absolute !important;
+            right: 0 !important;
+            top: calc(100% + 8px) !important;
+            z-index: 99999 !important;
+            background: rgba(255, 255, 255, 0.75) !important;
+            backdrop-filter: blur(18px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.55) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0,0,0,0.10) !important;
+            padding: 8px !important;
+            min-width: 0 !important;
+            width: max-content !important;
+            white-space: nowrap !important;
+        }
+
+        .dm-glass-toolbar .storage-services-panel {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 4px !important;
+        }
+
+        .dm-glass-toolbar .storage-title {
+            color: rgba(30, 30, 60, 0.5) !important;
+            font-size: 9px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.1em !important;
+            text-transform: uppercase !important;
+            margin: 0 0 2px 2px !important;
+            display: block !important;
+        }
+
+        .dm-glass-toolbar .storage-icons {
+            display: flex !important;
+            gap: 5px !important;
+            align-items: center !important;
+            flex-wrap: nowrap !important;
+        }
+
+        .dm-glass-toolbar .storage-icon {
+            width: 38px !important;
+            height: 38px !important;
+            border-radius: 9px !important;
+            background: rgba(255, 255, 255, 0.55) !important;
+            border: 1px solid rgba(255, 255, 255, 0.7) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            transition: all 0.18s ease !important;
+            position: relative !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important;
+        }
+
+        .dm-glass-toolbar .storage-icon:hover {
+            background: rgba(255, 255, 255, 0.92) !important;
+            border-color: rgba(255, 255, 255, 0.95) !important;
+            transform: translateY(-2px) scale(1.05) !important;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.15) !important;
+        }
+
+        .dm-glass-toolbar .storage-icon img {
+            width: 20px !important;
+            height: 20px !important;
+            object-fit: contain !important;
+        }
+
+        /* Green dot for connected provider */
+        .dm-glass-toolbar .storage-icon.connected::after {
+            content: '' !important;
+            position: absolute !important;
+            bottom: 3px !important;
+            right: 3px !important;
+            width: 7px !important;
+            height: 7px !important;
+            background: #22c55e !important;
+            border-radius: 50% !important;
+            border: 1.5px solid rgba(255,255,255,0.9) !important;
+            box-shadow: 0 0 4px rgba(34,197,94,0.5) !important;
+        }
+
+        /* =============================================
+           INTERNAL SCROLLING (Prevent full page scroll)
+           ============================================= */
+        /* Disable the outer layout scroll specifically for this page */
+        #homeContentScroll {
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
+            padding-right: 0 !important;
+        }
+
+        /* Enable scroll strictly within the documents list */
+        .dm-main-content {
+            max-height: calc(100vh - 260px) !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            padding-right: 8px !important;
+        }
+
+        /* Custom Scrollbar for Webkit */
+        .dm-main-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .dm-main-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .dm-main-content::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+        .dm-main-content:hover::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.25);
+        }
+
+        /* ── Dark-glass Actions dropdown ────────────────────────────────── */
+        .dm-glass-toolbar .actions-dropdown .actions-menu {
+            background: rgba(8, 12, 30, 0.90) !important;
+            backdrop-filter: blur(24px) saturate(150%) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(150%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.11) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.30) !important;
+            padding: 6px !important;
+            min-width: 190px !important;
+            top: calc(100% + 8px) !important;
+            z-index: 99999 !important;
+        }
+        .dm-glass-toolbar .actions-dropdown .actions-menu::before {
+            content: 'Quick Actions';
+            display: block;
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: rgba(255,255,255,0.28);
+            padding: 3px 10px 8px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            margin-bottom: 4px;
+        }
+        .dm-glass-toolbar .action-item {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            padding: 8px 10px !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+            border-radius: 9px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            transition: background 0.15s !important;
+        }
+        .dm-glass-toolbar .action-item:hover {
+            background: rgba(255, 255, 255, 0.09) !important;
+            color: #fff !important;
+        }
+        /* Colored icon boxes per action */
+        .dm-glass-toolbar .action-item[data-action="upload-document"] svg {
+            width: 28px !important;
+            height: 28px !important;
+            padding: 6px !important;
+            background: rgba(59, 130, 246, 0.20) !important;
+            border-radius: 8px !important;
+            color: #60a5fa !important;
+            box-shadow: 0 0 0 1px rgba(59,130,246,0.28) !important;
+            flex-shrink: 0 !important;
+        }
+        .dm-glass-toolbar .action-item[data-action="create-folder"] i {
+            width: 28px !important;
+            height: 28px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: rgba(245, 158, 11, 0.20) !important;
+            border-radius: 8px !important;
+            color: #fbbf24 !important;
+            box-shadow: 0 0 0 1px rgba(245,158,11,0.28) !important;
+            flex-shrink: 0 !important;
+            font-size: 13px !important;
+        }
+        .dm-glass-toolbar .action-item[data-action="view-trash"] i {
+            width: 28px !important;
+            height: 28px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: rgba(239, 68, 68, 0.20) !important;
+            border-radius: 8px !important;
+            color: #f87171 !important;
+            box-shadow: 0 0 0 1px rgba(239,68,68,0.28) !important;
+            flex-shrink: 0 !important;
+            font-size: 13px !important;
+        }
+        .dm-glass-toolbar .action-item[data-action="upload-document"]:hover svg {
+            background: rgba(59, 130, 246, 0.32) !important;
+        }
+        .dm-glass-toolbar .action-item[data-action="create-folder"]:hover i {
+            background: rgba(245, 158, 11, 0.32) !important;
+        }
+        .dm-glass-toolbar .action-item[data-action="view-trash"]:hover i {
+            background: rgba(239, 68, 68, 0.32) !important;
+        }
+    </style>
+    <div class="dm-explorer-layout">
+
+        <div class="dm-main-content">
+            <!-- Document Grid (Card View) -->
+            <div class="documents-container" id="card-view">
+                <div class="documents-grid" id="cardView">
+                    <!-- Documents will be populated via JavaScript -->
+                </div>
+
+                <!-- Empty State (inside content area) -->
+                <div class="empty-state-inline" id="emptyStateInline" style="display: none;">
+                    <div class="empty-inline-content">
+                        <i class="bi bi-folder2-open" style="font-size: 3rem; color: #9ca3af;"></i>
+                        <h4>This folder is empty</h4>
+                        <p>Upload documents or create folders to get started</p>
+                        <button class="btn btn-primary btn-sm" data-action="upload-document">
+                            <i class="bi bi-upload"></i> Upload
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List View -->
+            <div class="documents-container hidden" id="list-view">
+                <div class="documents-table">
+                    <div class="table-header">
+                        <div class="table-row">
+                            <div class="table-cell header-cell">Name</div>
+                            <div class="table-cell header-cell">Size</div>
+                            <div class="table-cell header-cell">Modified</div>
+                            <div class="table-cell header-cell">Actions</div>
+                        </div>
+                    </div>
+                    <div class="table-body" id='documentTableBody'>
+                        <!-- Table rows will be populated via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast UI Chart -->
+        <link rel="stylesheet" href="https://uicdn.toast.com/chart/latest/toastui-chart.min.css" />
+        <script src="https://uicdn.toast.com/chart/latest/toastui-chart.min.js"></script>
+
+        <!-- Contextual Side Panel -->
+        <div class="dm-side-panel hidden" id="context-panel">
+            <div class="panel-header">
+                <h3 id="panel-title">Details</h3>
+                <button class="panel-close" id="close-panel"><i class="bi bi-x"></i></button>
+            </div>
+            <div class="panel-body">
+                <div class="item-preview" id="panel-preview">
+                    <i class="bi bi-file-earmark-text large-icon"></i>
+                </div>
+                <div class="item-info">
+                    <div class="info-group">
+                        <label>Status</label>
+                        <span class="badge" id="panel-status">Borrador</span>
+                    </div>
+                    <div class="info-group">
+                        <label>Type</label>
+                        <span id="panel-type">-</span>
+                    </div>
+                    <div class="info-group">
+                        <label>Size</label>
+                        <span id="panel-size">-</span>
+                    </div>
+                    <div class="info-group">
+                        <label>Created</label>
+                        <span id="panel-created">-</span>
+                    </div>
+                </div>
+
+                <div class="panel-actions mt-4">
+                    <button class="btn-action w-100 mb-2" id="panel-open"><i class="bi bi-eye"></i> Open</button>
+                    <button class="btn-action w-100 mb-2" id="panel-share"><i class="bi bi-share"></i> Share</button>
+                    <button class="btn-action w-100 mb-2 text-danger" id="panel-delete"><i class="bi bi-trash"></i>
+                        Delete</button>
+                </div>
+
+                <div class="panel-sections mt-4">
+                    <div class="section-title">Tags</div>
+                    <div class="tags-container" id="panel-tags">
+                        <span class="placeholder-text">No tags</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Side Panel -->
+        <div class="dm-side-panel hidden" id="stats-panel">
+            <div class="panel-header">
+                <h3 id="stats-panel-title">Storage Stats</h3>
+                <button class="panel-close" id="close-stats-panel"><i class="bi bi-x"></i></button>
+            </div>
+            <div class="panel-body">
+                <!-- Header Section -->
+                <div class="stats-header mb-4">
+                    <div class="provider-info d-flex align-items-center gap-3">
+                        <div class="provider-icon-large" id="stats-provider-icon">
+                            <i class="bi bi-hdd"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0" id="stats-provider-name">My Documents</h5>
+                            <small class="text-muted" id="stats-account-info">{{ current_user.email }}</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Storage Section -->
+                <div class="storage-section mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fs-sm fw-bold">Storage Usage</span>
+                        <span class="fs-sm text-primary fw-bold" id="stats-percentage">0%</span>
+                    </div>
+                    <div class="progress" style="height: 10px; border-radius: 5px; background-color: #f0f2f5;">
+                        <div class="progress-bar stats-progress-bar" role="progressbar" style="width: 0%"
+                            id="stats-progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small class="text-muted mt-2 d-block" id="stats-usage-text">Calculating...</small>
+                </div>
+
+                <!-- Distribution Section -->
+                <div class="distribution-section">
+                    <h6 class="mb-3">File Distribution</h6>
+                    <div id="file-distribution-chart" style="width: 100%; height: 300px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rich Details Offcanvas -->
+    <div class="dm-side-panel hidden" id="rich-details-offcanvas" style="display: none;">
+        <div class="panel-header">
+            <div class="d-flex align-items-center overflow-hidden">
+                <div id="rich-details-icon" class="me-2"></div>
+                <h3 id="rich-details-title" class="text-truncate mb-0" style="max-width: 200px;">Details</h3>
+            </div>
+            <button class="panel-close" onclick="closeRichDetails()"><i class="bi bi-x"></i></button>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs nav-fill mb-3" id="richDetailsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details-pane"
+                    type="button" role="tab"><i class="bi bi-info-circle me-2"></i>Details</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="share-tab" data-bs-toggle="tab" data-bs-target="#share-pane" type="button"
+                    role="tab"><i class="bi bi-people me-2"></i>Share</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-pane"
+                    type="button" role="tab"><i class="bi bi-clock-history me-2"></i>History</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="richDetailsContent">
+            <!-- Details Tab -->
+            <div class="tab-pane fade show active" id="details-pane" role="tabpanel">
+                <div class="panel-body p-0">
+                    <div class="item-info">
+                        <div class="info-group">
+                            <label><i class="bi bi-shield-check"></i> Status</label>
+                            <span class="badge" id="rich-panel-status">-</span>
+                        </div>
+                        <div class="info-group">
+                            <label><i class="bi bi-file-earmark"></i> Type</label>
+                            <span id="rich-panel-type">-</span>
+                        </div>
+                        <div class="info-group">
+                            <label><i class="bi bi-database"></i> Size</label>
+                            <span id="rich-panel-size">-</span>
+                        </div>
+                        <div class="info-group">
+                            <label><i class="bi bi-clock"></i> Modified</label>
+                            <span id="rich-panel-modified">-</span>
+                        </div>
+                        <div class="info-group">
+                            <label><i class="bi bi-geo-alt"></i> Location</label>
+                            <span id="rich-panel-location">-</span>
+                        </div>
+                    </div>
+
+                    <div class="panel-actions mt-4">
+                        <button class="btn-action w-100 mb-2" id="rich-panel-open"><i class="bi bi-eye"></i>
+                            Open</button>
+                        <button class="btn-action w-100 mb-2" id="rich-panel-download"><i class="bi bi-download"></i>
+                            Download</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Share Tab -->
+            <div class="tab-pane fade" id="share-pane" role="tabpanel">
+                <div class="share-list-container">
+                    <h6 class="text-muted mb-3">Who has access</h6>
+                    <div id="rich-share-list" class="list-group list-group-flush">
+                        <!-- Populated via JS -->
+                        <div class="text-center text-muted py-3">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Tab -->
+            <div class="tab-pane fade" id="history-pane" role="tabpanel">
+                <div class="history-timeline">
+                    <h6 class="text-muted mb-3">Activity</h6>
+                    <div id="rich-history-list" class="activity-feed">
+                        <!-- Populated via JS -->
+                        <div class="text-center text-muted py-3">No recent activity</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<!-- Upload Modal -->
+<div class="upload-modal trial-modal-overlay" id="upload-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>
+                <i class="bi bi-file-earmark-arrow-up"></i>
+                Upload Document
+            </h2>
+            <button class="modal-close">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body pt-0">
+            <form id="documentUploadForm">
+                <!-- Document type selector -->
+                <div class="document-type-selector mb-4 mt-3" id="document-type-container">
+                    <h6 class="text-muted mb-3">Accepted formats:</h6>
+                    <div id="type-detection-container">
+                        <div class="row g-2 text-center">
+                            <div class="col-2">
+                                <div class="document-type-option pdf-icon" data-type="pdf">
+                                    <div class="icon-container">
+                                        <i class="bi bi-filetype-pdf"></i>
+                                    </div>
+                                    <span class="d-block mt-1 small">PDF</span>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="document-type-option docx-icon" data-type="docx">
+                                    <div class="icon-container">
+                                        <i class="bi bi-filetype-docx"></i>
+                                    </div>
+                                    <span class="d-block mt-1 small">DOCX</span>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="document-type-option doc-icon" data-type="doc">
+                                    <div class="icon-container">
+                                        <i class="bi bi-filetype-doc"></i>
+                                    </div>
+                                    <span class="d-block mt-1 small">DOC</span>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="document-type-option txt-icon" data-type="txt">
+                                    <div class="icon-container">
+                                        <i class="bi bi-filetype-txt"></i>
+                                    </div>
+                                    <span class="d-block mt-1 small">TXT</span>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="document-type-option epub-icon" data-type="epub">
+                                    <div class="icon-container">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                    </div>
+                                    <span class="d-block mt-1 small">EPUB</span>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="document-type-option mobi-icon" data-type="mobi">
+                                    <div class="icon-container">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                    </div>
+                                    <span class="d-block mt-1 small">MOBI</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FilePond container -->
+                <div class="mb-4" id="document-filepond-container">
+                    <label for="document-filepond" class="form-label fw-semibold">Select document</label>
+                    <input type="file" class="filepond" id="document-filepond" name="filepond" required>
+                    <div class="form-text mt-2 text-muted">
+                        <i class="bi bi-info-circle me-1"></i> (Max: 10MB)
+                    </div>
+                </div>
+
+                <!-- Upload Status 
+                    <div id="uploadStatus" class="alert d-none">
+                        <div class="status-container">
+                            <div class="status-icon">
+                                <i id="uploadStatusIcon" class="bi bi-arrow-repeat spin"></i>
+                            </div>
+                            <div class="status-content">
+                                <div class="status-title" id="uploadStatusText">Uploading document...</div>
+                                <div class="progress-container">
+                                    <div class="progress">
+                                        <div id="uploadProgressBar" class="progress-bar" style="width: 0%"></div>
+                                    </div>
+                                    <div class="progress-info">
+                                        <span class="stage-text" id="uploadStageText">Preparing...</span>
+                                        <span class="percentage-text" id="uploadProgressText">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                       Antivirus section 
+                        <div id="antivirusDetails" class="antivirus-section d-none">
+                            <div class="antivirus-header">
+                                <i class="antivirus-icon bi bi-shield-check"></i>
+                                <span class="antivirus-title">Security Analysis</span>
+                            </div>
+                            <div class="antivirus-status" id="antivirusStatusText">Verifying file...</div>
+                            <div class="antivirus-progress">
+                                <div id="antivirusProgressBar" class="antivirus-progress-bar"></div>
+                            </div>
+                        </div>
+                    </div>-->
+
+
+                <div id="uploadStatus" class="alert d-none">
+                    <div class="status-container">
+                        <div class="status-icon">
+                            <i id="uploadStatusIcon" class="bi bi-arrow-repeat spin"></i>
+                        </div>
+                        <div class="status-content">
+                            <div class="status-title" id="uploadStatusText">Uploading document...</div>
+                            <div class="progress-container">
+                                <div class="progress progress-tall">
+                                    <div id="uploadProgressBar" class="progress-bar" style="width: 0%">
+                                        <div class="progress-icons">
+                                            <!-- 50+ iconos de upload variados y más pequeños -->
+
+                                            <!-- Cloud Upload Icons (15 iconos) -->
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="5" height="5" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="6" height="6" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="7" height="7" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="8" height="8" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="4" height="4" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="9" height="9" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="3" height="3" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="5" height="5" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="6" height="6" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="7" height="7" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="8" height="8" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+                                            <svg class="progress-icon cloud-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="4" height="4" fill="currentColor" viewBox="0 0 16 16">
+                                                <path fill-rule="evenodd"
+                                                    d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708z" />
+                                                <path
+                                                    d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383m.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z" />
+                                            </svg>
+
+                                            <!-- File Upload Icons (15 iconos) -->
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="4" height="4" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="5" height="5" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="6" height="6" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="7" height="7" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="8" height="8" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+
+
+
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="3" height="3" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="9" height="9" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="4" height="4" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="5" height="5" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="6" height="6" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="7" height="7" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="8" height="8" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+                                            <svg class="progress-icon file-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="4" height="4" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z" />
+                                                <path
+                                                    d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z" />
+                                            </svg>
+
+                                            <!-- Upload Arrow Icons (20 iconos) -->
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="3" height="3" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="4" height="4" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="5" height="5" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="6" height="6" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="7" height="7" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="8" height="8" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="9" height="9" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="3" height="3" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="4" height="4" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="5" height="5" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="6" height="6" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="7" height="7" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="8" height="8" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="9" height="9" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="4" height="4" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="3" height="3" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="5" height="5" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+                                            <svg class="progress-icon upload-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="6" height="6" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                                                <path
+                                                    d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                                            </svg>
+
+                                            <!-- Error Icons - MUCHOS MÁS para el estado de error -->
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="3" height="3" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="4" height="4" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="5" height="5" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="6" height="6" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="7" height="7" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="8" height="8" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="9" height="9" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="3" height="3" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="4" height="4" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="5" height="5" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="6" height="6" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="7" height="7" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="8" height="8" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="9" height="9" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="3" height="3" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="4" height="4" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="5" height="5" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="6" height="6" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="7" height="7" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="8" height="8" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="9" height="9" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="3" height="3" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                            <svg class="progress-icon error-icon" xmlns="http://www.w3.org/2000/svg"
+                                                width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="progress-info">
+                                    <span class="stage-text" id="uploadStageText">Preparing...</span>
+                                    <span class="percentage-text" id="uploadProgressText">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Antivirus section -->
+                    <div id="antivirusDetails" class="antivirus-section d-none">
+                        <div class="antivirus-header">
+                            <i class="antivirus-icon bi bi-shield-check"></i>
+                            <span class="antivirus-title">Security Analysis</span>
+                        </div>
+                        <div class="antivirus-status" id="antivirusStatusText">Verifying file...</div>
+                        <div class="antivirus-progress">
+                            <div id="antivirusProgressBar" class="antivirus-progress-bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary modal-cancel"><i class="bi bi-x-square"></i> Cancel</button>
+            <button type="button" class="btn-primary upload-confirm" id="submitDocumentUpload">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path
+                        d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                    <path
+                        d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z" />
+                </svg>
+                Upload
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="upload-modal" id="delete-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Confirm Delete</h2>
+            <button class="modal-close">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="text-center py-3">
+                <div class="mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor"
+                        class="bi bi-exclamation-triangle text-warning" viewBox="0 0 16 16">
+                        <path
+                            d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.146.146 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.163.163 0 0 1-.054.06.116.116 0 0 1-.066.017H1.146a.115.115 0 0 1-.066-.017.163.163 0 0 1-.054-.06.176.176 0 0 1 .002-.183L7.884 2.073a.147.147 0 0 1 .054-.057zm1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566z" />
+                        <path
+                            d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995z" />
+                    </svg>
+                </div>
+                <h4 class="mb-3">Delete Document</h4>
+                <p class="text-muted" id="deleteConfirmText">Are you sure you want to delete this document? This action
+                    cannot be undone.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary modal-cancel"><i class="bi bi-x-square"></i> Cancel</button>
+            <button type="button" class="btn-primary btn-danger" id="confirmDeleteButton">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path
+                        d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z" />
+                    <path
+                        d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z" />
+                </svg>
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- PDF Viewer Modal -->
+<div class="upload-modal" id="pdf-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-content-large">
+        <div class="modal-header">
+            <h2 id="pdfTitle">Document Viewer</h2>
+            <button class="modal-close" id="closePdfModal">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body modal-body-pdf">
+            <div id="pdfLoadingIndicator" class="text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted">Loading PDF...</p>
+            </div>
+            <div id="pdfContainer" class="d-none">
+                <iframe id="pdfFrame" width="100%" style="border: none; border-radius: 0.5rem; height: 100%;"></iframe>
+            </div>
+            <div id="pdfError" class="d-none text-center py-4">
+                <div class="text-danger mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor"
+                        viewBox="0 0 16 16">
+                        <path
+                            d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                    </svg>
+                </div>
+                <h5 class="text-danger">Error Loading Document</h5>
+                <p class="text-muted">The document could not be loaded. Please try downloading it instead.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary modal-cancel"><i class="bi bi-x-square"></i> Close</button>
+            <a class="btn-primary" id="downloadPdfBtn" href="#" download>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path
+                        d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5" />
+                    <path
+                        d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z" />
+                </svg>
+                Download
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Alerts -->
+<div id="successAlert" class="alert alert-success d-none position-fixed top-0 start-50 translate-middle-x mt-3"
+    style="z-index: 9999;">
+    <span id="successMessage"></span>
+</div>
+
+</div>
+
+<!-- Create Folder Modal -->
+<div class="upload-modal" id="folder-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15); border-radius: 16px;">
+        <div class="modal-header" style="border-bottom: 1px solid rgba(0,0,0,0.06);">
+            <h2><i class="bi bi-folder-plus text-primary"></i> New Folder</h2>
+            <button class="modal-close"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <label class="form-label" style="font-weight: 600; color: #475569; font-size: 0.9rem;">Folder Name</label>
+                <input type="text" class="form-control" id="new-folder-name" placeholder="Enter folder name..." style="background: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.08); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); border-radius: 10px;">
+            </div>
+        </div>
+        <div class="modal-footer" style="border-top: 1px solid rgba(0,0,0,0.06);">
+            <button type="button" class="btn btn-light modal-cancel" style="background: rgba(255,255,255,0.8); border: 1px solid rgba(0,0,0,0.1);"><i class="bi bi-x-circle me-1"></i> Cancel</button>
+            <button type="button" class="btn btn-primary" id="confirm-create-folder" style="box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3); border-radius: 8px;"><i class="bi bi-folder-plus me-1"></i> Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="upload-modal" id="rename-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="bi bi-pencil-square"></i> Rename Item</h2>
+            <button class="modal-close"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <label class="form-label">New Name</label>
+                <input type="text" class="form-control" id="rename-input" placeholder="Enter new name...">
+            </div>
+            <div id="rename-history-preview" class="small text-muted d-none">
+                <i class="bi bi-clock-history"></i> Current name: <span id="current-name-display"></span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary modal-cancel">Cancel</button>
+            <button type="button" class="btn-primary" id="confirm-rename">Rename</button>
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal (Enhanced) -->
+<div class="upload-modal" id="share-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="bi bi-share"></i> Share Document</h2>
+            <button class="modal-close"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <label class="form-label">Search User by Email</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="email" class="form-control" id="share-user-search"
+                        placeholder="Type email (min 3 chars)...">
+                </div>
+                <div id="user-search-results" class="list-group mt-2 d-none"
+                    style="max-height: 200px; overflow-y: auto;">
+                    <!-- Search results here -->
+                </div>
+            </div>
+            <div id="selected-user-preview" class="d-none mt-3 p-3 border rounded background-light">
+                <div class="d-flex align-items-center gap-3">
+                    <div id="selected-user-avatar" class="shared-user-avatar">??</div>
+                    <div class="flex-grow-1">
+                        <div id="selected-user-name" class="fw-bold">User Name</div>
+                        <div id="selected-user-email" class="small text-muted">user@example.com</div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" id="clear-selected-user"><i
+                            class="bi bi-trash"></i></button>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-6">
+                        <label class="form-label small">Access Level</label>
+                        <select class="form-select form-select-sm" id="share-permission">
+                            <option value="viewer">👁 View Only</option>
+                            <option value="commenter">💬 Can Comment</option>
+                            <option value="editor">✏️ Can Edit</option>
+                            <option value="reviewer">📚 Academic Review</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Expires (Optional)</label>
+                        <input type="datetime-local" class="form-control form-control-sm" id="share-expires-at"
+                            placeholder="Never">
+                    </div>
+                </div>
+                <div class="mt-2 small text-muted">
+                    <i class="bi bi-info-circle"></i> Leave expiration empty for permanent access
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary modal-cancel">Cancel</button>
+            <button type="button" class="btn-primary d-none" id="confirm-share" onclick="executeEnhancedShare()">Share
+                Now</button>
+        </div>
+    </div>
+</div>
+
+<!-- Move Modal -->
+<div class="upload-modal" id="move-modal">
+    <div class="modal-overlay" onclick="closeMoveModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="bi bi-arrows-move"></i> Move to Folder</h2>
+            <button class="modal-close" onclick="closeMoveModal()"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted small mb-3">Select destination folder:</p>
+            <div id="folder-tree-container" class="folder-tree">
+                <!-- Folder tree will be loaded here -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeMoveModal()">Cancel</button>
+            <button type="button" class="btn-primary" id="confirm-move" onclick="executeMove()" disabled>Move
+                Here</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- Cloud Context Menu -->
+<div class="cloud-context-menu" id="cloud-context-menu">
+    <div class="context-menu-header" id="context-menu-title"><i class="bi bi-file-earmark"></i><span>Actions</span>
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" data-action="open"><i class="bi bi-folder2-open"></i> Open</div>
+    <div class="context-menu-item" data-action="rename"><i class="bi bi-pencil"></i> Rename</div>
+    <div class="context-menu-item" data-action="move"><i class="bi bi-arrows-move"></i> Move to...</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" data-action="download"><i class="bi bi-download"></i> Download</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item context-menu-item-danger" data-action="delete"><i class="bi bi-trash"></i> Delete
+    </div>
+</div>
+
+<!-- Cloud Folder Picker Modal -->
+<div class="upload-modal" id="cloud-folder-picker-modal">
+    <div class="modal-overlay" onclick="closeCloudFolderPicker()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="bi bi-folder-symlink"></i> Move to Folder</h2><button class="modal-close"
+                onclick="closeCloudFolderPicker()"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="move-item-info mb-3 p-2 bg-light rounded d-flex align-items-center gap-2"><i
+                    class="bi bi-file-earmark" id="move-item-icon"></i><span id="move-item-name">Item</span></div>
+            <div class="folder-picker-breadcrumbs mb-2" id="picker-breadcrumbs"><span class="picker-crumb active"
+                    data-id="null"><i class="bi bi-house"></i> Root</span></div>
+            <div class="folder-picker-list" id="picker-folder-list" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn-secondary"
+                onclick="closeCloudFolderPicker()">Cancel</button><button type="button" class="btn-primary"
+                id="confirm-cloud-move" disabled>Move Here</button></div>
+    </div>
+</div>
+
+<!-- Cloud Delete Modal -->
+<div class="upload-modal" id="cloud-delete-modal">
+    <div class="modal-overlay" onclick="closeCloudDeleteModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="bi bi-exclamation-triangle text-danger"></i> Confirm Delete</h2><button class="modal-close"
+                onclick="closeCloudDeleteModal()"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="modal-body text-center py-4"><i class="bi bi-trash text-danger" style="font-size: 3rem;"></i>
+            <h5 class="mt-3" id="cloud-delete-title">Delete Item?</h5>
+            <p class="text-muted" id="cloud-delete-message">This will move the item to trash.</p>
+            <div class="alert alert-warning d-none" id="cloud-folder-delete-warning"><i class="bi bi-info-circle"></i>
+                All contents will be deleted.</div>
+            <div class="alert alert-info" id="cloud-delete-restore-info"><i class="bi bi-recycle"></i> You can restore
+                from cloud trash.</div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn-secondary"
+                onclick="closeCloudDeleteModal()">Cancel</button><button type="button" class="btn btn-danger"
+                id="confirm-cloud-delete">Delete</button></div>
+    </div>
+</div>
+
+<!-- Cloud Rename Modal -->
+<div class="upload-modal" id="cloud-rename-modal">
+    <div class="modal-overlay" onclick="closeCloudRenameModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="bi bi-pencil-square"></i> Rename</h2><button class="modal-close"
+                onclick="closeCloudRenameModal()"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="modal-body"><label class="form-label">New name</label><input type="text" class="form-control"
+                id="cloud-rename-input" placeholder="Enter new name..."><small class="text-muted mt-2 d-block">Current:
+                <span id="cloud-current-name"></span></small></div>
+        <div class="modal-footer"><button type="button" class="btn-secondary"
+                onclick="closeCloudRenameModal()">Cancel</button><button type="button" class="btn-primary"
+                id="confirm-cloud-rename">Rename</button></div>
+    </div>
+</div>
+
+<!-- Cloud Folder Modal -->
+<div class="upload-modal" id="cloud-folder-modal">
+    <div class="modal-overlay" onclick="closeCloudFolderModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="bi bi-folder-plus"></i> New Folder</h2><button class="modal-close"
+                onclick="closeCloudFolderModal()"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="modal-body"><label class="form-label">Folder name</label><input type="text" class="form-control"
+                id="cloud-folder-name-input" placeholder="Enter folder name..."><small
+                class="text-muted mt-2 d-block">Location: <span id="cloud-folder-parent-name">Root</span></small></div>
+        <div class="modal-footer"><button type="button" class="btn-secondary"
+                onclick="closeCloudFolderModal()">Cancel</button><button type="button" class="btn-primary"
+                id="confirm-cloud-folder-create">Create</button></div>
+    </div>
+</div>
+
+<!-- Cloud Share Modal -->
+<div class="upload-modal" id="cloud-share-modal">
+    <div class="modal-overlay" onclick="closeCloudShareModal()"></div>
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2><i class="bi bi-share"></i> Share</h2>
+            <button class="modal-close" onclick="closeCloudShareModal()"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted small mb-3"><i class="bi bi-file-earmark"></i> <span id="share-item-name">File
+                    name</span></p>
+            <div class="mb-3">
+                <label class="form-label">Share with</label>
+                <input type="email" class="form-control" id="share-email-input" placeholder="Enter email address...">
+            </div>
+            <div class="row mb-3">
+                <div class="col-6">
+                    <label class="form-label">Permission</label>
+                    <select class="form-select" id="share-role-select">
+                        <option value="reader">👁 View only</option>
+                        <option value="commenter">💬 Can comment</option>
+                        <option value="writer">✏️ Can edit</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label">Options</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="share-notify-check" checked>
+                        <label class="form-check-label" for="share-notify-check">Send notification</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Message (optional)</label>
+                <textarea class="form-control" id="share-message-input" rows="2"
+                    placeholder="Add a message..."></textarea>
+            </div>
+            <hr>
+            <div id="collaborators-section">
+                <label class="form-label">People with access</label>
+                <div id="collaborators-list" style="max-height: 150px; overflow-y: auto;">
+                    <div class="text-muted small text-center py-2">Loading...</div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeCloudShareModal()">Cancel</button>
+            <button type="button" class="btn-primary" id="confirm-cloud-share"><i class="bi bi-share"></i>
+                Share</button>
+        </div>
+    </div>
+</div>
+
+<!-- Cloud Get Link Modal -->
+<div class="upload-modal" id="cloud-link-modal">
+    <div class="modal-overlay" onclick="closeCloudLinkModal()"></div>
+    <div class="modal-content" style="max-width: 450px;">
+        <div class="modal-header">
+            <h2><i class="bi bi-link-45deg"></i> Get Link</h2>
+            <button class="modal-close" onclick="closeCloudLinkModal()"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="modal-body">
+            <p class="text-muted small mb-3"><i class="bi bi-file-earmark"></i> <span id="link-item-name">File
+                    name</span></p>
+
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="public-link-toggle">
+                <label class="form-check-label" for="public-link-toggle">Anyone with the link can view</label>
+            </div>
+
+            <div id="link-settings" class="d-none">
+                <div class="mb-3">
+                    <label class="form-label">Link</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="public-link-url" readonly
+                            placeholder="Generating...">
+                        <button class="btn btn-outline-secondary" type="button" id="copy-link-btn">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Expires (optional)</label>
+                        <input type="datetime-local" class="form-control" id="link-expiry-input">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Password (optional)</label>
+                        <input type="password" class="form-control" id="link-password-input" placeholder="Set password">
+                    </div>
+                </div>
+                <div class="alert alert-info small">
+                    <i class="bi bi-info-circle"></i> Password protection may not be available for all providers.
+                </div>
+            </div>
+
+            <div id="no-link-message" class="text-muted text-center py-3">
+                <i class="bi bi-lock" style="font-size: 2rem;"></i>
+                <p class="mb-0 mt-2">This item is private. Enable public link to share.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary" onclick="closeCloudLinkModal()">Close</button>
+            <button type="button" class="btn btn-danger d-none" id="remove-link-btn"><i class="bi bi-trash"></i> Remove
+                Link</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Cloud Context Menu */
+    .cloud-context-menu {
+        position: fixed;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, .15);
+        padding: 8px 0;
+        min-width: 180px;
+        z-index: 10000;
+        display: none
+    }
+
+    .cloud-context-menu.active {
+        display: block
+    }
+
+    .context-menu-header {
+        padding: 8px 16px;
+        font-weight: 600;
+        font-size: .85rem;
+        display: flex;
+        align-items: center;
+        gap: 8px
+    }
+
+    .context-menu-divider {
+        height: 1px;
+        background: #e5e7eb;
+        margin: 4px 0
+    }
+
+    .context-menu-item {
+        padding: 8px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: .9rem;
+        transition: background .2s
+    }
+
+    .context-menu-item:hover {
+        background: #f3f4f6
+    }
+
+    .context-menu-item-danger {
+        color: #dc3545
+    }
+
+    .context-menu-item-danger:hover {
+        background: #fee2e2
+    }
+
+    .folder-picker-breadcrumbs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        font-size: .85rem
+    }
+
+    .picker-crumb {
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        background: #f3f4f6
+    }
+
+    .picker-crumb:hover {
+        background: #e5e7eb
+    }
+
+    .picker-crumb.active {
+        background: var(--primary);
+        color: #fff
+    }
+
+    .folder-picker-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 6px;
+        cursor: pointer
+    }
+
+    .folder-picker-item:hover {
+        background: #f3f4f6
+    }
+
+    .folder-picker-item.selected {
+        background: #e0f2fe;
+        border: 1px solid var(--primary)
+    }
+
+    @keyframes cloud-spin {
+        0% {
+            transform: rotate(0deg)
+        }
+
+        100% {
+            transform: rotate(360deg)
+        }
+    }
+
+    .spin {
+        animation: cloud-spin 1s linear infinite;
+        display: inline-block
+    }
+
+    .dm-explorer-layout {
+        display: flex;
+
+        gap: 20px;
+        min-height: 400px;
+        position: relative;
+    }
+
+    .dm-main-content {
+        flex: 1;
+        transition: all 0.3s ease;
+    }
+
+    .dm-side-panel {
+        width: 320px;
+        background: white;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        transition: all 0.3s ease;
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .dm-side-panel.hidden {
+        display: none;
+    }
+
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .panel-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #999;
+    }
+
+    .panel-info-group {
+        margin-bottom: 15px;
+    }
+
+    .panel-label {
+        font-size: 0.8rem;
+        color: #888;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .panel-value {
+        font-weight: 500;
+        color: #333;
+    }
+
+    /* Folder and File Item Enhancements */
+    .document-card.selected {
+        border: 2px solid var(--primary);
+        background-color: var(--sidebar-primary-hover);
+    }
+
+    .table-row.selected {
+        background-color: var(--sidebar-primary-hover);
+    }
+
+    .folder-item {
+        cursor: pointer;
+    }
+
+    /* Modal Styling */
+    .upload-modal {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 10000 !important;
+        display: none;
+        align-items: center !important;
+        justify-content: center !important;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+    }
+
+    .upload-modal.active {
+        display: flex !important;
+    }
+
+    .modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .modal-content {
+        position: relative !important;
+        background: white;
+        width: 90%;
+        max-width: 500px;
+        margin: auto !important;
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        animation: modalFadeIn 0.3s ease-out;
+        z-index: 10001;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .modal-header h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #666;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+        background: #f0f0f0;
+        color: #333;
+    }
+
+    .modal-close svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-danger {
+        background: #dc3545 !important;
+        border-color: #dc3545 !important;
+    }
+
+    .btn-danger:hover {
+        background: #bb2d3b !important;
+    }
+
+    @keyframes modalFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .breadcrumb-item i {
+        margin-right: 5px;
+    }
+
+    .folder-row {
+        cursor: pointer;
+    }
+
+    .large-icon {
+        font-size: 4rem;
+        color: #1a73e8;
+        display: block;
+        margin: 0 auto;
+        text-align: center;
+    }
+
+    .info-group {
+        margin-bottom: 12px;
+    }
+
+    .info-group label {
+        display: block;
+        font-size: 0.8rem;
+        color: #666;
+        margin-bottom: 2px;
+    }
+
+    .btn-action {
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        background: white;
+        color: #333;
+        transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+        background: #f8f9fa;
+        border-color: #ccc;
+    }
+
+    .breadcrumb-item {
+        cursor: pointer;
+    }
+
+    .breadcrumb-item:hover {
+        text-decoration: underline;
+        color: #1a73e8;
+    }
+
+    /* ============================================= */
+    /* MODAL FIX - FINAL OVERRIDE (MUST BE LAST)    */
+    /* ============================================= */
+    .upload-modal,
+    #folder-modal,
+    #delete-modal,
+    #upload-modal {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: none !important;
+        z-index: 10000 !important;
+        background: rgba(0, 0, 0, 0.5) !important;
+        backdrop-filter: blur(4px) !important;
+    }
+
+    .upload-modal.active,
+    #folder-modal.active,
+    #delete-modal.active,
+    #upload-modal.active {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .upload-modal .modal-content,
+    #folder-modal .modal-content,
+    #delete-modal .modal-content,
+    #upload-modal .modal-content {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        margin: auto !important;
+        width: 90% !important;
+        max-width: 500px !important;
+        max-height: 90vh !important;
+        z-index: 10001 !important;
+        background: white !important;
+        border-radius: 16px !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
+        animation: modalFadeIn 0.3s ease-out !important;
+    }
+
+    #user-search-results .list-group-item:hover {
+        background-color: var(--light);
+        cursor: pointer;
+    }
+
+    .background-light {
+        background-color: #f8f9fa;
+    }
+
+    .extra-small {
+        font-size: 0.7rem;
+    }
+
+    .shared-user-avatar.small {
+        width: 32px;
+        height: 32px;
+        font-size: 0.7rem;
+    }
+
+    #pdfFrame {
+        transition: opacity 0.3s ease;
+    }
+
+    .modal-body-pdf {
+        max-height: 80vh;
+        overflow: hidden;
+    }
+
+    /* PDF Modal - Much wider for better document viewing */
+    #pdf-modal .modal-content {
+        max-width: 1400px !important;
+        width: 95% !important;
+        height: 85vh !important;
+    }
+
+    #pdf-modal .modal-body-pdf {
+        height: calc(85vh - 140px) !important;
+        max-height: none !important;
+    }
+
+    #pdf-modal #pdfContainer {
+        height: 100% !important;
+    }
+
+    #pdf-modal #pdfFrame {
+        height: 100% !important;
+        min-height: 500px;
+    }
+</style>
+
+<!-- LZ-string: lightweight text compression for preview cache -->
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<script>
+/* ── Preview text cache: 24 h TTL, LZ-string compressed ─────────────── */
+(function () {
+  var LZ = function() { return typeof LZString !== 'undefined' ? LZString : null; };
+
+  /* ── PREVIEW cache (24 h) ── */
+  var PREV_NS  = 'xpx_prev_';
+  var PREV_TTL = 86400000;
+
+  window._previewCacheGet = function (key) {
+    try {
+      var raw = localStorage.getItem(PREV_NS + key);
+      if (!raw) return null;
+      var obj = JSON.parse(raw);
+      if (Date.now() > obj.exp) { localStorage.removeItem(PREV_NS + key); return null; }
+      var lz = LZ();
+      return lz ? lz.decompressFromUTF16(obj.c) : obj.c;
+    } catch (e) { return null; }
+  };
+  window._previewCacheSet = function (key, text) {
+    try {
+      var lz = LZ();
+      var c = lz ? lz.compressToUTF16(text) : text;
+      localStorage.setItem(PREV_NS + key, JSON.stringify({ c: c, exp: Date.now() + PREV_TTL }));
+    } catch (e) {}
+  };
+
+  /* ── LIST cache (1 h, two-tier: memory L1 + localStorage L2) ── */
+  var LIST_NS  = 'xpx_list_';
+  var LIST_TTL = 3600000; // 1 hour — cleared explicitly by refresh
+  var _mem     = new Map();          // L1: same-session, zero-cost retrieval
+
+  window._listCacheGet = function (key) {
+    /* L1 */ var m = _mem.get(key);
+    if (m && Date.now() < m.exp) return m.data;
+    if (m) _mem.delete(key);
+    /* L2 */ try {
+      var raw = localStorage.getItem(LIST_NS + key);
+      if (!raw) return null;
+      var obj = JSON.parse(raw);
+      if (Date.now() > obj.exp) { localStorage.removeItem(LIST_NS + key); return null; }
+      var lz = LZ();
+      var json = lz ? lz.decompressFromUTF16(obj.c) : obj.c;
+      var data = JSON.parse(json);
+      _mem.set(key, { data: data, exp: obj.exp }); // warm L1
+      return data;
+    } catch (e) { return null; }
+  };
+
+  window._listCacheSet = function (key, data) {
+    var exp = Date.now() + LIST_TTL;
+    _mem.set(key, { data: data, exp: exp });
+    try {
+      var lz = LZ();
+      var json = JSON.stringify(data);
+      var c = lz ? lz.compressToUTF16(json) : json;
+      localStorage.setItem(LIST_NS + key, JSON.stringify({ c: c, exp: exp }));
+    } catch (e) {}
+  };
+
+  window._listCacheClear = function (prefix) {
+    /* clear L1 */ _mem.forEach(function(_, k) { if (k.startsWith(prefix)) _mem.delete(k); });
+    /* clear L2 */ try {
+      var keys = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.startsWith(LIST_NS + prefix)) keys.push(k);
+      }
+      keys.forEach(function(k) { localStorage.removeItem(k); });
+    } catch (e) {}
+  };
+
+  window._listCacheClearAll = function () {
+    _mem.clear();
+    try {
+      var keys = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.startsWith(LIST_NS)) keys.push(k);
+      }
+      keys.forEach(function(k) { localStorage.removeItem(k); });
+    } catch (e) {}
+  };
+})();
+</script>
+<script rel="JavaScript" src="{{ url_for('static', filename='js/test/clean_javascript.js') }}"></script>
+<script rel="JavaScript" src="{{ url_for('static', filename='js/test/filepond_upload_js.js') }}"></script>
+<script rel="JavaScript" src="{{ url_for('static', filename='js/test/storage_manager_js.js') }}"></script>
+<script rel="JavaScript" src="{{ url_for('static', filename='js/test/cloud_management_ui.js') }}"></script>
+<script rel="JavaScript" src="{{ url_for('static', filename='js/test/upload_toast.js') }}"></script>
+<!-- Disabled: conflicts with filepond_upload_js.js which uses /x_doc/uploadsave -->
+<!-- <script rel="JavaScript" src="{{ url_for('static', filename='js/test/filepond_integration_cloud.js') }}"></script> -->
+
+
+<!-- Scripts para PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+
+<!-- Scripts para FilePond -->
+<script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-poster/dist/filepond-plugin-file-poster.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-metadata/dist/filepond-plugin-file-metadata.js"></script>
+<script src="https://unpkg.com/filepond@^4/dist/filepond.js"></script>
+
+
+<script>
+    function updateUploadProgress(percentage, message, iconClass, isError = false) {
+        const progressBar = document.getElementById('uploadProgressBar');
+        const progressText = document.getElementById('uploadProgressText');
+        const statusText = document.getElementById('uploadStatusText');
+        const statusIcon = document.getElementById('uploadStatusIcon');
+        const stageText = document.getElementById('uploadStageText');
+
+        if (progressBar) {
+            progressBar.style.width = `${percentage}%`;
+            progressBar.setAttribute('aria-valuenow', percentage);
+
+            // Remover clases anteriores
+            progressBar.classList.remove('uploading', 'error');
+
+            if (isError) {
+                // Estado de error
+                progressBar.classList.add('error');
+            } else if (percentage > 0 && percentage < 100) {
+                // Estado normal de carga
+                progressBar.classList.add('uploading');
+            }
+        }
+
+        if (progressText) progressText.textContent = `${percentage}%`;
+        if (statusText) statusText.textContent = message;
+        if (statusIcon) statusIcon.className = iconClass;
+        if (stageText) stageText.textContent = message;
+    }
+
+    function showUploadError(message) {
+        const uploadStatus = document.getElementById('uploadStatus');
+        const statusText = document.getElementById('uploadStatusText');
+        const statusIcon = document.getElementById('uploadStatusIcon');
+        const progressBar = document.getElementById('uploadProgressBar');
+
+        // Cambiar a estado de error
+        uploadStatus.classList.remove('alert-info');
+        uploadStatus.classList.add('alert-danger');
+
+        // Activar progress bar de error con iconos
+        updateUploadProgress(100, message, 'bi bi-exclamation-triangle-fill text-danger', true);
+
+        // Re-habilitar botón
+        const submitButton = document.getElementById('submitDocumentUpload');
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/>
+                    </svg>
+                    Upload
+                `;
+        }
+    }
+</script>
+{% endblock %}
