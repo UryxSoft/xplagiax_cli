@@ -204,7 +204,11 @@ body.xp-split-active .ai-split-view {
     background: rgba(248,249,255,0.6);
     padding: 0 10px;
     gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
 }
+.ai-split-tabs::-webkit-scrollbar { display: none; }
+.ai-split-tab { flex: 0 0 auto; white-space: nowrap; }
 .ai-split-tab {
     appearance: none;
     border: none;
@@ -540,6 +544,100 @@ body.xp-file-preview .mode-switch-container {
 }
 .plan-icon svg { width: 18px; height: 18px; }
 </style>
+
+<!-- ══ Integrity Card (resultado AI / FinderX) — estilos scopeados ══ -->
+<style id="xpa-icard-css">
+.xpa-icard{
+  --card-bg: rgba(255,255,255,0.82);
+  --card-bg-fallback: rgba(255,255,255,0.97);
+  --card-border: rgba(255,255,255,0.55);
+  --card-edge: rgba(0,0,0,0.07);
+  --ic-text-1:#15181f; --ic-text-2:#5b626d; --ic-track: rgba(0,0,0,0.065);
+  --ai:#FF453A; --human:#30D158; --original:#BF5AF2; --sim:#F5B800; --ref:#0A84FF;
+  --gauge-max: 360px;
+  color:var(--ic-text-1);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+}
+.xpa-icard .card{
+  position:relative; width:100%; margin:0 auto;
+  background:var(--card-bg-fallback);
+  border:1px solid var(--card-edge); border-radius:20px; overflow:hidden;
+  box-shadow:0 20px 50px -20px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.7);
+  opacity:0; transform:translateY(14px) scale(.99);
+  animation:xpaCardIn .6s cubic-bezier(.22,1,.36,1) forwards;
+}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .xpa-icard .card{ background:var(--card-bg); border-color:var(--card-border);
+    -webkit-backdrop-filter:blur(20px) saturate(125%); backdrop-filter:blur(20px) saturate(125%); }
+}
+@keyframes xpaCardIn{to{opacity:1;transform:none}}
+.xpa-icard .card__head{display:flex;align-items:center;gap:12px;padding:15px 18px}
+.xpa-icard .icon-tile{width:40px;height:40px;border-radius:11px;flex:0 0 auto;
+  background:linear-gradient(160deg,#2a2d36,#16181e);border:1px solid rgba(0,0,0,.18);
+  display:grid;place-items:center;color:#fff;box-shadow:0 4px 10px -4px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12)}
+.xpa-icard .icon-tile svg{width:21px;height:21px}
+.xpa-icard .card__head h2{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.xpa-icard .card__head .sub{font-size:12px;color:var(--ic-text-2);margin-top:2px}
+.xpa-icard .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.08) 12%,rgba(0,0,0,.08) 88%,transparent)}
+.xpa-icard .card__body{display:flex;flex-direction:column;align-items:center;gap:18px;padding:20px 18px}
+.xpa-icard .gauge{position:relative;width:min(var(--gauge-max),100%);margin:0 auto}
+.xpa-icard .gauge svg{width:100%;height:auto;display:block;overflow:visible}
+.xpa-icard .track{fill:none;stroke:var(--ic-track);stroke-width:24;stroke-linecap:round}
+.xpa-icard .arc{fill:none;stroke:currentColor;stroke-width:24;stroke-linecap:round;stroke-opacity:.5;
+  stroke-dasharray:100 100;stroke-dashoffset:100;filter:drop-shadow(0 1px 1px rgba(0,0,0,.08));
+  transition:stroke-dashoffset 1.25s cubic-bezier(.22,1,.36,1)}
+.xpa-icard .arc--ai{color:var(--ai)} .xpa-icard .arc--human{color:var(--human)}
+.xpa-icard .arc--original{color:var(--original)} .xpa-icard .arc--sim{color:var(--sim)} .xpa-icard .arc--ref{color:var(--ref)}
+.xpa-icard .is-mounted .arc{stroke-dashoffset:calc(100 - var(--v))}
+.xpa-icard .a1{transition-delay:.15s} .xpa-icard .a2{transition-delay:.27s} .xpa-icard .a3{transition-delay:.39s}
+.xpa-icard .a4{transition-delay:.51s} .xpa-icard .a5{transition-delay:.63s}
+.xpa-icard .ring-icons use{fill:none;stroke:#fff;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.xpa-icard .ring-icons .drift{opacity:0}
+.xpa-icard .is-mounted .ring-icons .drift{animation:xpaFloat var(--dur,6s) ease-in-out var(--delay,0s) infinite}
+@keyframes xpaFloat{0%,100%{opacity:0;transform:translate(0,0)}18%,82%{opacity:var(--peak,.85)}
+  50%{opacity:var(--peak,.85);transform:translate(var(--dx,0px),var(--dy,0px))}}
+.xpa-icard .gauge__center{position:absolute;left:50%;top:76.4%;transform:translate(-50%,-50%);
+  width:24.8%;aspect-ratio:1;border-radius:50%;background:#fff;
+  box-shadow:0 8px 18px -8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 1px rgba(0,0,0,.05);
+  display:grid;place-items:center;text-align:center;line-height:1}
+.xpa-icard .gauge__num{font-size:clamp(15px,5vw,22px);font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.xpa-icard .gauge__num .u{font-size:.6em;font-weight:600;color:var(--ic-text-2);margin-left:1px}
+.xpa-icard .gauge__cap{display:block;margin-top:.28em;font-size:clamp(8px,2.2vw,10px);color:var(--ic-text-2);text-transform:uppercase;letter-spacing:.06em}
+.xpa-icard .stats{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:14px 10px}
+.xpa-icard .stat{text-align:center;min-width:0}
+.xpa-icard .stat__label{display:block;font-size:12px;color:var(--ic-text-2)}
+.xpa-icard .stat__value{display:block;margin-top:3px;font-size:clamp(17px,4.4vw,20px);font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.xpa-icard .legend{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:14px;padding:15px 18px}
+.xpa-icard .legend li{min-width:0}
+.xpa-icard .legend__top{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ic-text-2)}
+.xpa-icard .leg-ic{width:15px;height:15px;flex:0 0 auto;display:inline-block}
+.xpa-icard .leg-ic use{fill:var(--c)}
+.xpa-icard .legend__val{display:block;margin-top:5px;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--c)}
+@media (prefers-reduced-motion:reduce){
+  .xpa-icard .card{opacity:1;transform:none}
+  .xpa-icard .arc{stroke-dashoffset:calc(100 - var(--v))}
+  .xpa-icard .ring-icons .drift{animation:none!important;opacity:.85!important;transform:none!important}
+}
+
+/* ── Bloques de segmentos COMPACTOS (AI + FinderX), texto siempre visible ── */
+.ai-split-results-scroll .analysis-block{padding:10px 12px;margin-bottom:8px;border-radius:10px}
+.ai-split-results-scroll .block-header{margin-bottom:6px}
+.ai-split-results-scroll .block-icon{width:26px;height:26px;font-size:0.8rem}
+.ai-split-results-scroll .block-type{font-size:0.82rem;font-weight:600;line-height:1.2}
+.ai-split-results-scroll .block-confidence{font-size:0.72rem;line-height:1.2}
+.ai-split-results-scroll .block-content{font-size:0.83rem!important;line-height:1.5!important;margin-top:2px}
+.ai-split-results-scroll .block-note{font-size:0.75rem;color:#64748b;margin-top:6px;line-height:1.4}
+.ai-split-results-scroll .confidence-bar{height:5px}
+.ai-split-results-scroll .section-title{margin:6px 0}
+.ai-split-results-scroll .model-tag{margin-top:8px!important}
+</style>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="i-human" viewBox="0 0 24 24"><circle cx="12" cy="7.6" r="4.3"/><path d="M3.6 21.2c0-4.2 3.9-6.9 8.4-6.9s8.4 2.7 8.4 6.9a.9.9 0 0 1-.9.9H4.5a.9.9 0 0 1-.9-.9z"/></symbol>
+  <symbol id="i-original" viewBox="0 0 24 24"><path d="M12 2.2a6.8 6.8 0 0 0-3.9 12.4c.5.4.8.9.8 1.5v.4a1 1 0 0 0 1 1h4.2a1 1 0 0 0 1-1v-.4c0-.6.3-1.1.8-1.5A6.8 6.8 0 0 0 12 2.2z"/><rect x="9.1" y="18.3" width="5.8" height="1.9" rx=".95"/><rect x="10" y="20.6" width="4" height="1.7" rx=".85"/></symbol>
+  <symbol id="i-ai" viewBox="0 0 24 24"><path d="M11.5 3.2c.6 4.9 2.2 6.5 7.1 7.1-4.9.6-6.5 2.2-7.1 7.1-.6-4.9-2.2-6.5-7.1-7.1 4.9-.6 6.5-2.2 7.1-7.1z"/><circle cx="18.6" cy="5.4" r="1.7"/></symbol>
+  <symbol id="i-sim" viewBox="0 0 24 24"><path d="M5.5 3.5h8.5a2 2 0 0 1 2 2v.6H8a2 2 0 0 0-2 2v8.4h-.5a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2z"/><rect x="8" y="8.1" width="11.5" height="11.5" rx="2.3"/></symbol>
+  <symbol id="i-ref" viewBox="0 0 24 24"><path d="M7 3h10a1.6 1.6 0 0 1 1.6 1.6v16.1a1 1 0 0 1-1.55.83L12 18.4l-6.05 3.13A1 1 0 0 1 5.4 20.7V4.6A1.6 1.6 0 0 1 7 3z"/></symbol>
+</defs></svg>
 
 <div class="main-container">
     <!-- AGREGAR HEADER AQUÍ -->
@@ -2604,6 +2702,147 @@ body.xp-file-preview .mode-switch-container {
             return { text: 'Mostly original', color: '#10b981' };
         }
 
+        // ── Integrity glass card (gauge multi-anillo) — compartida AI / FinderX ──
+        _buildIntegrityCard(cfg) {
+            const GEO = [
+                { r: 192, d: 'M18,214 A192,192 0 0 1 402,214' },
+                { r: 162, d: 'M48,214 A162,162 0 0 1 372,214' },
+                { r: 132, d: 'M78,214 A132,132 0 0 1 342,214' },
+                { r: 102, d: 'M108,214 A102,102 0 0 1 312,214' },
+                { r: 72,  d: 'M138,214 A72,72 0 0 1 282,214' },
+            ];
+            const PAL = {
+                human:    { v: '--human',    cls: 'arc--human',    sym: 'i-human',    label: 'Humano' },
+                ai:       { v: '--ai',       cls: 'arc--ai',       sym: 'i-ai',       label: 'IA' },
+                original: { v: '--original', cls: 'arc--original', sym: 'i-original', label: 'Original' },
+                sim:      { v: '--sim',      cls: 'arc--sim',      sym: 'i-sim',      label: 'Similitud' },
+                ref:      { v: '--ref',      cls: 'arc--ref',      sym: 'i-ref',      label: 'Referencia' },
+            };
+            const segs = (cfg.segments || [])
+                .filter(s => PAL[s.key])
+                .map(s => ({ ...s, value: Math.max(0, Math.min(100, Math.round(s.value || 0))) }))
+                .sort((a, b) => b.value - a.value)
+                .slice(0, 5);
+
+            let tracks = '', arcs = '', legend = '';
+            segs.forEach((s, i) => {
+                const g = GEO[i], p = PAL[s.key];
+                tracks += `<path class="track" d="${g.d}"/>`;
+                arcs += `<path class="arc ${p.cls} a${i + 1}" pathLength="100" style="--v:${s.value}" data-r="${g.r}" data-v="${s.value}" data-sym="${p.sym}" d="${g.d}"/>`;
+                legend += `<li style="--c:var(${p.v})"><span class="legend__top"><svg class="leg-ic" aria-hidden="true"><use href="#${p.sym}"/></svg>${p.label}</span><span class="legend__val"><span class="count" data-to="${s.value}">0</span>%</span></li>`;
+            });
+            const stats = (cfg.stats || []).slice(0, 4).map(st =>
+                `<div class="stat"><span class="stat__label">${this._escapeHtml(st.label)}</span><span class="stat__value count" data-to="${Number(st.value) || 0}">0</span></div>`).join('');
+
+            return `
+            <div class="xpa-icard">
+              <section class="card" role="region" aria-label="${this._escapeHtml(cfg.title || '')}">
+                <div class="card__head">
+                  <div class="icon-tile" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+                  </div>
+                  <div><h2>${this._escapeHtml(cfg.title || '')}</h2><p class="sub">${this._escapeHtml(cfg.subtitle || '')}</p></div>
+                </div>
+                <div class="divider"></div>
+                <div class="card__body">
+                  <div class="gauge">
+                    <svg viewBox="0 0 420 280" role="img" aria-label="${this._escapeHtml(cfg.title || '')}">
+                      ${tracks}
+                      ${arcs}
+                    </svg>
+                    <div class="gauge__center"><div>
+                      <div class="gauge__num"><span class="count" data-to="${Math.round(cfg.centerValue || 0)}">0</span><span class="u">%</span></div>
+                      <span class="gauge__cap">${this._escapeHtml(cfg.centerCaption || '')}</span>
+                    </div></div>
+                  </div>
+                  <div class="stats">${stats}</div>
+                </div>
+                <div class="divider"></div>
+                <ul class="legend">${legend}</ul>
+              </section>
+            </div>`;
+        }
+
+        // Anima todas las .xpa-icard dentro de rootEl (iconos en anillos + count-up + arcos).
+        _animateIntegrityCard(rootEl) {
+            if (!rootEl) return;
+            const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const fmt = n => n.toLocaleString('es-ES');
+            const rng = (seed) => () => {
+                seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+                let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+                t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            };
+            const NS = 'http://www.w3.org/2000/svg';
+
+            rootEl.querySelectorAll('.xpa-icard .card').forEach(card => {
+                if (card.dataset.animated) return;
+                card.dataset.animated = '1';
+                const svg = card.querySelector('.gauge svg');
+                if (svg && !svg.querySelector('.ring-icons')) {
+                    const cx = 210, cy = 214, sw = 24;
+                    const g = document.createElementNS(NS, 'g');
+                    g.setAttribute('class', 'ring-icons'); g.setAttribute('aria-hidden', 'true');
+                    const rand = rng(20260618);
+                    card.querySelectorAll('.arc').forEach(arc => {
+                        const r = parseFloat(arc.getAttribute('data-r'));
+                        const v = parseFloat(arc.getAttribute('data-v'));
+                        const sym = arc.getAttribute('data-sym');
+                        if (!r || !v) return;
+                        const a0 = Math.PI, a1 = Math.PI * (1 - v / 100);
+                        const arcLen = v / 100 * Math.PI * r;
+                        let size = 14; const maxForSpan = (a0 - a1) * r * 0.92; if (size > maxForSpan) size = Math.max(8, maxForSpan);
+                        let count = Math.floor(arcLen / 30); if (count < 1) count = 1; if (count > 6) count = 6;
+                        const halfAng = (size / r) / 2 + 0.018;
+                        let lo = a1 + halfAng, hi = a0 - halfAng; if (hi < lo) { lo = hi = (a0 + a1) / 2; }
+                        for (let i = 0; i < count; i++) {
+                            const sc = 0.92 + rand() * 0.16, s2 = size * sc;
+                            const radialJit = Math.max(0, sw / 2 - s2 / 2 - 2.8);
+                            const gi = document.createElementNS(NS, 'g');
+                            const use = document.createElementNS(NS, 'use');
+                            use.setAttribute('class', 'drift');
+                            use.setAttribute('href', '#' + sym);
+                            use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + sym);
+                            use.setAttribute('width', s2.toFixed(2)); use.setAttribute('height', s2.toFixed(2));
+                            use.setAttribute('x', (-s2 / 2).toFixed(2)); use.setAttribute('y', (-s2 / 2).toFixed(2));
+                            const place = () => {
+                                const ang = lo + rand() * (hi - lo);
+                                const rr = r + (rand() - 0.5) * 2 * radialJit;
+                                const x = cx + rr * Math.cos(ang), y = cy - rr * Math.sin(ang);
+                                const rot = (rand() - 0.5) * 60;
+                                gi.setAttribute('transform', `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${rot.toFixed(1)})`);
+                                const dMag = 1.4 + rand() * 1.1, dAng = rand() * Math.PI * 2;
+                                use.style.setProperty('--dx', (dMag * Math.cos(dAng)).toFixed(2) + 'px');
+                                use.style.setProperty('--dy', (dMag * Math.sin(dAng)).toFixed(2) + 'px');
+                                use.style.setProperty('--dur', (4.5 + rand() * 4).toFixed(2) + 's');
+                                use.style.setProperty('--peak', (0.75 + rand() * 0.2).toFixed(2));
+                            };
+                            place();
+                            use.style.setProperty('--delay', (-(rand() * 8.5)).toFixed(2) + 's');
+                            use.addEventListener('animationiteration', place);
+                            gi.appendChild(use); g.appendChild(gi);
+                        }
+                    });
+                    svg.appendChild(g);
+                }
+                requestAnimationFrame(() => setTimeout(() => {
+                    card.classList.add('is-mounted');
+                    card.querySelectorAll('.count').forEach(el => {
+                        const to = parseInt(el.getAttribute('data-to'), 10) || 0;
+                        if (reduce) { el.textContent = fmt(to); return; }
+                        const start = performance.now();
+                        const tick = now => {
+                            const p = Math.min((now - start) / 1200, 1);
+                            el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - p, 3))));
+                            if (p < 1) requestAnimationFrame(tick); else el.textContent = fmt(to);
+                        };
+                        requestAnimationFrame(tick);
+                    });
+                }, 150));
+            });
+        }
+
         _buildSourceScoresHtml(result) {
             const scores = result.scores || {};
             const overall = Math.round(scores.overall || 0);
@@ -2621,79 +2860,87 @@ body.xp-file-preview .mode-switch-container {
                 message = `<strong>Mostly original.</strong> Only ${overall}% of the content matches external sources.`;
             }
 
+            const ca = result.citation_analysis || {};
+            const frags = Array.isArray(result.fragment_decisions) ? result.fragment_decisions : [];
+            const matches = Array.isArray(result.academic_matches) ? result.academic_matches : [];
+            const coverage = Math.round(ca.citation_coverage || 0);
+            // "Coincidencias": fragmentos marcados como plagio/no original.
+            const flagged = frags.filter(f => {
+                const dec = String(f.decision || '').toLowerCase();
+                return dec.includes('plag') || (Number(f.similarity_score) || 0) >= 0.5;
+            }).length;
+
+            const card = this._buildIntegrityCard({
+                title: 'Plagiarism Checker',
+                subtitle: 'XplagiaX · FinderX',
+                centerValue: overall,
+                centerCaption: 'Similitud',
+                segments: [
+                    { key: 'original', value: Math.max(0, 100 - overall) },
+                    { key: 'sim', value: overall },
+                    { key: 'ref', value: coverage },
+                ],
+                stats: [
+                    { label: 'Coincidencias', value: flagged },
+                    { label: 'Fuentes', value: matches.length },
+                    { label: 'Fragmentos', value: frags.length },
+                    { label: 'Citas', value: ca.total_inline_citations || 0 },
+                ],
+            });
             const topicMeta = [];
             if (result.language) topicMeta.push(this._escapeHtml(String(result.language).toUpperCase()));
             if (result.topic) topicMeta.push(this._escapeHtml(String(result.topic).replace(/_/g, ' ')));
-            const metaLine = topicMeta.length
-                ? `<div style="font-size:0.78rem;color:#64748b;margin-top:6px">${topicMeta.join(' · ')}</div>` : '';
-
-            return `
-            <div class="results-content" style="padding:16px 16px 8px">
-                <h2 class="results-title">
-                    <i class="fas fa-search" aria-hidden="true"></i>
-                    Source &amp; Plagiarism
-                </h2>
-                <div class="aixrow" style="align-items:flex-start;gap:16px">
-                    <div style="flex:0 0 130px">
-                        <div class="result-chart-container" style="width:120px;height:120px">
-                            <div class="result-chart-bg"></div>
-                            <div class="score-label">
-                                <i class="fas fa-percent" aria-hidden="true"></i>
-                                Similarity
-                            </div>
-                            <div class="result-chart">
-                                <div class="score-circle" style="--percentage:${overall}%"></div>
-                                <div class="score-circle-inner">
-                                    <div class="score-value" style="color:${lbl.color}">${overall}%</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="flex:1;min-width:0">
-                        <div class="metric-item" style="margin-bottom:10px">
-                            <div class="metric-header">
-                                <div class="metric-title"><div class="metric-icon" style="background:#fee2e2;color:#f43f5e"><i class="fas fa-equals" aria-hidden="true"></i></div>Exact match</div>
-                                <div class="metric-value" style="color:#f43f5e">${exact}%</div>
-                            </div>
-                            <div class="metric-bar"><div class="metric-fill" style="width:${exact}%;background:#f43f5e"></div></div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-header">
-                                <div class="metric-title"><div class="metric-icon" style="background:#fef3c7;color:#f59e0b"><i class="fas fa-brain" aria-hidden="true"></i></div>Semantic match</div>
-                                <div class="metric-value" style="color:#f59e0b">${semantic}%</div>
-                            </div>
-                            <div class="metric-bar"><div class="metric-fill" style="width:${semantic}%;background:#f59e0b"></div></div>
-                        </div>
-                        <div style="font-size:0.76rem;color:#64748b;margin-top:8px">Confidence: <strong>${this._escapeHtml(String(confidence))}</strong></div>
-                        ${metaLine}
-                    </div>
-                </div>
-                <div class="score-message" style="margin-top:14px">${message}</div>
-            </div>`;
+            const meta = topicMeta.length ? ` · ${topicMeta.join(' · ')}` : '';
+            return card + `<div class="score-message" style="margin:14px 16px 0">${message}${meta}</div>`;
         }
 
         _buildFragmentBlockHtml(fr) {
-            const severity = typeof fr.decision_severity === 'number' ? fr.decision_severity : 0;
-            const color = severity >= 0.6 ? '#f43f5e' : severity >= 0.2 ? '#f59e0b' : '#10b981';
-            const label = this._escapeHtml(fr.decision_label || fr.decision || 'Fragment');
-            const score = Math.round(fr.final_score || 0);
+            // ── Lógica coherente: el estado se deriva de similitud + cita + decisión ──
+            const sim = Math.round((Number(fr.similarity_score) || 0) * 100);
+            const cited = !!fr.has_citation;
+            const dec = String(fr.decision || '').toLowerCase();
+            const isPlag = dec.includes('plag');
+
+            let status, color, explanation;
+            if (isPlag || (sim >= 50 && !cited)) {
+                status = 'Plagio detectado'; color = '#f43f5e';
+                explanation = `Coincidencia del ${sim}% sin cita — posible plagio.`;
+            } else if (sim >= 50 && cited) {
+                status = 'Cita directa válida'; color = '#0A84FF';
+                explanation = `Texto similar (${sim}%) pero correctamente citado.`;
+            } else if (sim > 0 && cited) {
+                status = 'Citado correctamente'; color = '#10b981';
+                explanation = `Baja similitud (${sim}%) con cita válida.`;
+            } else if (sim > 0) {
+                status = 'Similitud leve'; color = '#f59e0b';
+                explanation = `Similitud del ${sim}% — revisa si requiere cita.`;
+            } else {
+                status = 'Contenido original'; color = '#10b981';
+                explanation = 'Sin coincidencias relevantes — contenido original.';
+            }
+
+            // Etiqueta legible del tipo de zona (no el código crudo).
+            const ZONE = {
+                original: 'Original', direct_quote: 'Cita textual',
+                paraphrase: 'Paráfrasis', common_knowledge: 'Conocimiento común',
+            };
+            const zoneKey = String(fr.zone_type || '').toLowerCase();
+            const zoneLabel = ZONE[zoneKey] || (fr.zone_type ? fr.zone_type.replace(/_/g, ' ') : '');
+
             const preview = this._escapeHtml(fr.text_preview || '');
-            const explanation = this._escapeHtml(fr.explanation || '');
-            const citationTag = fr.has_citation
-                ? '<span style="margin-right:8px;font-size:0.76rem;color:#10b981">· Cited</span>'
-                : '<span style="margin-right:8px;font-size:0.76rem;color:#f43f5e">· Not cited</span>';
+            const citationTag = cited
+                ? '<span style="font-size:0.74rem;color:#10b981">✓ Citado</span>'
+                : '<span style="font-size:0.74rem;color:#f43f5e">✗ Sin cita</span>';
 
             const sources = Array.isArray(fr.qdrant_sources) ? fr.qdrant_sources : [];
             const sourcesHtml = sources.map(s => {
-                const title = this._escapeHtml(s.title || 'Source');
+                const title = this._escapeHtml(s.title || 'Fuente');
                 const pct = Math.round((s.score || 0) * 100);
                 const url = s.url ? this._escapeHtml(s.url) : null;
                 const titleHtml = url
                     ? `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#064CDB;text-decoration:none">${title}</a>`
                     : title;
-                return `<div style="font-size:0.78rem;margin-top:6px;padding-left:10px;border-left:2px solid ${color}33">
-                    ${titleHtml} <span style="color:#94a3b8">— ${pct}% match</span>
-                </div>`;
+                return `<div style="font-size:0.76rem;margin-top:4px;padding-left:9px;border-left:2px solid ${color}44">${titleHtml} <span style="color:#94a3b8">— ${pct}%</span></div>`;
             }).join('');
 
             return `
@@ -2702,18 +2949,17 @@ body.xp-file-preview .mode-switch-container {
                     <div class="block-info">
                         <div class="block-icon" style="color:${color}"><i class="fas fa-file-alt" aria-hidden="true"></i></div>
                         <div>
-                            <div class="block-type">${label}</div>
-                            <div class="block-confidence">${this._escapeHtml(fr.zone_type || '')}</div>
+                            <div class="block-type">${status}</div>
+                            <div class="block-confidence">${this._escapeHtml(zoneLabel)} · ${citationTag}</div>
                         </div>
                     </div>
-                    <div class="confidence-meter" style="min-width:90px">
-                        <div style="text-align:right;font-size:0.79rem;font-weight:700;color:${color};margin-bottom:4px">${score}%</div>
-                        <div class="confidence-bar"><div class="confidence-fill" style="width:${score}%;background:${color}"></div></div>
+                    <div class="confidence-meter" style="min-width:78px">
+                        <div style="text-align:right;font-size:0.78rem;font-weight:700;color:${color};margin-bottom:3px">${sim}%</div>
+                        <div class="confidence-bar"><div class="confidence-fill" style="width:${sim}%;background:${color}"></div></div>
                     </div>
                 </div>
-                <div class="block-content" style="font-size:0.88rem;line-height:1.65">"${preview}"</div>
-                ${explanation ? `<div style="font-size:0.8rem;color:#64748b;margin-top:8px">${explanation}</div>` : ''}
-                <div class="model-tag" style="margin-top:10px">${citationTag}</div>
+                <div class="block-content">"${preview}"</div>
+                <div class="block-note">${explanation}</div>
                 ${sourcesHtml}
             </div>`;
         }
@@ -2838,19 +3084,29 @@ body.xp-file-preview .mode-switch-container {
                         <div class="ai-split-resizer-handle"></div>
                     </div>
                     <div class="ai-split-right" id="aiSplitRight">
-                        <div class="ai-split-panel-header">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" viewBox="0 0 16 16"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2z"/></svg>
-                            Source Results
+                        <div class="ai-split-tabs" role="tablist">
+                            <button class="ai-split-tab active" data-tab="src" role="tab" type="button">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
+                                Fuentes
+                            </button>
+                            <button class="ai-split-tab" data-tab="cit" role="tab" type="button">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 3.5h9a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM5 6h6v1H5zm0 2.5h6v1H5z"/></svg>
+                                Citas
+                            </button>
+                            <button class="ai-split-tab" data-tab="acad" role="tab" type="button">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917z"/></svg>
+                                Académicas
+                            </button>
                         </div>
-                        <div class="ai-split-results-scroll" id="aiSplitResultsScroll">
+                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="src">
                             ${scoresHtml}
                             <div class="results-content" style="padding:4px 16px 16px">
                                 <h3 class="section-title">Fragment Decisions</h3>
                                 <div class="analysis-results" id="finderxFragmentsContainer"></div>
                             </div>
-                            ${citationHtml}
-                            ${academicHtml}
                         </div>
+                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="cit" style="display:none">${citationHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">Sin análisis de citas.</div>'}</div>
+                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="acad" style="display:none">${academicHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">Sin coincidencias académicas.</div>'}</div>
                     </div>
                 </div>`;
 
@@ -2861,14 +3117,31 @@ body.xp-file-preview .mode-switch-container {
 
             document.body.classList.add('xp-split-active');
             mainContainer.appendChild(overlay);
+            this._wireSplitTabs(overlay);
 
             requestAnimationFrame(() => {
                 overlay.classList.add('visible');
+                this._animateIntegrityCard(overlay);
                 this._streamFragments(fragments);
             });
 
             document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
             this._initSplitResizer();
+        }
+
+        // Conecta las pestañas .ai-split-tab con sus paneles .ai-tab-panel (data-tab/data-panel).
+        _wireSplitTabs(overlay) {
+            const tabs = overlay.querySelectorAll('.ai-split-tab');
+            const panels = overlay.querySelectorAll('.ai-tab-panel');
+            if (!tabs.length) return;
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    const target = tab.dataset.tab;
+                    panels.forEach(p => { p.style.display = (p.dataset.panel === target) ? '' : 'none'; });
+                });
+            });
         }
 
         _streamFragments(fragments) {
@@ -2953,8 +3226,16 @@ body.xp-file-preview .mode-switch-container {
                             </button>
                             <button class="ai-split-tab" data-tab="source" role="tab" type="button">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
-                                Sources
+                                Fuentes
                                 <span class="ai-split-tab-badge" style="color:${srcLbl.color}">${overall}%</span>
+                            </button>
+                            <button class="ai-split-tab" data-tab="cit" role="tab" type="button">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 3.5h9a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM5 6h6v1H5zm0 2.5h6v1H5z"/></svg>
+                                Citas
+                            </button>
+                            <button class="ai-split-tab" data-tab="acad" role="tab" type="button">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917z"/></svg>
+                                Académicas
                             </button>
                         </div>
                         <div class="ai-split-results-scroll ai-tab-panel" data-panel="ai">
@@ -2970,9 +3251,9 @@ body.xp-file-preview .mode-switch-container {
                                 <h3 class="section-title">Fragment Decisions</h3>
                                 <div class="analysis-results" id="finderxFragmentsContainer"></div>
                             </div>
-                            ${citationHtml}
-                            ${academicHtml}
                         </div>
+                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="cit" style="display:none">${citationHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">Sin análisis de citas.</div>'}</div>
+                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="acad" style="display:none">${academicHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">Sin coincidencias académicas.</div>'}</div>
                     </div>
                 </div>`;
 
@@ -2983,21 +3264,11 @@ body.xp-file-preview .mode-switch-container {
 
             document.body.classList.add('xp-split-active');
             mainContainer.appendChild(overlay);
-
-            // Tab switching
-            const tabs = overlay.querySelectorAll('.ai-split-tab');
-            const panels = overlay.querySelectorAll('.ai-tab-panel');
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    const target = tab.dataset.tab;
-                    panels.forEach(p => { p.style.display = (p.dataset.panel === target) ? '' : 'none'; });
-                });
-            });
+            this._wireSplitTabs(overlay);
 
             requestAnimationFrame(() => {
                 overlay.classList.add('visible');
+                this._animateIntegrityCard(overlay);
                 this._streamBlocks(aiResult.blocks);
                 this._streamFragments(fragments);
             });
@@ -3146,58 +3417,24 @@ body.xp-file-preview .mode-switch-container {
         }
 
         _buildScoresHtml(result) {
-            const scoreColor = result.ai_score >= 50 ? '#f43f5e' : '#10b981';
-            return `
-            <div class="results-content" style="padding:16px 16px 8px">
-                <h2 class="results-title">
-                    <i class="fas fa-chart-line" aria-hidden="true"></i>
-                    Analysis Results
-                </h2>
-                <div class="aixrow" style="align-items:flex-start;gap:16px">
-                    <div style="flex:0 0 130px">
-                        <div class="result-chart-container" style="width:120px;height:120px">
-                            <div class="result-chart-bg"></div>
-                            <div class="score-label">
-                                <i class="fas fa-robot" aria-hidden="true"></i>
-                                AI Score
-                            </div>
-                            <div class="result-chart">
-                                <div class="score-circle" style="--percentage:${result.ai_score}%"></div>
-                                <div class="score-circle-inner">
-                                    <div class="score-value" style="color:${scoreColor}">${result.ai_score}%</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="flex:1;min-width:0">
-                        <div class="metric-item metric-human" style="margin-bottom:10px">
-                            <div class="metric-header">
-                                <div class="metric-title">
-                                    <div class="metric-icon icon-human"><i class="fas fa-user" aria-hidden="true"></i></div>
-                                    Human Content
-                                </div>
-                                <div class="metric-value value-human">${result.human_score}%</div>
-                            </div>
-                            <div class="metric-bar" role="progressbar" aria-valuenow="${result.human_score}" aria-valuemin="0" aria-valuemax="100">
-                                <div class="metric-fill fill-human" style="width:${result.human_score}%"></div>
-                            </div>
-                        </div>
-                        <div class="metric-item metric-ai">
-                            <div class="metric-header">
-                                <div class="metric-title">
-                                    <div class="metric-icon icon-ai"><i class="fas fa-robot" aria-hidden="true"></i></div>
-                                    AI-Generated Content
-                                </div>
-                                <div class="metric-value value-ai">${result.ai_score}%</div>
-                            </div>
-                            <div class="metric-bar" role="progressbar" aria-valuenow="${result.ai_score}" aria-valuemin="0" aria-valuemax="100">
-                                <div class="metric-fill fill-ai" style="width:${result.ai_score}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="score-message" style="margin-top:14px">${result.message}</div>
-            </div>`;
+            const blocks = result.blocks || [];
+            const card = this._buildIntegrityCard({
+                title: 'AI Detection',
+                subtitle: 'XplagiaX · AI TestPro',
+                centerValue: result.ai_score,
+                centerCaption: 'Contenido IA',
+                segments: [
+                    { key: 'human', value: result.human_score },
+                    { key: 'ai', value: result.ai_score },
+                ],
+                stats: [
+                    { label: 'Palabras', value: result.word_count || 0 },
+                    { label: 'Segmentos', value: blocks.length },
+                    { label: 'IA %', value: result.ai_score },
+                    { label: 'Humano %', value: result.human_score },
+                ],
+            });
+            return card + `<div class="score-message" style="margin:14px 16px 0">${result.message}</div>`;
         }
 
         _enterSplitMode(text, result) {
@@ -3279,6 +3516,7 @@ body.xp-file-preview .mode-switch-container {
             // ── Trigger entry animation + stream blocks (height is CSS-driven) ──
             requestAnimationFrame(() => {
                 overlay.classList.add('visible');
+                this._animateIntegrityCard(overlay);
                 this._streamBlocks(result.blocks);
             });
 
