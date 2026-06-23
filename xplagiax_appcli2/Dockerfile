@@ -70,15 +70,15 @@ RUN mkdir -p \
 USER appuser
 
 # Solo se expone el puerto de la app.
-EXPOSE 5000
+EXPOSE 5003
 
 # Healthcheck simple contra el endpoint /test_alive.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/test_alive', timeout=4)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5003/test_alive', timeout=4)" || exit 1
 
 # Servidor WSGI de producción (NUNCA app.run()).
 CMD ["gunicorn", \
-     "--bind", "0.0.0.0:5000", \
+     "--bind", "0.0.0.0:5003", \
      "--worker-class", "sync", \
      "--timeout", "120", \
      "--graceful-timeout", "30", \
