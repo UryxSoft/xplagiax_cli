@@ -2440,10 +2440,15 @@ body.xp-file-preview .mode-switch-container {
                 if (!taskId) throw new Error('Analysis service did not return a task id.');
                 aiJson = await this._pollJson(
                     `/x_doc/analyze_status/${encodeURIComponent(taskId)}`,
-                    d => d.status === 'ok',
-                    d => d.status === 'error' || d.status === 'failed',
-                    { interval: 2000, timeout: 130000 }
+                    // "done" tolerante: cubre variantes del servicio.
+                    d => ['ok', 'completed', 'complete', 'success', 'done', 'finished'].includes(String(d.status).toLowerCase())
+                         || !!(d.results && d.results.ai_detection)
+                         || !!(d.result && d.result.results),
+                    d => ['error', 'failed', 'failure'].includes(String(d.status).toLowerCase()),
+                    { interval: 3000, timeout: 240000 }
                 );
+                // El resultado puede venir directo o anidado bajo 'result'.
+                if (aiJson && aiJson.result && aiJson.result.results) aiJson = aiJson.result;
             }
             return this._mapApiResponse(aiJson, text);
         }
@@ -2520,9 +2525,14 @@ body.xp-file-preview .mode-switch-container {
 
         // Maps the /analyze_document_async response onto the shape _enterSplitMode expects.
         _mapApiResponse(apiData, text) {
-            const ai = apiData && apiData.results && apiData.results.ai_detection;
-            const data = ai && ai.data;
-            if (!data) {
+            // El resultado puede venir directo o anidado bajo 'result' (proxy async).
+            const root = (apiData && apiData.results) ? apiData
+                       : (apiData && apiData.result && apiData.result.results) ? apiData.result
+                       : apiData;
+            const ai = root && root.results && root.results.ai_detection;
+            // Igual que marktrack: ai_detection.data || ai_detection.
+            const data = ai && (ai.data || ai);
+            if (!data || data.ai_percentage === undefined) {
                 throw new Error('Unexpected response from analysis service.');
             }
 
@@ -2573,9 +2583,11 @@ body.xp-file-preview .mode-switch-container {
 
             const report = await this._pollJson(
                 `/x_doc/finderx_report/${encodeURIComponent(jobId)}`,
-                d => d.status === 'completed',
-                d => d.status === 'failed' || d.status === 'error',
-                { interval: 2000, timeout: 130000 }
+                // "done" tolerante: completed/done/ok/success + presencia de result.
+                d => (['completed', 'complete', 'done', 'ok', 'success', 'finished'].includes(String(d.status).toLowerCase()) && d.result)
+                     || !!(d.result && d.result.scores),
+                d => ['failed', 'error', 'failure', 'not_found'].includes(String(d.status).toLowerCase()),
+                { interval: 3000, timeout: 240000 }
             );
             const result = report && report.result ? report.result : null;
             if (!result) throw new Error('Unexpected response from FinderX service.');

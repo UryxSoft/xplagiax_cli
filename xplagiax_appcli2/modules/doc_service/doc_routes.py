@@ -3754,11 +3754,15 @@ def analyze_text():
     except ValueError:
         return jsonify({'error': 'Invalid response from analysis service.'}), 502
 
+    logger.info('AI submit OK → keys=%s', list(sd.keys()))
+
     # Si el servicio ya respondió síncrono con el resultado, devolverlo.
     if sd.get('results'):
         return jsonify({'done': True, 'result': sd}), 200
 
-    task_id = sd.get('task_id') or sd.get('job_id') or sd.get('id')
+    inner = sd.get('data', sd) if isinstance(sd.get('data'), dict) else sd
+    task_id = (sd.get('task_id') or sd.get('job_id') or sd.get('id')
+               or inner.get('task_id') or inner.get('job_id') or inner.get('id'))
     if not task_id:
         logger.error('AI submit missing task_id: %s', str(sd)[:300])
         return jsonify({'error': 'Analysis service did not return a task id.'}), 502
@@ -3783,9 +3787,11 @@ def analyze_status(task_id):
         logger.error('AI poll returned %s: %s', poll.status_code, poll.text[:300])
         return jsonify({'error': f'Analysis service error ({poll.status_code}).'}), 502
     try:
-        return jsonify(poll.json()), 200
+        pdata = poll.json()
     except ValueError:
         return jsonify({'error': 'Invalid response from analysis service.'}), 502
+    logger.info('AI status %s → status=%r keys=%s', task_id, pdata.get('status'), list(pdata.keys()))
+    return jsonify(pdata), 200
 
 
 # ── FinderX: servicio de búsqueda de fuentes / plagio académico ──────────────
@@ -3865,6 +3871,8 @@ def finderx_report(job_id):
         logger.error('FinderX report returned %s: %s', report.status_code, report.text[:300])
         return jsonify({'error': f'FinderX service error ({report.status_code}).'}), 502
     try:
-        return jsonify(report.json()), 200
+        rdata = report.json()
     except ValueError:
         return jsonify({'error': 'Invalid response from FinderX service.'}), 502
+    logger.info('FinderX report %s → status=%r keys=%s', job_id, rdata.get('status'), list(rdata.keys()))
+    return jsonify(rdata), 200
