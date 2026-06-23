@@ -20,27 +20,38 @@ flask_mail==0.10.0
 Flask_Migrate==4.1.0
 Flask_SocketIO==5.5.1
 flask_sqlalchemy==3.1.1
+Flask-WTF==1.2.1
+WTForms==3.1.2
 SQLAlchemy==2.0.38
 
 # ── Driver de base de datos (MySQL, mysql+pymysql) — Python puro ─────────────
 PyMySQL==1.1.1
 
-# ── Autenticación ────────────────────────────────────────────────────────────
+# ── Autenticación / OAuth ────────────────────────────────────────────────────
 Authlib==1.4.1
+Flask-Dance==7.1.0
 PyJWT==2.10.1
 bcrypt==4.2.1
 
 # ── Servidor WSGI de producción ──────────────────────────────────────────────
 gunicorn==23.0.0
 
+# ── Tareas programadas / cola ────────────────────────────────────────────────
+APScheduler==3.10.4
+celery==5.5.2
+
+# ── Pagos ────────────────────────────────────────────────────────────────────
+stripe==10.10.0
+paypalrestsdk==1.13.3
+
 # ── HTTP / utilidades ────────────────────────────────────────────────────────
 Requests==2.32.4
 urllib3==2.5.0
 psutil==5.9.5
+python-dotenv==1.0.1
 
-# ── Cache / búsqueda / vectorial ─────────────────────────────────────────────
+# ── Cache / vectorial ────────────────────────────────────────────────────────
 redis==5.2.1
-elasticsearch==9.1.0
 qdrant_client==1.15.1
 
 # ── Documentos e imágenes ────────────────────────────────────────────────────
