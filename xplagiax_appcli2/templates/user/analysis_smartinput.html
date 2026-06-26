@@ -554,7 +554,7 @@ body.xp-file-preview .mode-switch-container {
   --card-edge: rgba(0,0,0,0.07);
   --ic-text-1:#15181f; --ic-text-2:#5b626d; --ic-track: rgba(0,0,0,0.065);
   --ai:#FF453A; --human:#30D158; --original:#BF5AF2; --sim:#F5B800; --ref:#0A84FF;
-  --gauge-max: 360px;
+  --gauge-max: 250px;
   color:var(--ic-text-1);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
 }
@@ -571,15 +571,15 @@ body.xp-file-preview .mode-switch-container {
     -webkit-backdrop-filter:blur(20px) saturate(125%); backdrop-filter:blur(20px) saturate(125%); }
 }
 @keyframes xpaCardIn{to{opacity:1;transform:none}}
-.xpa-icard .card__head{display:flex;align-items:center;gap:12px;padding:15px 18px}
-.xpa-icard .icon-tile{width:40px;height:40px;border-radius:11px;flex:0 0 auto;
+.xpa-icard .card__head{display:flex;align-items:center;gap:10px;padding:11px 14px}
+.xpa-icard .icon-tile{width:34px;height:34px;border-radius:11px;flex:0 0 auto;
   background:linear-gradient(160deg,#2a2d36,#16181e);border:1px solid rgba(0,0,0,.18);
   display:grid;place-items:center;color:#fff;box-shadow:0 4px 10px -4px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12)}
 .xpa-icard .icon-tile svg{width:21px;height:21px}
-.xpa-icard .card__head h2{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.xpa-icard .card__head h2{font-size:14.5px;font-weight:600;letter-spacing:-.01em}
 .xpa-icard .card__head .sub{font-size:12px;color:var(--ic-text-2);margin-top:2px}
 .xpa-icard .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(0,0,0,.08) 12%,rgba(0,0,0,.08) 88%,transparent)}
-.xpa-icard .card__body{display:flex;flex-direction:column;align-items:center;gap:18px;padding:20px 18px}
+.xpa-icard .card__body{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 14px}
 .xpa-icard .gauge{position:relative;width:min(var(--gauge-max),100%);margin:0 auto}
 .xpa-icard .gauge svg{width:100%;height:auto;display:block;overflow:visible}
 .xpa-icard .track{fill:none;stroke:var(--ic-track);stroke-width:24;stroke-linecap:round}
@@ -603,11 +603,11 @@ body.xp-file-preview .mode-switch-container {
 .xpa-icard .gauge__num{font-size:clamp(15px,5vw,22px);font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .xpa-icard .gauge__num .u{font-size:.6em;font-weight:600;color:var(--ic-text-2);margin-left:1px}
 .xpa-icard .gauge__cap{display:block;margin-top:.28em;font-size:clamp(8px,2.2vw,10px);color:var(--ic-text-2);text-transform:uppercase;letter-spacing:.06em}
-.xpa-icard .stats{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:14px 10px}
+.xpa-icard .stats{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:8px 8px}
 .xpa-icard .stat{text-align:center;min-width:0}
 .xpa-icard .stat__label{display:block;font-size:12px;color:var(--ic-text-2)}
 .xpa-icard .stat__value{display:block;margin-top:3px;font-size:clamp(17px,4.4vw,20px);font-weight:600;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
-.xpa-icard .legend{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:14px;padding:15px 18px}
+.xpa-icard .legend{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:10px;padding:11px 14px}
 .xpa-icard .legend li{min-width:0}
 .xpa-icard .legend__top{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ic-text-2)}
 .xpa-icard .leg-ic{width:15px;height:15px;flex:0 0 auto;display:inline-block}
@@ -630,6 +630,28 @@ body.xp-file-preview .mode-switch-container {
 .ai-split-results-scroll .confidence-bar{height:5px}
 .ai-split-results-scroll .section-title{margin:6px 0}
 .ai-split-results-scroll .model-tag{margin-top:8px!important}
+
+/* Bloques clickeables → localizar segmento en el texto */
+.xpa-block-clickable{cursor:pointer;transition:transform .12s ease, box-shadow .12s ease}
+.xpa-block-clickable:hover{transform:translateY(-1px);box-shadow:0 4px 14px -6px rgba(0,0,0,.25)}
+.xpa-block-clickable:active{transform:translateY(0)}
+/* Pulso del segmento resaltado al hacer click */
+@keyframes xpaSegPulse{0%{box-shadow:0 0 0 0 rgba(99,102,241,.45)}70%{box-shadow:0 0 0 8px rgba(99,102,241,0)}100%{box-shadow:0 0 0 0 rgba(99,102,241,0)}}
+.xpa-seg-hl{transition:filter .15s ease}
+.xpa-seg-pulse{animation:xpaSegPulse 1.1s ease-out 1;filter:brightness(1.06) saturate(1.15)}
+
+/* Comparación "Your text vs Academic source" */
+.xpa-cmp-label{font-size:0.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#94a3b8;margin:6px 0 2px}
+.xpa-cmp{margin:0;font-size:0.78rem;line-height:1.5;font-style:italic;color:#475569;border-left:2px solid #cbd5e1;padding-left:8px}
+.xpa-cmp-you{border-left-color:#cbd5e1}
+.xpa-cmp-src{color:#64748b}
+/* Aviso de falso positivo (corpus / similitud temática) */
+.xpa-corpus-warn{border:1px solid #f59e0b55;background:#fffbeb;border-radius:12px;padding:13px 15px}
+.xpa-corpus-title{font-size:0.86rem;font-weight:700;color:#b45309;margin-bottom:5px}
+.xpa-corpus-desc{margin:0 0 10px;font-size:0.79rem;line-height:1.55;color:#64748b}
+.xpa-corpus-list{display:flex;flex-direction:column;gap:8px}
+.xpa-corpus-src{position:relative;border-radius:9px;background:rgba(0,0,0,.02);border:1px solid rgba(0,0,0,.06);padding:10px 12px;font-size:0.8rem}
+.xpa-corpus-best{display:inline-block;font-size:0.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#b45309;background:#fde68a66;border:1px solid #f59e0b55;border-radius:6px;padding:1px 6px;margin-bottom:5px}
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
   <symbol id="i-human" viewBox="0 0 24 24"><circle cx="12" cy="7.6" r="4.3"/><path d="M3.6 21.2c0-4.2 3.9-6.9 8.4-6.9s8.4 2.7 8.4 6.9a.9.9 0 0 1-.9.9H4.5a.9.9 0 0 1-.9-.9z"/></symbol>
@@ -2851,8 +2873,22 @@ body.xp-file-preview .mode-switch-container {
             const confidence = scores.confidence || 'n/a';
             const lbl = this._sourceLabel(overall);
 
+            // ── Lógica de marktrack: distinguir similitud SEMÁNTICA (falso positivo)
+            //    de copia DIRECTA. Si hay fuentes académicas pero TODOS los fragmentos
+            //    son originales (0% directo) → es solapamiento temático, no plagio. ──
+            const _frags = Array.isArray(result.fragment_decisions) ? result.fragment_decisions : [];
+            const _academic = Array.isArray(result.academic_matches) ? result.academic_matches : [];
+            const allOriginal = _frags.length > 0 && _frags.every(f => {
+                const dec = String(f.decision || '').toLowerCase();
+                return dec.includes('original') || dec.includes('insufici') || (Number(f.similarity_score) || 0) < 0.2;
+            });
+            const hasAcademicHits = _academic.some(m => (m.snippet || '').length > 30);
+            const falsePositive = allOriginal && hasAcademicHits && overall >= 20;
+
             let message;
-            if (overall >= 50) {
+            if (falsePositive) {
+                message = `<strong>Thematic overlap (${overall}%) — no direct copies.</strong> The similarity is <em>semantic</em> (shared vocabulary/topic), but all fragments are original (0% direct match). Likely a false positive — no citation required unless your text was derived from the sources below.`;
+            } else if (overall >= 50) {
                 message = `<strong>High similarity detected.</strong> ${overall}% of the content matches external sources. Review the flagged fragments and citations below.`;
             } else if (overall >= 25) {
                 message = `<strong>Moderate similarity.</strong> ${overall}% of the text shows matches with external sources — verify proper citation of the flagged fragments.`;
@@ -2940,7 +2976,14 @@ body.xp-file-preview .mode-switch-container {
                 const titleHtml = url
                     ? `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#064CDB;text-decoration:none">${title}</a>`
                     : title;
-                return `<div style="font-size:0.76rem;margin-top:4px;padding-left:9px;border-left:2px solid ${color}44">${titleHtml} <span style="color:#94a3b8">— ${pct}%</span></div>`;
+                // Comparación "Your text vs Academic source" (como marktrack) si hay texto fuente.
+                const srcText = s.text ? this._escapeHtml(String(s.text).slice(0, 240)) : '';
+                const compare = srcText ? `
+                    <div class="xpa-cmp-label">Your text</div>
+                    <p class="xpa-cmp xpa-cmp-you">"${preview}"</p>
+                    <div class="xpa-cmp-label">Academic source</div>
+                    <p class="xpa-cmp xpa-cmp-src" style="border-color:${color}">"${srcText}…"</p>` : '';
+                return `<div style="font-size:0.78rem;margin-top:6px;padding-left:9px;border-left:2px solid ${color}44">${titleHtml} <span style="color:#94a3b8">— ${pct}%</span>${compare}</div>`;
             }).join('');
 
             return `
@@ -3030,6 +3073,55 @@ body.xp-file-preview .mode-switch-container {
             </div>`;
         }
 
+        // Aviso de falso positivo (similitud semántica, no copia) — lógica de marktrack.
+        _buildCorpusWarning(result) {
+            const overall = Math.round((result.scores || {}).overall || 0);
+            const frags = Array.isArray(result.fragment_decisions) ? result.fragment_decisions : [];
+            const academic = Array.isArray(result.academic_matches) ? result.academic_matches : [];
+            const allOriginal = frags.length > 0 && frags.every(f => {
+                const dec = String(f.decision || '').toLowerCase();
+                return dec.includes('original') || dec.includes('insufici') || (Number(f.similarity_score) || 0) < 0.2;
+            });
+            const hasHits = academic.some(m => (m.snippet || '').length > 30);
+            if (!(allOriginal && hasHits && overall >= 20)) return '';
+
+            // Dedup por URL/título y top 5 por longitud de snippet (como marktrack).
+            const seen = new Set();
+            const top = academic.filter(m => {
+                const key = m.url || ((m.title || '') + '|' + ((m.authors && m.authors[0]) || ''));
+                if (seen.has(key)) return false; seen.add(key); return true;
+            }).filter(m => (m.snippet || '').length > 30)
+              .sort((a, b) => (b.snippet ? b.snippet.length : 0) - (a.snippet ? a.snippet.length : 0))
+              .slice(0, 5);
+
+            const items = top.map((m, i) => {
+                const title = this._escapeHtml(m.title || 'Source');
+                const doiUrl = m.doi ? `https://doi.org/${this._escapeHtml(m.doi)}` : (m.url ? this._escapeHtml(m.url) : null);
+                const titleHtml = doiUrl
+                    ? `<a href="${doiUrl}" target="_blank" rel="noopener noreferrer" style="color:#064CDB;text-decoration:none;font-weight:600">${title}</a>`
+                    : `<span style="font-weight:600">${title}</span>`;
+                const authors = Array.isArray(m.authors) ? this._escapeHtml(m.authors.slice(0, 3).join(', ')) : '';
+                const meta = `${authors}${m.year ? ' · ' + this._escapeHtml(String(m.year)) : ''}${m.provider ? ' · ' + this._escapeHtml(m.provider) : ''}`;
+                const snippet = this._escapeHtml(String(m.snippet || '').slice(0, 240));
+                return `<div class="xpa-corpus-src">
+                    ${i === 0 ? '<span class="xpa-corpus-best">Best match</span>' : ''}
+                    ${titleHtml}
+                    <div style="font-size:0.74rem;color:#94a3b8;margin:2px 0 6px">${meta}</div>
+                    <div class="xpa-cmp-label">Academic source</div>
+                    <p class="xpa-cmp xpa-cmp-src" style="border-color:#f59e0b">"${snippet}…"</p>
+                </div>`;
+            }).join('');
+
+            return `
+            <div class="results-content" style="padding:8px 16px 4px">
+                <div class="xpa-corpus-warn">
+                    <div class="xpa-corpus-title">⚠ Thematic overlap (${overall}%) — no direct copies detected</div>
+                    <p class="xpa-corpus-desc">The corpus search found <strong>${overall}% semantic similarity</strong> (shared vocabulary/topic), but all fragments are <strong>original</strong> (0% direct match). Likely a <em>false positive</em> — no citation required unless your text was derived from the sources below.</p>
+                    <div class="xpa-corpus-list">${items}</div>
+                </div>
+            </div>`;
+        }
+
         _enterSourceSplitMode(text, result) {
             if (document.querySelector('.ai-split-view')) return;
 
@@ -3038,6 +3130,7 @@ body.xp-file-preview .mode-switch-container {
             const lbl = this._sourceLabel(overall);
             const safeText = this._escapeHtml(text);
             const scoresHtml = this._buildSourceScoresHtml(result);
+            const corpusHtml = this._buildCorpusWarning(result);
             const citationHtml = this._buildCitationAnalysisHtml(result.citation_analysis);
             const academicHtml = this._buildAcademicMatchesHtml(result.academic_matches);
             const fragments = Array.isArray(result.fragment_decisions) ? result.fragment_decisions : [];
@@ -3087,26 +3180,27 @@ body.xp-file-preview .mode-switch-container {
                         <div class="ai-split-tabs" role="tablist">
                             <button class="ai-split-tab active" data-tab="src" role="tab" type="button">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
-                                Fuentes
+                                Sources
                             </button>
                             <button class="ai-split-tab" data-tab="cit" role="tab" type="button">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 3.5h9a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM5 6h6v1H5zm0 2.5h6v1H5z"/></svg>
-                                Citas
+                                Citations
                             </button>
                             <button class="ai-split-tab" data-tab="acad" role="tab" type="button">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917z"/></svg>
-                                Académicas
+                                Academic
                             </button>
                         </div>
                         <div class="ai-split-results-scroll ai-tab-panel" data-panel="src">
                             ${scoresHtml}
+                            ${corpusHtml}
                             <div class="results-content" style="padding:4px 16px 16px">
                                 <h3 class="section-title">Fragment Decisions</h3>
                                 <div class="analysis-results" id="finderxFragmentsContainer"></div>
                             </div>
                         </div>
-                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="cit" style="display:none">${citationHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">Sin análisis de citas.</div>'}</div>
-                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="acad" style="display:none">${academicHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">Sin coincidencias académicas.</div>'}</div>
+                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="cit" style="display:none">${citationHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">No citation analysis.</div>'}</div>
+                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="acad" style="display:none">${academicHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">No academic matches.</div>'}</div>
                     </div>
                 </div>`;
 
@@ -3171,12 +3265,13 @@ body.xp-file-preview .mode-switch-container {
             const aiPct = Math.round(aiResult.ai_score || 0);
             const aiLabel = aiPct >= 50 ? 'High AI' : aiPct >= 25 ? 'Mixed' : 'Mostly Human';
             const aiColor = aiPct >= 50 ? '#f43f5e' : aiPct >= 25 ? '#f59e0b' : '#10b981';
-            const aiScoresHtml = this._buildScoresHtml(aiResult);
+            // Card Overview única (combina IA + Fuentes en un solo medidor).
+            const overviewHtml = this._buildOverviewCard(aiResult, sourceResult);
 
             // Source tab data
             const overall = Math.round((sourceResult.scores || {}).overall || 0);
             const srcLbl = this._sourceLabel(overall);
-            const srcScoresHtml = this._buildSourceScoresHtml(sourceResult);
+            const corpusHtml = this._buildCorpusWarning(sourceResult);
             const citationHtml = this._buildCitationAnalysisHtml(sourceResult.citation_analysis);
             const academicHtml = this._buildAcademicMatchesHtml(sourceResult.academic_matches);
             const fragments = Array.isArray(sourceResult.fragment_decisions) ? sourceResult.fragment_decisions : [];
@@ -3219,41 +3314,47 @@ body.xp-file-preview .mode-switch-container {
                     </div>
                     <div class="ai-split-right" id="aiSplitRight">
                         <div class="ai-split-tabs" role="tablist">
-                            <button class="ai-split-tab active" data-tab="ai" role="tab" type="button">
+                            <button class="ai-split-tab active" data-tab="ov" role="tab" type="button">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M0 0h1v15h15v1H0zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07"/></svg>
+                                Overview
+                            </button>
+                            <button class="ai-split-tab" data-tab="ai" role="tab" type="button">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M0 10.5a.5.5 0 0 1 .5-.5h15a.5.5 0 0 1 0 1H.5a.5.5 0 0 1-.5-.5M12 0H4a2 2 0 0 0-2 2v7h1V2a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v7h1V2a2 2 0 0 0-2-2m2 12h-1v2a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2H2v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2z"/></svg>
                                 AI Detection
                                 <span class="ai-split-tab-badge" style="color:${aiColor}">${aiPct}%</span>
                             </button>
                             <button class="ai-split-tab" data-tab="source" role="tab" type="button">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>
-                                Fuentes
+                                Sources
                                 <span class="ai-split-tab-badge" style="color:${srcLbl.color}">${overall}%</span>
                             </button>
                             <button class="ai-split-tab" data-tab="cit" role="tab" type="button">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 3.5h9a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM5 6h6v1H5zm0 2.5h6v1H5z"/></svg>
-                                Citas
+                                Citations
                             </button>
                             <button class="ai-split-tab" data-tab="acad" role="tab" type="button">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917z"/></svg>
-                                Académicas
+                                Academic
                             </button>
                         </div>
-                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="ai">
-                            ${aiScoresHtml}
-                            <div class="results-content" style="padding:4px 16px 16px">
+                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="ov">
+                            ${overviewHtml}
+                        </div>
+                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="ai" style="display:none">
+                            <div class="results-content" style="padding:8px 16px 16px">
                                 <h3 class="section-title">Detailed Analysis</h3>
                                 <div class="analysis-results" id="aiBlocksContainer"></div>
                             </div>
                         </div>
                         <div class="ai-split-results-scroll ai-tab-panel" data-panel="source" style="display:none">
-                            ${srcScoresHtml}
-                            <div class="results-content" style="padding:4px 16px 16px">
+                            ${corpusHtml}
+                            <div class="results-content" style="padding:8px 16px 16px">
                                 <h3 class="section-title">Fragment Decisions</h3>
                                 <div class="analysis-results" id="finderxFragmentsContainer"></div>
                             </div>
                         </div>
-                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="cit" style="display:none">${citationHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">Sin análisis de citas.</div>'}</div>
-                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="acad" style="display:none">${academicHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">Sin coincidencias académicas.</div>'}</div>
+                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="cit" style="display:none">${citationHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">No citation analysis.</div>'}</div>
+                        <div class="ai-split-results-scroll ai-tab-panel" data-panel="acad" style="display:none">${academicHtml || '<div style="padding:16px;color:#94a3b8;font-size:0.82rem">No academic matches.</div>'}</div>
                     </div>
                 </div>`;
 
@@ -3269,6 +3370,7 @@ body.xp-file-preview .mode-switch-container {
             requestAnimationFrame(() => {
                 overlay.classList.add('visible');
                 this._animateIntegrityCard(overlay);
+                this._highlightSegments(aiResult.blocks);
                 this._streamBlocks(aiResult.blocks);
                 this._streamFragments(fragments);
             });
@@ -3437,6 +3539,83 @@ body.xp-file-preview .mode-switch-container {
             return card + `<div class="score-message" style="margin:14px 16px 0">${result.message}</div>`;
         }
 
+        // Card "Overview" única: combina IA (Human/AI) + FinderX (Original/Similitud/Reference).
+        _buildOverviewCard(ai, source) {
+            const segments = [];
+            const stats = [];
+            let centerValue = 0, centerCaption = 'Integrity', message = '';
+
+            if (ai) {
+                segments.push({ key: 'human', value: ai.human_score });
+                segments.push({ key: 'ai', value: ai.ai_score });
+                centerValue = ai.ai_score; centerCaption = 'AI Content';
+                stats.push({ label: 'Words', value: ai.word_count || 0 });
+                stats.push({ label: 'AI %', value: ai.ai_score });
+                message = ai.message || '';
+            }
+            if (source) {
+                const sc = source.scores || {};
+                const overall = Math.round(sc.overall || 0);
+                const ca = source.citation_analysis || {};
+                const matches = (source.academic_matches || []).length;
+                segments.push({ key: 'original', value: Math.max(0, 100 - overall) });
+                segments.push({ key: 'sim', value: overall });
+                segments.push({ key: 'ref', value: Math.round(ca.citation_coverage || 0) });
+                if (!ai) { centerValue = overall; centerCaption = 'Similarity'; }
+                stats.push({ label: 'Sources', value: matches });
+                stats.push({ label: 'Similarity %', value: overall });
+            }
+
+            const card = this._buildIntegrityCard({
+                title: 'Overview',
+                subtitle: 'XplagiaX · Integrity',
+                centerValue, centerCaption,
+                segments,
+                stats: stats.slice(0, 4),
+            });
+            return message ? card + `<div class="score-message" style="margin:14px 16px 0">${message}</div>` : card;
+        }
+
+        // Resalta los segmentos en el panel de texto izquierdo con el color de su resultado.
+        _highlightSegments(blocks) {
+            const el = document.getElementById('aiSplitTextContent');
+            if (!el || !Array.isArray(blocks) || !blocks.length) return;
+            const full = el.textContent || '';
+            const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+            let html = '', cursor = 0;
+            blocks.forEach((b, i) => {
+                const frag = (b.text || '').trim();
+                if (!frag) return;
+                let idx = full.indexOf(frag, cursor);
+                let len = frag.length;
+                if (idx === -1) {
+                    // Fallback (como marktrack): localizar por prefijo si hay diferencias de espacios.
+                    idx = full.indexOf(frag.slice(0, 30), cursor);
+                }
+                if (idx === -1) return;
+                if (idx + len > full.length) len = full.length - idx;
+                const color = b.type === 'ai' ? 'var(--ai, #f43f5e)' : 'var(--human, #10b981)';
+                html += esc(full.slice(cursor, idx));
+                html += `<mark id="xpaSeg${i}" data-seg="${i}" class="xpa-seg-hl" style="background:${color}26;color:inherit;border-radius:3px;padding:0 1px;box-shadow:inset 0 -2px 0 ${color};scroll-margin:60px">${esc(full.slice(idx, idx + len))}</mark>`;
+                cursor = idx + len;
+            });
+            if (!html) return;            // no se pudo mapear ningún segmento → dejar el texto tal cual
+            html += esc(full.slice(cursor));
+            el.innerHTML = html;
+        }
+
+        // Desplaza y resalta el segmento i en el panel de texto (click desde un bloque).
+        _focusSegment(i) {
+            const mark = document.getElementById('xpaSeg' + i);
+            if (!mark) return;
+            mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            mark.classList.remove('xpa-seg-pulse');
+            // reflow para reiniciar la animación si se vuelve a hacer click
+            void mark.offsetWidth;
+            mark.classList.add('xpa-seg-pulse');
+            setTimeout(() => mark.classList.remove('xpa-seg-pulse'), 1300);
+        }
+
         _enterSplitMode(text, result) {
             if (document.getElementById('aiAnalysisSplitView')) return;
 
@@ -3517,6 +3696,7 @@ body.xp-file-preview .mode-switch-container {
             requestAnimationFrame(() => {
                 overlay.classList.add('visible');
                 this._animateIntegrityCard(overlay);
+                this._highlightSegments(result.blocks);
                 this._streamBlocks(result.blocks);
             });
 
@@ -3536,7 +3716,9 @@ body.xp-file-preview .mode-switch-container {
                         `<span style="margin-right:8px;font-size:0.76rem">· ${this._escapeHtml(p)}</span>`
                     ).join('');
                     const el = document.createElement('div');
-                    el.className = `analysis-block block-${block.type}`;
+                    el.className = `analysis-block block-${block.type} xpa-block-clickable`;
+                    el.dataset.seg = i;
+                    el.title = 'Click to locate in text';
                     el.innerHTML = `
                         <div class="block-header">
                             <div class="block-info">
@@ -3555,6 +3737,7 @@ body.xp-file-preview .mode-switch-container {
                         </div>
                         <div class="block-content" style="font-size:0.88rem;line-height:1.65">"${safeSnippet}"</div>
                         <div class="model-tag" style="margin-top:10px">${patternTags}</div>`;
+                    el.addEventListener('click', () => this._focusSegment(i));
                     container.appendChild(el);
                     // Trigger slide-up on next frame after append
                     requestAnimationFrame(() => el.classList.add('slide-up'));

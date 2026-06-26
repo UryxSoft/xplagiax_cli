@@ -30,6 +30,7 @@
 - [Modules & Responsibilities](#-modules--responsibilities)
 - [API Reference](#-api-reference)
 - [External Services](#-external-services)
+- [Analysis Pipeline & UI](#-analysis-pipeline--ui)
 - [Environment Variables](#-environment-variables)
 - [Prerequisites](#-prerequisites)
 - [Local Setup](#-local-setup)
@@ -298,6 +299,52 @@ Legacy full pipeline (parsing + Qdrant + AI + DB persistence). Multipart: `analy
 
 ---
 
+## 🔬 Analysis Pipeline & UI
+
+The text/document analysis screen (`/analysiss`, [`templates/user/analysis_smartinput.html`](templates/user/analysis_smartinput.html)) runs **AI detection** (xota) and **source/plagiarism** (FinderX) and renders them in a resizable **split view** (input text · results). The flow mirrors `xplagiax_marktrack`'s `documentedit`, adapted to appcli2's light "glass" design.
+
+### Data flow
+
+```mermaid
+flowchart LR
+    U([User]) -->|paste text / upload doc| FE[analysis_smartinput.html]
+    FE -->|doc only| EX["POST /x_doc/extract_text<br/>(server-side parsing)"]
+    EX --> FE
+    FE -->|AI| AT["POST /x_doc/analyze_text<br/>(sync proxy → xota)"]
+    FE -->|FinderX| FX["POST /x_doc/finderx_check → job_id<br/>GET /x_doc/finderx_report/&lt;id&gt; (poll)"]
+    AT --> MAP[_mapApiResponse]
+    FX --> SRC[source result]
+    MAP --> RENDER[Split view + tabs]
+    SRC --> RENDER
+```
+
+### AI service mode — `sync` vs `async`
+
+| Mode (`AI_SERVICE_MODE`) | Endpoint | Needs Celery worker? |
+|---|---|---|
+| **`sync` (default)** | `xota:5006/analyze_document` — processes inline, returns `{results}` | **No** |
+| `async` | `xota:5006/analyze_document_async` → `task_id` → poll `/analyze_status/{id}` | **Yes** (xota worker) |
+
+> The current xota deployment has **no Celery worker**, so `async` stays `pending` forever (affects all clients, marktrack included). appcli2 defaults to **`sync`** to work without it. FinderX **does** have a worker (`xplagiax_finderx_worker`), so its async + polling flow works.
+
+### How results are processed (JS, in `AdvancedInputComponent`)
+
+| Concern | Logic |
+|---|---|
+| **AI mapping** (`_mapApiResponse`) | Reads `results.ai_detection.data` (fallback `.ai_detection`); maps `ai_percentage`, `human_percentage`, `detected_model`, `segments[]` → blocks (`type`, `confidence`, `text`). |
+| **Segment normalization** | Each segment's score is expressed as AI-probability; `dominant_label === 'human'` → green, `'ai'` → red. |
+| **FinderX false-positive** (`_buildCorpusWarning`) | If academic sources are found **but all fragments are original** (0% direct, `similarity_score < 0.2`) and overall ≥ 20% → flags it as **thematic/semantic overlap, not plagiarism** (dedup + top-5 sources by snippet length). Ported from marktrack. |
+| **Fragment status** (`_buildFragmentBlockHtml`) | Derives a coherent verdict from `similarity_score` + `has_citation` + `decision` (Plagiarism / Cited quote / Original…) instead of showing the raw `zone_type`. |
+
+### UI components
+
+- **Integrity card** (`_buildIntegrityCard` / `_animateIntegrityCard`) — glass card with an animated multi-ring gauge, count-up stats and legend. The combined view shows a single **Overview** card (5 rings: Human · Original · AI · Similarity · Reference).
+- **Tabs** (`_wireSplitTabs`): `Overview` · `AI Detection` · `Sources` · `Citations` · `Academic`.
+- **Segment highlighting** (`_highlightSegments` / `_focusSegment`): the input text is highlighted per segment (green = Human, red = AI); clicking a result block scrolls to and pulses the matching span (with prefix fallback for whitespace drift).
+- **"Your text vs Academic source"** side-by-side comparison inside FinderX fragments.
+
+---
+
 ## ⚙️ Environment Variables
 
 All configuration is read from the environment (`settings/config.py`) with safe defaults for local dev.
@@ -315,14 +362,16 @@ All configuration is read from the environment (`settings/config.py`) with safe 
 | `QDRANT_API_KEY` | Qdrant auth | str | `None` | ⬜ |
 | `SEAWEEDFS_FILER_URL` / `SEAWEEDFS_MASTER_URL` | SeaweedFS endpoints | str | `http://localhost:8333` | ⬜ |
 | `SEAWEEDFS_BUCKET` | Storage bucket | str | `xplagiax-users-documents` | ⬜ |
-| `AI_TEXT_SERVICE_URL` | AI detection endpoint | str | `http://localhost:5006/analyze_document_async` | ✅ |
+| `AI_TEXT_SERVICE_URL` (or `XPLAGIAX_URL`) | AI detection endpoint | str | `http://localhost:5006/analyze_document_async` | ✅ |
 | `AI_TEXT_SERVICE_API_KEY` | AI service key | str | *(default key)* | ✅ |
-| `FINDERX_SERVICE_BASE` | FinderX base URL | str | `http://localhost:8000` | ✅ |
-| `FINDERX_SERVICE_API_KEY` | FinderX key | str | *(default key)* | ✅ |
+| `AI_SERVICE_MODE` | `sync` (inline, no worker) or `async` (worker + poll) | str | `sync` | ⬜ |
+| `FINDERX_SERVICE_BASE` (or `FINDERX_URL`) | FinderX base URL | str | `http://localhost:8000` | ✅ |
+| `FINDERX_SERVICE_API_KEY` (or `FINDERX_API_KEY`) | FinderX key | str | *(default key)* | ✅ |
 | `FINDERX_POLL_INTERVAL` / `FINDERX_POLL_TIMEOUT` | Polling tuning (s) | float | `1.5` / `90` | ⬜ |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP credentials | str | *(dev default)* | ✅ (email) |
-| `GOOGLE_REDIRECT_URI` / `MICROSOFT_REDIRECT_URI` | OAuth callbacks | str | `localhost` callbacks | ✅ (OAuth) |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` … (`ONEDRIVE_*`, `DROPBOX_*`, `BOX_*`) | OAuth credentials | str | *(defaults)* | ⬜ |
+| `GOOGLE_REDIRECT_URI` / `MICROSOFT_REDIRECT_URI` | OAuth callbacks (must match the provider console exactly) | str | `localhost` callbacks | ✅ (OAuth) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` … (`ONEDRIVE_*`, `DROPBOX_*`, `BOX_*`) | OAuth credentials (shared with marktrack — register both redirect URIs) | str | *(defaults)* | ⬜ |
+| `OAUTH_RELAX_STATE` | ⚠️ Temporary: skip OAuth `state` (CSRF) check when the session cookie doesn't persist. Set `false` once login is stable. | bool | `true` | ⬜ |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | Stripe | str | `""` | ⬜ |
 | `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` / `PAYPAL_MODE` / `PAYPAL_WEBHOOK_ID` | PayPal | str | *(defaults)* / `live` | ⬜ |
 | `SERPAPI_KEY` / `ZENSERP_KEY` | Web-search providers | str | *(defaults)* | ⬜ |
@@ -509,6 +558,9 @@ pytest --cov=modules --cov-report=term-missing   # coverage
 | Worker fails to boot — DB error | Wrong `DATABASE_URL` / MySQL not on `xplagiax-net` | Use container name `mysql-container`, not `localhost` |
 | FinderX returns `504` | Upstream slow / timeout | Increase `FINDERX_POLL_TIMEOUT` |
 | AI/Source analysis `502` | Sibling service down | Check `xplagiax-xota` / `xplagiax_finderx_api` containers |
+| AI analysis stuck — status `pending` forever | xota has no Celery worker; `async` jobs never run | Use `AI_SERVICE_MODE=sync` (default) — uses the inline `/analyze_document` endpoint |
+| Google login loops back to `/login` | Shared OAuth client; `app.xplagiax.ca` redirect URI not registered, **or** session `state` lost | Register the redirect URI in Google Cloud Console; keep `SECRET_KEY` fixed; temp bypass via `OAUTH_RELAX_STATE=true` |
+| Logout redirects to `127.0.0.1:5000` | Stale cached `logout.js` / missing ProxyFix | Hard-refresh (`/static` is cached 1y); ProxyFix is enabled in `app.py` |
 | Healthcheck unhealthy | `curl` missing or wrong port | Image ships `curl`; ensure probe hits `:5003/test_alive` |
 
 ---
@@ -522,6 +574,11 @@ pytest --cov=modules --cov-report=term-missing   # coverage
 - [ ] Move all secrets out of `config.py` defaults and rotate exposed keys
 - [ ] Test coverage ≥ 80%
 - [ ] OpenAPI/Swagger spec for the public API
+- [x] AI/FinderX split-view, integrity card, tabs & segment highlighting
+- [x] FinderX false-positive (thematic vs direct-copy) detection
+- [ ] Analysis tabs: **Style Analysis** (`stylometric_analysis`) & **References Integrity** (`citation_check`)
+- [ ] Overview **alert cards** linking to each analysis tab
+- [ ] Re-enable strict OAuth `state` once login is stable (`OAUTH_RELAX_STATE=false`)
 
 ---
 
