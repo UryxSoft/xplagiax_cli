@@ -652,6 +652,79 @@ body.xp-file-preview .mode-switch-container {
 .xpa-corpus-list{display:flex;flex-direction:column;gap:8px}
 .xpa-corpus-src{position:relative;border-radius:9px;background:rgba(0,0,0,.02);border:1px solid rgba(0,0,0,.06);padding:10px 12px;font-size:0.8rem}
 .xpa-corpus-best{display:inline-block;font-size:0.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#b45309;background:#fde68a66;border:1px solid #f59e0b55;border-radius:6px;padding:1px 6px;margin-bottom:5px}
+.xpa-corpus-sim{display:inline-block;font-size:0.62rem;font-weight:800;letter-spacing:.04em;border:1px solid;border-radius:6px;padding:1px 6px;margin:0 0 5px 5px}
+
+/* ════════════════ Sidebar estilo xplagiax_marktrack (dark glass) ════════════════ */
+.ai-split-right.xpa-mt{background:#0d1119;padding:0;display:flex;flex-direction:column;overflow:hidden;--glass-bdr:rgba(255,255,255,0.1)}
+.xpa-mt .analysis-panels{width:100%;height:100%;display:flex;flex-direction:column;background:transparent;overflow:hidden}
+.xpa-mt .tabs{display:flex;border-bottom:1px solid rgba(255,255,255,0.1);background:transparent;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.xpa-mt .tabs::-webkit-scrollbar{display:none}
+.xpa-mt .tab{flex:1;padding:14px 10px;border:none;background:transparent;font-size:15px;color:rgba(255,255,255,0.4);cursor:pointer;white-space:nowrap;transition:all .2s ease;border-bottom:2px solid transparent}
+.xpa-mt .tab:hover{color:rgba(255,255,255,0.9);background:rgba(255,255,255,0.03)}
+.xpa-mt .tab.active{color:#3b82f6;background:rgba(59,130,246,0.1);border-bottom-color:#3b82f6}
+.xpa-mt .tab-content{flex:1;overflow-y:auto;padding:16px 18px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.15) transparent}
+.xpa-mt .tab-content::-webkit-scrollbar{width:5px}
+.xpa-mt .tab-content::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:4px}
+.xpa-mt .tab-panel{display:none;animation:mtFade .3s ease}
+.xpa-mt .tab-panel.active{display:block}
+@keyframes mtFade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.xpa-mt h2{font-size:18px;font-weight:600;color:#fff;margin:8px 0 16px}
+.xpa-mt h3{font-size:15px;font-weight:600;color:#fff;margin:0 0 12px}
+.xpa-mt h4{font-size:13px;font-weight:600;color:rgba(255,255,255,0.7);margin:0 0 10px}
+.xpa-mt p{font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5;margin:0 0 12px}
+.xpa-mt .alert-cards{display:flex;flex-direction:column;gap:12px;margin-bottom:8px}
+.xpa-mt .alert-card{display:flex;gap:14px;padding:14px;align-items:center;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);transition:transform .2s ease,background .2s ease}
+.xpa-mt .alert-card:hover{background:rgba(255,255,255,0.06);transform:translateY(-2px)}
+.xpa-mt .alert-high{border-left:4px solid #ef4444}
+.xpa-mt .alert-medium{border-left:4px solid #3b82f6}
+.xpa-mt .alert-icon{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.07);flex-shrink:0;font-size:17px;color:rgba(255,255,255,0.7)}
+.xpa-mt .alert-high .alert-icon{background:rgba(239,68,68,0.18);color:#f87171}
+.xpa-mt .alert-medium .alert-icon{background:rgba(59,130,246,0.18);color:#93c5fd}
+.xpa-mt .alert-content{display:grid;grid-template-areas:"title button" "text button";grid-template-columns:1fr auto;align-items:center;column-gap:12px;row-gap:2px;width:100%}
+.xpa-mt .alert-content h3{grid-area:title;font-size:14px;font-weight:600;color:#fff;margin:0;line-height:1.2}
+.xpa-mt .alert-content p{grid-area:text;font-size:12px;color:rgba(255,255,255,0.5);margin:0;line-height:1.4}
+.xpa-mt .btn-link{grid-area:button;justify-self:end;font-size:12px;font-weight:700;color:#93c5fd;background:rgba(147,197,253,0.12);border:1px solid rgba(147,197,253,0.3);cursor:pointer;display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;transition:all .2s ease;white-space:nowrap}
+.xpa-mt .btn-link:hover{background:rgba(147,197,253,0.22);color:#bfdbfe;border-color:rgba(147,197,253,0.5)}
+.xpa-mt .integrity-score{background:rgba(255,255,255,0.03);border:1px solid var(--glass-bdr);border-radius:14px;padding:20px;margin-bottom:16px}
+.xpa-mt .score-meter{height:12px;background:rgba(255,255,255,0.08);border-radius:20px;position:relative;overflow:hidden;margin:16px 0}
+.xpa-mt .score-fill{height:100%;border-radius:20px;transition:width .8s cubic-bezier(.34,1.56,.64,1)}
+.xpa-mt .score-fill-low{background:linear-gradient(90deg,#ef4444,#f87171);box-shadow:0 0 12px rgba(239,68,68,0.3)}
+.xpa-mt .score-fill-medium{background:linear-gradient(90deg,#f59e0b,#fbbf24);box-shadow:0 0 12px rgba(245,158,11,0.3)}
+.xpa-mt .score-fill-high{background:linear-gradient(90deg,#10b981,#34d399);box-shadow:0 0 12px rgba(16,185,129,0.3)}
+.xpa-mt .score-value{position:absolute;right:0;top:-24px;font-size:13px;font-weight:700;color:#fff}
+.xpa-mt .score-breakdown{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:12px}
+.xpa-mt .score-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:12px;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:6px 10px;flex:1 1 auto;min-width:90px}
+.xpa-mt .score-item span:last-child{font-size:11px;font-weight:700;color:rgba(255,255,255,0.85)}
+.xpa-mt .score-badge{font-weight:700;padding:4px 10px;border-radius:8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.xpa-mt .score-low{color:#f87171;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.2)}
+.xpa-mt .score-medium{color:#fbbf24;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.2)}
+.xpa-mt .score-high{color:#34d399;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.2)}
+.xpa-mt .ai-probability{display:flex;align-items:center;gap:24px;padding:24px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-bdr);border-radius:16px;margin-bottom:20px}
+.xpa-mt .probability-label strong{font-size:16px;font-weight:700;color:#fff;display:block;margin-bottom:4px}
+.xpa-mt .probability-label p{font-size:13px;color:rgba(255,255,255,0.5);margin:0}
+.xpa-mt .section-breakdown{overflow-x:auto;margin-top:16px}
+.xpa-mt .analysis-table{width:100%;border-collapse:separate;border-spacing:0 8px;font-size:13px}
+.xpa-mt .analysis-table th{text-align:left;padding:10px 14px;color:rgba(255,255,255,0.4);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.1em}
+.xpa-mt .analysis-table td{padding:14px;color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.05)}
+.xpa-mt .analysis-table tr td:first-child{border-radius:12px 0 0 12px;border-left:1px solid rgba(255,255,255,0.05)}
+.xpa-mt .analysis-table tr td:last-child{border-radius:0 12px 12px 0;border-right:1px solid rgba(255,255,255,0.05)}
+.xpa-mt .analysis-table tr:hover td{background:rgba(255,255,255,0.06);color:#fff}
+.xpa-mt .analysis-table tr.score-low td:first-child{border-left:4px solid #f87171}
+.xpa-mt .analysis-table tr.score-medium td:first-child{border-left:4px solid #fbbf24}
+.xpa-mt .analysis-table tr.score-high td:first-child{border-left:4px solid #34d399}
+.xpa-mt .insight-box{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);padding:16px;border-radius:12px;margin-bottom:20px}
+.xpa-mt .insight-box p{font-size:13px;line-height:1.5;color:rgba(255,255,255,0.8);margin:0}
+.xpa-mt .references-list{margin-top:20px}
+.xpa-mt .references-list h4{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,0.4);margin-bottom:12px}
+.xpa-mt .reference-item{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px 14px;margin-bottom:8px;position:relative}
+.xpa-mt .reference-item .ref-status{position:absolute;top:10px;right:12px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:2px 6px;border-radius:4px}
+.xpa-mt .reference-item.verified .ref-status{background:rgba(16,185,129,0.15);color:#10b981}
+.xpa-mt .reference-item.unverified .ref-status{background:rgba(239,68,68,0.15);color:#ef4444}
+.xpa-mt .reference-item p{font-size:12px;color:rgba(255,255,255,0.7);margin:0;padding-right:70px;line-height:1.4}
+.xpa-mt .empty-state{text-align:center;padding:40px 20px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);border-radius:12px;margin-top:20px}
+.xpa-mt .empty-state p{font-size:14px;font-weight:600;color:rgba(255,255,255,0.6);margin:0 0 4px}
+.xpa-mt .empty-state small{font-size:12px;color:rgba(255,255,255,0.3)}
+.xpa-mt .ar-arc{transition:stroke-dashoffset .9s cubic-bezier(.34,1.56,.64,1)}
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
   <symbol id="i-human" viewBox="0 0 24 24"><circle cx="12" cy="7.6" r="4.3"/><path d="M3.6 21.2c0-4.2 3.9-6.9 8.4-6.9s8.4 2.7 8.4 6.9a.9.9 0 0 1-.9.9H4.5a.9.9 0 0 1-.9-.9z"/></symbol>
@@ -2582,6 +2655,7 @@ body.xp-file-preview .mode-switch-container {
                 this.showError('Please enter at least 10 words to analyze.');
                 return;
             }
+            this._analyzedText = text;   // guardado para similitud real con fuentes
             const wantAi = types.includes('detect_ai');
             const wantSource = types.includes('search_source');
             if (!wantAi && !wantSource) {
@@ -2603,14 +2677,13 @@ body.xp-file-preview .mode-switch-container {
                     const sourceResult = srcSettled.status === 'fulfilled' ? srcSettled.value : null;
                     hideCustomLoadingOnDiv('inputWrapper');
 
-                    if (aiResult && sourceResult) {
-                        this._enterCombinedSplitMode(text, aiResult, sourceResult);
-                    } else if (aiResult) {
-                        this.showError('FinderX failed: ' + (srcSettled.reason && srcSettled.reason.message || 'unknown error'));
-                        this._enterSplitMode(text, aiResult);
-                    } else if (sourceResult) {
-                        this.showError('AI detection failed: ' + (aiSettled.reason && aiSettled.reason.message || 'unknown error'));
-                        this._enterSourceSplitMode(text, sourceResult);
+                    if (aiResult || sourceResult) {
+                        if (aiResult && !sourceResult) {
+                            this.showError('FinderX failed: ' + (srcSettled.reason && srcSettled.reason.message || 'unknown error'));
+                        } else if (sourceResult && !aiResult) {
+                            this.showError('AI detection failed: ' + (aiSettled.reason && aiSettled.reason.message || 'unknown error'));
+                        }
+                        this._enterMarktrackView(text, aiResult, sourceResult);
                     } else {
                         const reason = (aiSettled.reason && aiSettled.reason.message)
                             || (srcSettled.reason && srcSettled.reason.message) || 'unknown error';
@@ -2619,11 +2692,11 @@ body.xp-file-preview .mode-switch-container {
                 } else if (wantAi) {
                     const result = await this._fetchAiResult(text);
                     hideCustomLoadingOnDiv('inputWrapper');
-                    this._enterSplitMode(text, result);
+                    this._enterMarktrackView(text, result, null);
                 } else {
                     const result = await this._fetchSourceResult(text);
                     hideCustomLoadingOnDiv('inputWrapper');
-                    this._enterSourceSplitMode(text, result);
+                    this._enterMarktrackView(text, null, result);
                 }
             } catch (error) {
                 hideCustomLoadingOnDiv('inputWrapper');
@@ -2684,7 +2757,14 @@ body.xp-file-preview .mode-switch-container {
                 message = `<strong>Predominantly human-written.</strong> ${humanScore}% of the content demonstrates authentic human authorship.`;
             }
 
-            return { ai_score: aiScore, human_score: humanScore, word_count: wordCount, message, blocks };
+            // Datos extra para los tabs estilo marktrack (Style / References).
+            const styl = root && root.results && root.results.stylometric_analysis;
+            const stylometric = (styl && (styl.data || styl)) || null;
+            const cit = root && root.results && root.results.citation_check;
+            const citation = (cit && (cit.data || cit)) || null;
+
+            return { ai_score: aiScore, human_score: humanScore, word_count: wordCount,
+                     message, blocks, detected_model: detectedModel, stylometric, citation };
         }
 
         // ─── FinderX (source / plagiarism search) ──────────────────────────────────
@@ -2722,6 +2802,124 @@ body.xp-file-preview .mode-switch-container {
             if (overall >= 50) return { text: 'High similarity', color: '#f43f5e' };
             if (overall >= 25) return { text: 'Moderate similarity', color: '#f59e0b' };
             return { text: 'Mostly original', color: '#10b981' };
+        }
+
+        // ── Similitud REAL de texto (no la del servicio) ────────────────────────────
+        // Detecta copia DIRECTA: fracción de los n-gramas del snippet que aparecen en
+        // el texto. Alto = copia textual; bajo = solo solapamiento temático/vocabulario.
+        // Normaliza texto y genera shingles (n-gramas de palabras).
+        // k=3 para mayor tolerancia a variaciones menores de redacción entre fuentes.
+        _shingleSet(t, k = 3) {
+            const norm = String(t || '').toLowerCase()
+                .replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/g, ' ')
+                .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+            const w = norm ? norm.split(' ') : [];
+            const set = new Set();
+            for (let i = 0; i + k <= w.length; i++) set.add(w.slice(i, i + k).join(' '));
+            return set;
+        }
+        // Normaliza texto a string limpio para comparación a nivel de carácter.
+        _normText(t) {
+            return String(t || '').toLowerCase()
+                .replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/g, ' ')
+                .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+        // LCS ratio: proporción de la subsecuencia común más larga sobre el texto
+        // más corto. Detecta copias con reordenación menor / inserciones.
+        _lcsRatio(a, b) {
+            const na = this._normText(a), nb = this._normText(b);
+            if (!na || !nb) return 0;
+            const wa = na.split(' '), wb = nb.split(' ');
+            const m = wa.length, n = wb.length;
+            if (!m || !n) return 0;
+            // Optimización: solo dos filas del DP.
+            let prev = new Uint16Array(n + 1), curr = new Uint16Array(n + 1);
+            for (let i = 1; i <= m; i++) {
+                for (let j = 1; j <= n; j++) {
+                    curr[j] = wa[i - 1] === wb[j - 1]
+                        ? prev[j - 1] + 1
+                        : Math.max(prev[j], curr[j - 1]);
+                }
+                [prev, curr] = [curr, prev];
+                curr.fill(0);
+            }
+            return prev[n] / Math.min(m, n);   // 0..1
+        }
+        // Containment BIDIRECCIONAL + fallback LCS para textos cortos.
+        // Devuelve un score 0..1 que representa cuánto del texto aparece en la fuente.
+        _textContainment(a, b) {
+            const sa = this._shingleSet(a), sb = this._shingleSet(b);
+            // Containment en ambas direcciones: max(a⊆b, b⊆a)
+            let shingleSim = 0;
+            if (sa.size && sb.size) {
+                let abInter = 0, baInter = 0;
+                sa.forEach(x => { if (sb.has(x)) abInter++; });
+                sb.forEach(x => { if (sa.has(x)) baInter++; });
+                const abC = abInter / sa.size;   // fracción de a contenida en b
+                const baC = baInter / sb.size;   // fracción de b contenida en a
+                shingleSim = Math.max(abC, baC);
+            }
+            // Fallback LCS para textos cortos (<80 palabras) donde los shingles
+            // son escasos y variaciones menores de redacción matan la similitud.
+            const wordCount = Math.min(
+                String(a || '').split(/\s+/).length,
+                String(b || '').split(/\s+/).length
+            );
+            if (wordCount < 80) {
+                const lcs = this._lcsRatio(a, b);
+                return Math.max(shingleSim, lcs);
+            }
+            return shingleSim;
+        }
+        // Atribución de fuente: similitud REAL de `text` con cada snippet (rellena
+        // m._sim) y elige la fuente ORIGINAL. Cuando un mismo pasaje aparece en varias
+        // fuentes (cita de cita), la original es la más antigua → se prefiere por año.
+        // Además, si el título de una fuente coincide con el texto analizado, se da
+        // prioridad a esa fuente como la original.
+        _attributeAcademic(text, academic) {
+            const arr = Array.isArray(academic) ? academic : [];
+            const fullText = this._analyzedText || text || '';
+            let maxSim = 0;
+            arr.forEach(m => {
+                // Comparar snippet con el texto del fragmento Y con el texto completo;
+                // usar el MAYOR de ambos para no perder copias cuando el fragmento es
+                // un trozo pequeño del texto completo.
+                const simFrag = this._textContainment(text, m.snippet || '');
+                const simFull = (text !== fullText)
+                    ? this._textContainment(fullText, m.snippet || '')
+                    : simFrag;
+                m._sim = Math.max(simFrag, simFull);
+                if (m._sim > maxSim) maxSim = m._sim;
+            });
+            if (maxSim <= 0) return { best: null, bestSim: 0 };
+            // Umbral SAME más bajo: incluir fuentes con al menos 60% del score máximo
+            // (antes era min(0.5, max), que excluía fuentes con redacción ligeramente
+            // distinta en su snippet).
+            const SAME = maxSim * 0.60;
+            // Detectar si alguna fuente tiene un título que aparece en el texto
+            // analizado — fuerte indicador de que ES la fuente original.
+            const fullNorm = this._normText(fullText);
+            let best = null;
+            arr.forEach(m => {
+                if ((m._sim || 0) < SAME) return;
+                if (!best) { best = m; return; }
+                // Priorizar fuente cuyo título aparece textualmente en el texto.
+                const mTitleInText = m.title && fullNorm.includes(this._normText(m.title));
+                const bTitleInText = best.title && fullNorm.includes(this._normText(best.title));
+                if (mTitleInText && !bTitleInText) { best = m; return; }
+                if (bTitleInText && !mTitleInText) return;
+                // Prefiere el año más antiguo (fuente original).
+                const y = Number(m.year) || 9999, by = Number(best.year) || 9999;
+                if (y < by) { best = m; return; }
+                if (y === by && (m._sim || 0) > (best._sim || 0)) best = m;
+            });
+            // bestSim = la MAYOR similitud encontrada (no la de best, que puede
+            // ser la fuente original con un snippet ligeramente distinto).
+            return { best, bestSim: maxSim };
+        }
+        // Mejor coincidencia para el texto analizado completo.
+        _bestAcademic(academic) {
+            return this._attributeAcademic(this._analyzedText || '', academic);
         }
 
         // ── Integrity glass card (gauge multi-anillo) — compartida AI / FinderX ──
@@ -2873,21 +3071,20 @@ body.xp-file-preview .mode-switch-container {
             const confidence = scores.confidence || 'n/a';
             const lbl = this._sourceLabel(overall);
 
-            // ── Lógica de marktrack: distinguir similitud SEMÁNTICA (falso positivo)
-            //    de copia DIRECTA. Si hay fuentes académicas pero TODOS los fragmentos
-            //    son originales (0% directo) → es solapamiento temático, no plagio. ──
-            const _frags = Array.isArray(result.fragment_decisions) ? result.fragment_decisions : [];
+            // ── Veredicto por SIMILITUD REAL del texto con los snippets académicos. ──
+            //    Esto corrige el caso en que FinderX reporta los fragmentos como
+            //    "originales" (sim=0) pero la fuente académica es idéntica (copia real).
             const _academic = Array.isArray(result.academic_matches) ? result.academic_matches : [];
-            const allOriginal = _frags.length > 0 && _frags.every(f => {
-                const dec = String(f.decision || '').toLowerCase();
-                return dec.includes('original') || dec.includes('insufici') || (Number(f.similarity_score) || 0) < 0.2;
-            });
-            const hasAcademicHits = _academic.some(m => (m.snippet || '').length > 30);
-            const falsePositive = allOriginal && hasAcademicHits && overall >= 20;
+            const { best, bestSim } = this._bestAcademic(_academic);
+            const directCopy = bestSim >= 0.25;      // umbral reducido: 25% de n-gramas = copia textual
+            const directPct = Math.round(bestSim * 100);
+            const bestTitle = best ? this._escapeHtml(best.title || 'the source below') : 'the source below';
 
             let message;
-            if (falsePositive) {
-                message = `<strong>Thematic overlap (${overall}%) — no direct copies.</strong> The similarity is <em>semantic</em> (shared vocabulary/topic), but all fragments are original (0% direct match). Likely a false positive — no citation required unless your text was derived from the sources below.`;
+            if (directCopy) {
+                message = `<strong>Direct match detected (${directPct}%).</strong> This text closely matches <em>“${bestTitle}”</em> — it appears to be copied. Cite the source or rewrite it.`;
+            } else if (bestSim > 0 && overall >= 20) {
+                message = `<strong>Thematic overlap (${overall}%) — no direct copies.</strong> The similarity is <em>semantic</em> (shared vocabulary/topic); no near-identical text was found. No citation required unless your text was derived from the sources below.`;
             } else if (overall >= 50) {
                 message = `<strong>High similarity detected.</strong> ${overall}% of the content matches external sources. Review the flagged fragments and citations below.`;
             } else if (overall >= 25) {
@@ -2900,11 +3097,13 @@ body.xp-file-preview .mode-switch-container {
             const frags = Array.isArray(result.fragment_decisions) ? result.fragment_decisions : [];
             const matches = Array.isArray(result.academic_matches) ? result.academic_matches : [];
             const coverage = Math.round(ca.citation_coverage || 0);
-            // "Coincidencias": fragmentos marcados como plagio/no original.
-            const flagged = frags.filter(f => {
+            // "Coincidencias": fragmentos marcados como plagio + fuentes con copia REAL.
+            const fragFlagged = frags.filter(f => {
                 const dec = String(f.decision || '').toLowerCase();
                 return dec.includes('plag') || (Number(f.similarity_score) || 0) >= 0.5;
             }).length;
+            const directMatches = _academic.filter(m => (m._sim || 0) >= 0.25).length;
+            const flagged = Math.max(fragFlagged, directMatches);
 
             const card = this._buildIntegrityCard({
                 title: 'Plagiarism Checker',
@@ -2925,20 +3124,36 @@ body.xp-file-preview .mode-switch-container {
             });
             const topicMeta = [];
             if (result.language) topicMeta.push(this._escapeHtml(String(result.language).toUpperCase()));
-            if (result.topic) topicMeta.push(this._escapeHtml(String(result.topic).replace(/_/g, ' ')));
-            const meta = topicMeta.length ? ` · ${topicMeta.join(' · ')}` : '';
-            return card + `<div class="score-message" style="margin:14px 16px 0">${message}${meta}</div>`;
+            if (result.topic && String(result.topic).toLowerCase() !== 'general') {
+                topicMeta.push(this._escapeHtml(String(result.topic).replace(/_/g, ' ')));
+            }
+            const metaLine = topicMeta.length
+                ? `<div style="font-size:0.72rem;color:#94a3b8;margin:4px 16px 0">${topicMeta.join(' · ')}</div>` : '';
+            return card + `<div class="score-message" style="margin:14px 16px 0">${message}</div>${metaLine}`;
         }
 
-        _buildFragmentBlockHtml(fr) {
+        _buildFragmentBlockHtml(fr, academic) {
             // ── Lógica coherente: el estado se deriva de similitud + cita + decisión ──
-            const sim = Math.round((Number(fr.similarity_score) || 0) * 100);
+            const rawSim = Math.round((Number(fr.similarity_score) || 0) * 100);
             const cited = !!fr.has_citation;
             const dec = String(fr.decision || '').toLowerCase();
             const isPlag = dec.includes('plag');
 
+            // Similitud REAL del fragmento con las fuentes académicas. Corrige el caso
+            // en que FinderX reporta sim=0 ("original") pero la fuente es idéntica.
+            const { best: acadBest, bestSim: acadSim } = this._attributeAcademic(fr.text_preview || '', academic);
+            const acadPct = Math.round(acadSim * 100);
+            const directAcad = acadSim >= 0.25;          // umbral reducido: 25% = copia textual
+            const sim = Math.max(rawSim, acadPct);       // similitud efectiva mostrada
+
             let status, color, explanation;
-            if (isPlag || (sim >= 50 && !cited)) {
+            if (directAcad && !cited) {
+                status = 'Plagio detectado'; color = '#f43f5e';
+                explanation = `Coincidencia textual del ${acadPct}% con una fuente académica, sin cita — copia directa.`;
+            } else if (directAcad && cited) {
+                status = 'Cita directa válida'; color = '#0A84FF';
+                explanation = `Texto casi idéntico (${acadPct}%) a una fuente académica, correctamente citado.`;
+            } else if (isPlag || (sim >= 50 && !cited)) {
                 status = 'Plagio detectado'; color = '#f43f5e';
                 explanation = `Coincidencia del ${sim}% sin cita — posible plagio.`;
             } else if (sim >= 50 && cited) {
@@ -2986,6 +3201,19 @@ body.xp-file-preview .mode-switch-container {
                 return `<div style="font-size:0.78rem;margin-top:6px;padding-left:9px;border-left:2px solid ${color}44">${titleHtml} <span style="color:#94a3b8">— ${pct}%</span>${compare}</div>`;
             }).join('');
 
+            // Si FinderX no trajo la fuente del fragmento pero hay copia textual real
+            // con una fuente académica, muéstrala (comparación lado a lado).
+            const acadCompareHtml = (directAcad && acadBest && !sources.some(s => s.text)) ? `
+                <div style="font-size:0.78rem;margin-top:6px;padding-left:9px;border-left:2px solid ${color}44">
+                    ${acadBest.title ? (acadBest.url || acadBest.doi
+                        ? `<a href="${this._escapeHtml(acadBest.doi ? 'https://doi.org/' + acadBest.doi : acadBest.url)}" target="_blank" rel="noopener noreferrer" style="color:#064CDB;text-decoration:none">${this._escapeHtml(acadBest.title)}</a>`
+                        : this._escapeHtml(acadBest.title)) : 'Academic source'} <span style="color:#94a3b8">— ${acadPct}%</span>
+                    <div class="xpa-cmp-label">Your text</div>
+                    <p class="xpa-cmp xpa-cmp-you">"${preview}"</p>
+                    <div class="xpa-cmp-label">Academic source</div>
+                    <p class="xpa-cmp xpa-cmp-src" style="border-color:${color}">"${this._escapeHtml(String(acadBest.snippet || '').slice(0, 240))}…"</p>
+                </div>` : '';
+
             return `
             <div class="analysis-block">
                 <div class="block-header">
@@ -3004,6 +3232,7 @@ body.xp-file-preview .mode-switch-container {
                 <div class="block-content">"${preview}"</div>
                 <div class="block-note">${explanation}</div>
                 ${sourcesHtml}
+                ${acadCompareHtml}
             </div>`;
         }
 
@@ -3073,28 +3302,31 @@ body.xp-file-preview .mode-switch-container {
             </div>`;
         }
 
-        // Aviso de falso positivo (similitud semántica, no copia) — lógica de marktrack.
+        // Aviso de fuentes académicas. Distingue COPIA DIRECTA (similitud textual real
+        // alta con un snippet) de solapamiento temático (vocabulario compartido).
         _buildCorpusWarning(result) {
             const overall = Math.round((result.scores || {}).overall || 0);
-            const frags = Array.isArray(result.fragment_decisions) ? result.fragment_decisions : [];
             const academic = Array.isArray(result.academic_matches) ? result.academic_matches : [];
-            const allOriginal = frags.length > 0 && frags.every(f => {
-                const dec = String(f.decision || '').toLowerCase();
-                return dec.includes('original') || dec.includes('insufici') || (Number(f.similarity_score) || 0) < 0.2;
-            });
             const hasHits = academic.some(m => (m.snippet || '').length > 30);
-            if (!(allOriginal && hasHits && overall >= 20)) return '';
+            if (!hasHits) return '';
 
-            // Dedup por URL/título y top 5 por longitud de snippet (como marktrack).
+            // Similitud REAL + atribución de la fuente ORIGINAL (rellena m._sim).
+            const { best, bestSim } = this._bestAcademic(academic);
+            const directCopy = bestSim >= 0.25;
+            if (!directCopy && overall < 20) return '';   // nada relevante que avisar
+
+            // Dedup por URL/título; la fuente atribuida va primero, resto por similitud.
             const seen = new Set();
             const top = academic.filter(m => {
                 const key = m.url || ((m.title || '') + '|' + ((m.authors && m.authors[0]) || ''));
                 if (seen.has(key)) return false; seen.add(key); return true;
             }).filter(m => (m.snippet || '').length > 30)
-              .sort((a, b) => (b.snippet ? b.snippet.length : 0) - (a.snippet ? a.snippet.length : 0))
+              .sort((a, b) => (a === best ? -1 : b === best ? 1 : 0)
+                    || ((b._sim || 0) - (a._sim || 0)) || ((b.snippet || '').length - (a.snippet || '').length))
               .slice(0, 5);
 
-            const items = top.map((m, i) => {
+            const accent = directCopy ? '#f43f5e' : '#f59e0b';
+            const items = top.map((m) => {
                 const title = this._escapeHtml(m.title || 'Source');
                 const doiUrl = m.doi ? `https://doi.org/${this._escapeHtml(m.doi)}` : (m.url ? this._escapeHtml(m.url) : null);
                 const titleHtml = doiUrl
@@ -3102,21 +3334,34 @@ body.xp-file-preview .mode-switch-container {
                     : `<span style="font-weight:600">${title}</span>`;
                 const authors = Array.isArray(m.authors) ? this._escapeHtml(m.authors.slice(0, 3).join(', ')) : '';
                 const meta = `${authors}${m.year ? ' · ' + this._escapeHtml(String(m.year)) : ''}${m.provider ? ' · ' + this._escapeHtml(m.provider) : ''}`;
+                const simPct = Math.round((m._sim || 0) * 100);
+                const simBadge = simPct >= 30
+                    ? `<span class="xpa-corpus-sim" style="background:${accent}1a;border-color:${accent}55;color:${accent}">${simPct}% match</span>`
+                    : '';
                 const snippet = this._escapeHtml(String(m.snippet || '').slice(0, 240));
                 return `<div class="xpa-corpus-src">
-                    ${i === 0 ? '<span class="xpa-corpus-best">Best match</span>' : ''}
+                    ${m === best ? `<span class="xpa-corpus-best" style="background:${accent}1a;border-color:${accent}55;color:${accent}">Best match · original source</span>` : ''}
+                    ${simBadge}
                     ${titleHtml}
                     <div style="font-size:0.74rem;color:#94a3b8;margin:2px 0 6px">${meta}</div>
                     <div class="xpa-cmp-label">Academic source</div>
-                    <p class="xpa-cmp xpa-cmp-src" style="border-color:#f59e0b">"${snippet}…"</p>
+                    <p class="xpa-cmp xpa-cmp-src" style="border-color:${accent}">"${snippet}…"</p>
                 </div>`;
             }).join('');
 
+            const directPct = Math.round(bestSim * 100);
+            const title = directCopy
+                ? `⚠ Direct match detected (${directPct}%) — likely copied`
+                : `⚠ Thematic overlap (${overall}%) — no direct copies detected`;
+            const desc = directCopy
+                ? `The text closely matches the highlighted source below (<strong>${directPct}% of phrasing in common</strong>). This is <strong>not original</strong> — cite the source or rewrite it in your own words.`
+                : `The corpus search found <strong>${overall}% semantic similarity</strong> (shared vocabulary/topic), but no near-identical passages were confirmed. Review the sources below to verify originality.`;
+
             return `
             <div class="results-content" style="padding:8px 16px 4px">
-                <div class="xpa-corpus-warn">
-                    <div class="xpa-corpus-title">⚠ Thematic overlap (${overall}%) — no direct copies detected</div>
-                    <p class="xpa-corpus-desc">The corpus search found <strong>${overall}% semantic similarity</strong> (shared vocabulary/topic), but all fragments are <strong>original</strong> (0% direct match). Likely a <em>false positive</em> — no citation required unless your text was derived from the sources below.</p>
+                <div class="xpa-corpus-warn" style="border-color:${accent}55;background:${directCopy ? '#fef2f2' : '#fffbeb'}">
+                    <div class="xpa-corpus-title" style="color:${directCopy ? '#b91c1c' : '#b45309'}">${title}</div>
+                    <p class="xpa-corpus-desc">${desc}</p>
                     <div class="xpa-corpus-list">${items}</div>
                 </div>
             </div>`;
@@ -3216,7 +3461,7 @@ body.xp-file-preview .mode-switch-container {
             requestAnimationFrame(() => {
                 overlay.classList.add('visible');
                 this._animateIntegrityCard(overlay);
-                this._streamFragments(fragments);
+                this._streamFragments(fragments, result.academic_matches);
             });
 
             document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
@@ -3238,7 +3483,7 @@ body.xp-file-preview .mode-switch-container {
             });
         }
 
-        _streamFragments(fragments) {
+        _streamFragments(fragments, academic) {
             const container = document.getElementById('finderxFragmentsContainer');
             if (!container) return;
             if (!fragments || !fragments.length) {
@@ -3248,13 +3493,417 @@ body.xp-file-preview .mode-switch-container {
             fragments.forEach((fr, i) => {
                 setTimeout(() => {
                     const wrap = document.createElement('div');
-                    wrap.innerHTML = this._buildFragmentBlockHtml(fr).trim();
+                    wrap.innerHTML = this._buildFragmentBlockHtml(fr, academic).trim();
                     const el = wrap.firstChild;
                     container.appendChild(el);
                     requestAnimationFrame(() => el.classList.add('slide-up'));
                 }, i * 80);
             });
         }
+        // ════════════════════════════════════════════════════════════════════════
+        // Vista estilo xplagiax_marktrack (documentedit): sidebar oscuro con tabs
+        // Overview · AI Detection · Style · References · Plagiarism.
+        // ════════════════════════════════════════════════════════════════════════
+        _mtNormalize(val, ideal, range) {
+            const diff = Math.abs((Number(val) || 0) - ideal);
+            return Math.max(0, 100 - (diff / range) * 100);
+        }
+        _mtRing(r, color, pct) {
+            const C = 2 * Math.PI * r;
+            const off = C * (1 - Math.max(0, Math.min(100, pct)) / 100);
+            return `<circle cx="70" cy="70" r="${r}" fill="none" stroke="${color}1a" stroke-width="10"/>`
+                 + `<circle class="ar-arc" cx="70" cy="70" r="${r}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}" data-final="${off.toFixed(1)}" transform="rotate(-90 70 70)"/>`;
+        }
+        _mtLegendRow(color, name, sub, pct) {
+            return `<div style="display:flex;align-items:center;gap:9px;">
+                <div style="width:7px;height:7px;border-radius:50%;background:${color};box-shadow:0 0 5px ${color};flex-shrink:0;"></div>
+                <div style="flex:1;min-width:0;overflow:hidden;"><span style="font-size:11.5px;font-weight:600;color:#fff;">${name}</span><span style="font-size:10px;color:rgba(255,255,255,0.35);margin-left:4px;">${sub}</span></div>
+                <span style="font-size:12px;font-weight:700;color:${color};font-variant-numeric:tabular-nums;flex-shrink:0;">${pct}%</span>
+            </div>`;
+        }
+        _mtGauge(pct, color) {
+            const r = 80, C = 2 * Math.PI * r, off = C * (1 - Math.max(0, Math.min(100, pct)) / 100);
+            return `<svg viewBox="0 0 200 200" style="width:100%;height:100%;filter:drop-shadow(0 0 8px ${color}55);">
+                <circle cx="100" cy="100" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="20"/>
+                <circle cx="100" cy="100" r="${r}" fill="none" stroke="${color}" stroke-width="20" stroke-linecap="round" stroke-dasharray="${C.toFixed(0)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 100 100)"/>
+                <text x="100" y="116" text-anchor="middle" style="font-size:48px;fill:${color};font-weight:800;">${pct}%</text>
+            </svg>`;
+        }
+        _mtStyleScore(d) {
+            if (!d) return null;
+            const s = this._mtNormalize(d.sentence_length_variance || 0, 20, 40) * 0.30
+                    + this._mtNormalize(d.burstiness || 0, 0, 0.8) * 0.25
+                    + this._mtNormalize(d.lexical_diversity || 0, 0.7, 0.4) * 0.25
+                    + this._mtNormalize(d.complex_sentence_ratio || 0, 0.4, 0.4) * 0.20;
+            const score = Math.round(s);
+            if (score >= 80) return { score, label: 'Highly Consistent', cls: 'score-high' };
+            if (score >= 60) return { score, label: 'Generally Consistent', cls: 'score-medium' };
+            if (score >= 40) return { score, label: 'Unusual Variance', cls: 'score-low' };
+            return { score, label: 'High Stylistic Irregularity', cls: 'score-low' };
+        }
+        _mtRefsScore(d) {
+            const total = (d && d.total_references) || 0;
+            if (!total) return { score: 0, total: 0, label: 'No References', cls: 'score-medium' };
+            const det = d.details || {};
+            const fab = (det.fabricated_ratio && det.fabricated_ratio.value) || 0;
+            const chi = (det.chimeric_ratio && det.chimeric_ratio.value) || 0;
+            const conf = (det.mean_confidence && det.mean_confidence.value) || 0;
+            let score = Math.max(0, Math.min(100, Math.round(100 - fab * 50 - chi * 30 - (100 - conf) * 0.2)));
+            let label, cls;
+            if (score >= 80) { label = 'Reliable'; cls = 'score-high'; }
+            else if (score >= 60) { label = 'Mostly Reliable'; cls = 'score-medium'; }
+            else if (score >= 40) { label = 'Needs Review'; cls = 'score-medium'; }
+            else { label = 'High Risk'; cls = 'score-low'; }
+            return { score, total, label, cls };
+        }
+
+        _buildMtOverview(ai, source) {
+            const aiPct = ai ? Math.round(ai.ai_score) : 0;
+            const humanPct = ai ? Math.round(ai.human_score) : 0;
+            const overall = source ? Math.round((source.scores || {}).overall || 0) : 0;
+            const originalPct = source ? Math.max(0, 100 - overall) : 0;
+            const coverage = source ? Math.round(((source.citation_analysis || {}).citation_coverage) || 0) : 0;
+            const copy = source ? this._bestAcademic(source.academic_matches) : { best: null, bestSim: 0 };
+            const copyPct = Math.round((copy.bestSim || 0) * 100);
+            const directCopy = (copy.bestSim || 0) >= 0.30;
+            const riskPct = Math.max(aiPct, directCopy ? copyPct : 0);
+            const risk = riskPct >= 50 ? { t: 'High Risk', c: '#ef4444' } : riskPct >= 25 ? { t: 'Medium Risk', c: '#f59e0b' } : { t: 'Low Risk', c: '#10b981' };
+
+            const rings = `<svg viewBox="0 0 140 140" style="width:140px;height:140px;flex-shrink:0;overflow:visible;">
+                ${this._mtRing(62, '#10b981', humanPct)}${this._mtRing(50, '#a78bfa', originalPct)}${this._mtRing(38, '#f59e0b', overall)}${this._mtRing(26, '#ef4444', aiPct)}${this._mtRing(14, '#3b82f6', coverage)}</svg>`;
+            const legend = `<div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;">
+                ${this._mtLegendRow('#10b981', 'Human', 'Written', humanPct)}
+                ${this._mtLegendRow('#a78bfa', 'Original', 'Unique', originalPct)}
+                ${this._mtLegendRow('#f59e0b', 'Similarity', 'Semantic', overall)}
+                ${this._mtLegendRow('#ef4444', 'AI', 'Generated', aiPct)}
+                ${this._mtLegendRow('#3b82f6', 'References', 'Citations', coverage)}</div>`;
+            const dist = `<div style="height:12px;border-radius:6px;overflow:hidden;display:flex;gap:1px;background:transparent;">
+                <div title="Human: ${humanPct}%" style="flex:${humanPct} 1 0%;background:#10b981;min-width:2px;"></div>
+                <div title="AI: ${aiPct}%" style="flex:${aiPct} 1 0%;background:#ef4444;min-width:2px;"></div>
+                <div title="Similarity: ${overall}%" style="flex:${overall} 1 0%;background:#f59e0b;min-width:2px;"></div></div>`;
+
+            const style = this._mtStyleScore(ai ? ai.stylometric : null);
+            const refs = this._mtRefsScore(ai ? ai.citation : null);
+            const alerts = [
+                { goto: 'ai', high: aiPct >= 50, icon: 'fa-microchip', title: 'AI-Generated Content', txt: ai ? `${aiPct}% of the text shows AI patterns` : 'AI detection not run', btn: 'View Details' },
+                { goto: 'style', high: !!(style && style.cls === 'score-low'), icon: 'fa-pen-nib', title: 'Style Analysis', txt: style ? style.label : 'Not analyzed', btn: 'View Style' },
+                { goto: 'refs', high: false, icon: 'fa-book-open', title: 'References Integrity', txt: refs.total ? refs.label : 'No references detected', btn: 'View References' },
+                { goto: 'plag', high: directCopy, icon: 'fa-copy', title: 'Plagiarism Report', txt: source ? (directCopy ? `${copyPct}% direct match — likely copied` : `${overall}% semantic — no direct copies`) : 'Not run', btn: 'View Report' },
+            ];
+            const alertCards = alerts.map(a => `
+                <div class="alert-card ${a.high ? 'alert-high' : 'alert-medium'}" style="border-left-color:${a.high ? '#ef4444' : '#3b82f6'};">
+                    <div class="alert-icon"><i class="fas ${a.icon}"></i></div>
+                    <div class="alert-content">
+                        <h3>${a.title}</h3><p>${a.txt}</p>
+                        <button class="btn-link" data-goto="${a.goto}">${a.btn}</button>
+                    </div>
+                </div>`).join('');
+
+            return `
+            <h3>Analysis Overview</h3>
+            <div class="integrity-score" style="padding:14px 16px;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:14px;">${rings}${legend}</div>
+            </div>
+            <div class="integrity-score">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <h4 style="margin:0;font-size:14px;font-weight:700;">Integrity Score</h4>
+                    <span class="score-badge" style="background:${risk.c}1a;color:${risk.c};border:1px solid ${risk.c};">${risk.t}</span>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:4px;"><span>Document Integrity Risk Level</span></div>
+                    <div class="score-meter" style="height:8px;margin:0;"><div style="height:100%;width:${Math.max(8, riskPct)}%;background:${risk.c};transition:width .6s;"></div></div>
+                </div>
+                <div>
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:4px;"><span>Integrity Distribution Sequence</span></div>
+                    ${dist}
+                </div>
+                <div style="display:flex;gap:12px;font-size:10px;margin-top:12px;flex-wrap:wrap;color:rgba(255,255,255,0.7);">
+                    <div style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#10b981;"></span> Human</div>
+                    <div style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></span> AI</div>
+                    <div style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#f59e0b;"></span> Similarity</div>
+                </div>
+            </div>
+            <div class="alert-cards">${alertCards}</div>`;
+        }
+
+        _buildMtAiPanel(ai) {
+            if (!ai) return '<div class="empty-state"><p>AI detection not run</p><small>Select “AI detection” and analyze.</small></div>';
+            const aiPct = Math.round(ai.ai_score);
+            const blocks = Array.isArray(ai.blocks) ? ai.blocks : [];
+            const rows = blocks.map((b, i) => {
+                const isAI = b.type === 'ai';
+                const aiProb = isAI ? b.confidence : Math.max(0, 100 - b.confidence);
+                const cls = aiProb >= 50 ? 'score-low' : aiProb >= 25 ? 'score-medium' : 'score-high';
+                const col = aiProb >= 50 ? '#f87171' : aiProb >= 25 ? '#fbbf24' : '#34d399';
+                const words = (b.text || '').trim().split(/\s+/).filter(Boolean).length;
+                const preview = this._escapeHtml((b.text || '').slice(0, 56));
+                return `<tr class="${cls}">
+                    <td>Section ${i + 1}<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px;">${preview}…</div></td>
+                    <td style="text-align:right;">${words}</td>
+                    <td style="text-align:right;color:${col};font-weight:700;">${aiProb}%</td>
+                </tr>`;
+            }).join('');
+            const lbl = aiPct >= 50 ? 'High AI concentration' : aiPct >= 25 ? 'Mixed content' : 'Predominantly human';
+            const col = aiPct >= 50 ? '#ef4444' : aiPct >= 25 ? '#f59e0b' : '#10b981';
+            return `
+            <h2>AI Detection Analysis</h2>
+            <div class="ai-probability" style="padding:18px;gap:18px;">
+                <div style="width:96px;height:96px;flex-shrink:0;">${this._mtGauge(aiPct, col)}</div>
+                <div class="probability-label"><strong>${lbl}</strong><p>${aiPct}% of the analyzed content shows AI-characteristic patterns.</p></div>
+            </div>
+            <div class="section-breakdown">
+                <h4>Section-by-Section Analysis</h4>
+                <table class="analysis-table"><thead><tr><th>Section</th><th style="text-align:right;">Words</th><th style="text-align:right;">AI Prob.</th></tr></thead>
+                <tbody>${rows || '<tr><td colspan="3" style="text-align:center;color:rgba(255,255,255,0.4);">No segments</td></tr>'}</tbody></table>
+            </div>`;
+        }
+
+        _buildMtStylePanel(ai) {
+            const d = ai ? ai.stylometric : null;
+            if (!d) return '<div class="empty-state"><p>Style analysis not available</p><small>Stylometric data was not returned for this text.</small></div>';
+            const s = this._mtStyleScore(d);
+            const q = (v, i, r) => { const sc = this._mtNormalize(v, i, r); return sc >= 80 ? 'High' : sc >= 50 ? 'Moderate' : 'Low'; };
+            let insight;
+            if (s.score >= 80) insight = 'The text maintains a very uniform style throughout, suggesting a cohesive writing process.';
+            else if (s.score >= 60) insight = 'The style is generally stable, though some minor variations in sentence structure are present.';
+            else if ((d.sentence_length_variance || 0) > 45) insight = 'Significant stylistic shifts detected. The variation in sentence length is unusually high, which may indicate different authors or sources.';
+            else if ((d.burstiness || 0) < -0.5) insight = 'The flow of the text is unusually mechanical. This lack of natural variation is often associated with non-human generation.';
+            else insight = 'Multiple stylistic inconsistencies detected. The writing patterns vary significantly between sections.';
+            const shift = ((d.sentence_length_variance || 0) > 35 || Math.abs(d.burstiness || 0) > 0.6);
+            const fillCls = 'score-fill-' + s.cls.split('-')[1];
+            return `
+            <h2>Style Analysis</h2>
+            <div class="integrity-score">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <h4 style="margin:0;font-size:14px;font-weight:700;">Stylistic Consistency</h4>
+                    <span class="score-badge ${s.cls}">${s.label}</span>
+                </div>
+                <div class="score-meter"><div class="score-value">${s.score}/100</div><div class="score-fill ${fillCls}" style="width:${s.score}%;"></div></div>
+                <div class="score-breakdown">
+                    <div class="score-item"><span>Vocabulary Variety</span><span>${q(d.lexical_diversity, 0.7, 0.4)}</span></div>
+                    <div class="score-item"><span>Structural Flow</span><span>${q(d.burstiness, 0, 0.8)}</span></div>
+                    <div class="score-item"><span>Grammatical Complexity</span><span>${q(d.complex_sentence_ratio, 0.4, 0.4)}</span></div>
+                </div>
+            </div>
+            <h4 style="margin:20px 0 12px;">Interpretive Insights</h4>
+            <div class="insight-box"><p>${insight}</p></div>
+            <div style="margin-top:20px;display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(0,0,0,0.2);border-radius:10px;border:1px solid rgba(255,255,255,0.05);">
+                <span style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.85);">Stylistic Shifts</span>
+                <span class="score-badge ${shift ? 'score-low' : 'score-high'}" style="font-size:10px;">${shift ? 'Detected' : 'Not Detected'}</span>
+            </div>`;
+        }
+
+        _buildMtRefsPanel(ai) {
+            const d = ai ? ai.citation : null;
+            const r = this._mtRefsScore(d);
+            const det = (d && d.details) || {};
+            const fab = (det.fabricated_ratio && det.fabricated_ratio.value) || 0;
+            const conf = (det.mean_confidence && det.mean_confidence.value) || 0;
+            const authLabel = fab <= 0.1 ? 'High' : fab <= 0.3 ? 'Moderate' : 'Low';
+            const verLabel = conf >= 70 ? 'High' : conf >= 40 ? 'Moderate' : 'Low';
+            const breakdown = r.total === 0
+                ? `<div class="score-item"><span>Authenticity</span><span style="color:rgba(255,255,255,0.2);">—</span></div>
+                   <div class="score-item"><span>Verification</span><span style="color:rgba(255,255,255,0.2);">—</span></div>
+                   <div class="score-item"><span>Usage Quality</span><span style="color:rgba(255,255,255,0.2);">—</span></div>`
+                : `<div class="score-item"><span>Authenticity</span><span>${authLabel}</span></div>
+                   <div class="score-item"><span>Verification</span><span>${verLabel}</span></div>
+                   <div class="score-item"><span>Usage Quality</span><span>${r.score >= 60 ? 'Good' : 'Fair'}</span></div>`;
+            let summary;
+            if (r.total === 0) summary = 'No references were found in this document. Consider adding sources to support your work.';
+            else if (r.score >= 80) summary = 'All references in this document appear to be valid and properly used.';
+            else if (r.score >= 60) summary = 'Most references appear reliable, but a few could not be fully verified.';
+            else if (fab > 0.3) summary = 'Significant risk detected: several references appear to be fabricated or non-existent.';
+            else summary = 'Low confidence: many sources could not be verified against academic databases.';
+            const refsArr = (d && Array.isArray(d.references)) ? d.references : [];
+            const list = refsArr.length
+                ? `<div class="references-list"><h4>Detected References</h4>${refsArr.slice(0, 20).map(rf => {
+                        const ok = (rf.verified === true) || String(rf.status || rf.validation_status || '').toLowerCase() === 'verified' || String(rf.validation_status || '').toLowerCase() === 'valid';
+                        const txt = this._escapeHtml(rf.text || rf.citation || rf.title || 'Reference');
+                        return `<div class="reference-item ${ok ? 'verified' : 'unverified'}"><span class="ref-status">${ok ? 'Verified' : 'Unverified'}</span><p>${txt}</p></div>`;
+                    }).join('')}</div>`
+                : `<div class="empty-state"><p>No references were found in this document.</p><small>Consider adding sources to support your work.</small></div>`;
+            const fillCls = 'score-fill-' + r.cls.split('-')[1];
+            return `
+            <h2>References Integrity</h2>
+            <div class="integrity-score">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <h4 style="margin:0;font-size:14px;font-weight:700;">Source Reliability</h4>
+                    <span class="score-badge ${r.cls}">${r.label}</span>
+                </div>
+                <div class="score-meter"><div class="score-value">${r.total === 0 ? '—/100' : r.score + '/100'}</div><div class="score-fill ${fillCls}" style="width:${r.total === 0 ? 0 : r.score}%;"></div></div>
+                <div class="score-breakdown">${breakdown}</div>
+            </div>
+            <div class="insight-box"><p>${summary}</p></div>
+            ${list}`;
+        }
+
+        _mtCorpusDark(academic, best, directCopy, copyPct, overall) {
+            const seen = new Set();
+            const top = academic.filter(m => {
+                const k = m.url || ((m.title || '') + '|' + ((m.authors && m.authors[0]) || ''));
+                if (seen.has(k)) return false; seen.add(k); return true;
+            }).filter(m => (m.snippet || '').length > 30)
+              .sort((a, b) => (a === best ? -1 : b === best ? 1 : 0) || ((b._sim || 0) - (a._sim || 0)) || ((b.snippet || '').length - (a.snippet || '').length))
+              .slice(0, 5);
+            const accent = directCopy ? '#f87171' : '#fbbf24';
+            const yourText = this._escapeHtml(String(this._analyzedText || '').slice(0, 180));
+            const cards = top.map(m => {
+                const isBest = m === best;
+                const title = this._escapeHtml(m.title || 'Source');
+                const doiUrl = m.doi ? ('https://doi.org/' + this._escapeHtml(m.doi)) : (m.url ? this._escapeHtml(m.url) : null);
+                const titleHtml = doiUrl
+                    ? `<a href="${doiUrl}" target="_blank" rel="noopener" style="font-size:12px;font-weight:700;color:#93c5fd;text-decoration:none;display:block;margin-bottom:4px;line-height:1.4;">${title}</a>`
+                    : `<span style="font-size:12px;font-weight:700;color:#fff;display:block;margin-bottom:4px;">${title}</span>`;
+                const authors = Array.isArray(m.authors) ? this._escapeHtml(m.authors.slice(0, 3).join(', ')) : '';
+                const simPct = Math.round((m._sim || 0) * 100);
+                const snippet = this._escapeHtml(String(m.snippet || '').slice(0, 200));
+                return `<div style="padding:12px 14px;border-radius:9px;background:${isBest ? 'rgba(239,68,68,0.07)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isBest ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.07)'};">
+                    ${isBest ? `<span style="font-size:9px;font-weight:800;letter-spacing:0.08em;color:${accent};text-transform:uppercase;display:block;margin-bottom:6px;">Best match · original source</span>` : ''}
+                    ${titleHtml}
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;align-items:center;">
+                        <span style="font-size:10px;color:rgba(255,255,255,0.5);">${authors}</span>
+                        ${m.year ? `<span style="font-size:10px;color:rgba(255,255,255,0.35);">· ${this._escapeHtml(String(m.year))}</span>` : ''}
+                        ${m.provider ? `<span style="font-size:9px;padding:1px 6px;border-radius:20px;background:rgba(99,102,241,0.15);color:#a5b4fc;border:1px solid rgba(99,102,241,0.25);">${this._escapeHtml(m.provider)}</span>` : ''}
+                        ${simPct >= 30 ? `<span style="font-size:9px;padding:1px 6px;border-radius:20px;background:${accent}22;color:${accent};border:1px solid ${accent}55;">${simPct}% match</span>` : ''}
+                    </div>
+                    <div style="margin-bottom:8px;"><span style="font-size:9px;font-weight:700;letter-spacing:0.06em;color:rgba(255,255,255,0.35);text-transform:uppercase;display:block;margin-bottom:3px;">Your text</span>
+                    <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.75);line-height:1.5;font-style:italic;border-left:2px solid rgba(255,255,255,0.2);padding-left:8px;">“${yourText}…”</p></div>
+                    <div><span style="font-size:9px;font-weight:700;letter-spacing:0.06em;color:rgba(255,255,255,0.35);text-transform:uppercase;display:block;margin-bottom:3px;">Academic source</span>
+                    <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.6);line-height:1.4;font-style:italic;border-left:2px solid ${accent};padding-left:8px;">“${snippet}…”</p></div>
+                </div>`;
+            }).join('');
+            const title = directCopy ? `Direct match detected (${copyPct}%) — likely copied` : `Thematic overlap (${overall}%) — no direct copies detected`;
+            const desc = directCopy
+                ? `The text closely matches the highlighted source below. This is <strong style="color:rgba(255,255,255,0.85);">not original</strong> — cite the source or rewrite it.`
+                : `The corpus search found <strong style="color:${accent};">${overall}% semantic similarity</strong> (shared vocabulary/topic), but no near-identical passages. Likely a <em>false positive</em>.`;
+            return `<div style="border-radius:12px;border:1px solid ${accent}66;background:${accent}12;padding:14px 16px;margin-bottom:16px;">
+                <div style="margin-bottom:10px;">
+                    <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:${accent};">${title}</p>
+                    <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.5);line-height:1.5;">${desc}</p>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;">${cards}</div>
+            </div>`;
+        }
+
+        _buildMtPlagPanel(source) {
+            if (!source) return '<div class="empty-state"><p>Plagiarism check not run</p><small>Select “Search sources” and analyze.</small></div>';
+            const overall = Math.round((source.scores || {}).overall || 0);
+            const conf = (source.scores || {}).confidence || 'n/a';
+            const academic = Array.isArray(source.academic_matches) ? source.academic_matches : [];
+            const { best, bestSim } = this._bestAcademic(academic);
+            const directCopy = (bestSim || 0) >= 0.30;
+            const copyPct = Math.round((bestSim || 0) * 100);
+            const gColor = (directCopy || overall >= 50) ? '#f87171' : overall >= 25 ? '#fbbf24' : '#34d399';
+            const head = `<div style="display:flex;align-items:center;gap:18px;margin-bottom:18px;">
+                <div style="width:80px;height:80px;flex-shrink:0;">${this._mtGauge(overall, gColor)}</div>
+                <div><strong style="color:${gColor};font-size:15px;">${directCopy ? 'Direct copy detected' : this._sourceLabel(overall).text}</strong>
+                <p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.5);">Confidence: <b style="color:rgba(255,255,255,0.8);">${this._escapeHtml(String(conf))}</b></p></div>
+            </div>`;
+            const body = academic.length
+                ? this._mtCorpusDark(academic, best, directCopy, copyPct, overall)
+                : '<div class="empty-state"><p>No academic matches found</p><small>Content appears original against the corpus.</small></div>';
+            return `<h2 style="margin-bottom:14px;">Plagiarism Checker</h2>${head}${body}`;
+        }
+
+        _wireMtTabs(overlay) {
+            const tabs = Array.from(overlay.querySelectorAll('.tabs .tab'));
+            const panels = Array.from(overlay.querySelectorAll('.tab-content .tab-panel'));
+            const content = overlay.querySelector('.tab-content');
+            const go = name => {
+                tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+                panels.forEach(p => p.classList.toggle('active', p.dataset.panel === name));
+                if (content) content.scrollTop = 0;
+            };
+            tabs.forEach(t => t.addEventListener('click', () => go(t.dataset.tab)));
+            overlay.addEventListener('click', e => {
+                const b = e.target.closest('[data-goto]');
+                if (b) { e.preventDefault(); go(b.dataset.goto); }
+            });
+        }
+        _animateMtRings(overlay) {
+            overlay.querySelectorAll('.ar-arc').forEach(arc => {
+                const f = arc.getAttribute('data-final');
+                if (f !== null) requestAnimationFrame(() => { arc.style.strokeDashoffset = f; });
+            });
+        }
+
+        _enterMarktrackView(text, ai, source) {
+            if (document.querySelector('.ai-split-view')) return;
+            const safeText = this._escapeHtml(text);
+            const aiPct = ai ? Math.round(ai.ai_score) : 0;
+            const overall = source ? Math.round((source.scores || {}).overall || 0) : 0;
+            const aiColor = aiPct >= 50 ? '#ef4444' : aiPct >= 25 ? '#f59e0b' : '#10b981';
+            const srcLbl = this._sourceLabel(overall);
+
+            const overlay = document.createElement('div');
+            overlay.id = 'aiAnalysisSplitView';
+            overlay.className = 'ai-split-view';
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-label', 'Analysis');
+            overlay.innerHTML = `
+                <div class="ai-split-topbar">
+                    <div class="ai-split-topbar-brand">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5 8.186 1.113zM15 4.239l-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/></svg>
+                        AI TestPro · FinderX
+                    </div>
+                    <div class="ai-split-topbar-sep"></div>
+                    <div class="ai-split-topbar-meta">
+                        ${ai ? `<span class="ai-split-meta-chip" style="color:${aiColor};border-color:${aiColor}33;background:${aiColor}0d">${aiPct}% AI</span>` : ''}
+                        ${source ? `<span class="ai-split-meta-chip" style="color:${srcLbl.color};border-color:${srcLbl.color}33;background:${srcLbl.color}0d">${overall}% match</span>` : ''}
+                    </div>
+                    <button class="ai-split-new-btn" id="aiSplitNewBtn" type="button">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        New Analysis
+                    </button>
+                </div>
+                <div class="ai-split-body">
+                    <div class="ai-split-left" id="aiSplitLeft">
+                        <div class="ai-split-panel-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" viewBox="0 0 16 16"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/></svg>
+                            Input Text
+                        </div>
+                        <div class="ai-split-text-content" id="aiSplitTextContent">${safeText}</div>
+                    </div>
+                    <div class="ai-split-resizer" id="aiSplitResizer"><div class="ai-split-resizer-handle"></div></div>
+                    <div class="ai-split-right xpa-mt" id="aiSplitRight">
+                        <div class="analysis-panels">
+                            <div class="tabs" role="tablist">
+                                <button class="tab active" data-tab="ov" type="button" title="Overview"><i class="fas fa-th-large"></i></button>
+                                <button class="tab" data-tab="ai" type="button" title="AI Detection"><i class="fas fa-microchip"></i></button>
+                                <button class="tab" data-tab="style" type="button" title="Style Analysis"><i class="fas fa-pen-nib"></i></button>
+                                <button class="tab" data-tab="refs" type="button" title="References Integrity"><i class="fas fa-book"></i></button>
+                                <button class="tab" data-tab="plag" type="button" title="Plagiarism"><i class="fas fa-shield-alt"></i></button>
+                            </div>
+                            <div class="tab-content">
+                                <div class="tab-panel active" data-panel="ov">${this._buildMtOverview(ai, source)}</div>
+                                <div class="tab-panel" data-panel="ai">${this._buildMtAiPanel(ai)}</div>
+                                <div class="tab-panel" data-panel="style">${this._buildMtStylePanel(ai)}</div>
+                                <div class="tab-panel" data-panel="refs">${this._buildMtRefsPanel(ai)}</div>
+                                <div class="tab-panel" data-panel="plag">${this._buildMtPlagPanel(source)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+            const mainContainer = document.querySelector('.main-container');
+            const _hide = id => { const el = typeof id === 'string' ? document.getElementById(id) : id; if (el) el.style.display = 'none'; };
+            _hide(mainContainer.querySelector('.header-section'));
+            _hide('inputWrapper'); _hide('optionsPanel'); _hide('statusMessage'); _hide('metrics');
+
+            document.body.classList.add('xp-split-active');
+            mainContainer.appendChild(overlay);
+            this._wireMtTabs(overlay);
+
+            requestAnimationFrame(() => {
+                overlay.classList.add('visible');
+                this._animateMtRings(overlay);
+                if (ai && Array.isArray(ai.blocks)) this._highlightSegments(ai.blocks);
+            });
+
+            document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
+            this._initSplitResizer();
+        }
+
         // ─── Combined view (AI detection + FinderX, tabbed) ────────────────────────
         _enterCombinedSplitMode(text, aiResult, sourceResult) {
             if (document.querySelector('.ai-split-view')) return;
@@ -3372,7 +4021,7 @@ body.xp-file-preview .mode-switch-container {
                 this._animateIntegrityCard(overlay);
                 this._highlightSegments(aiResult.blocks);
                 this._streamBlocks(aiResult.blocks);
-                this._streamFragments(fragments);
+                this._streamFragments(fragments, sourceResult.academic_matches);
             });
 
             document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
