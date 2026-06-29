@@ -1678,6 +1678,7 @@ body.xp-file-preview .mode-switch-container {
             this.setupBackButton();
             this.setupModeSwitch();
             this.setupAnalysisModal();
+            this.setupHistory();
             this.getSelectedAnalysisTypes();
 
             // AGREGAR ESTO:
@@ -3998,6 +3999,224 @@ body.xp-file-preview .mode-switch-container {
             });
         }
 
+        // ════════════════════════════════════════════════════════════════════════
+        // Historial de análisis (MySQL vía /x_doc/history) — texto + resultados.
+        // Solo planes Individual / Research Essentials / Institutes (gate en backend
+        // y en el nav-rail; aquí se refleja con this._historyEnabled).
+        // ════════════════════════════════════════════════════════════════════════
+        // Clona el resultado quitando campos pesados (abstract/full_text) — los paneles
+        // usan snippet/blocks, así que se re-renderiza idéntico ocupando mucho menos.
+        _trimResult(r) {
+            if (!r || typeof r !== 'object') return r;
+            const c = JSON.parse(JSON.stringify(r));
+            const slim = m => { if (m && typeof m === 'object') { delete m.full_text; delete m.abstract; } return m; };
+            if (Array.isArray(c.academic_matches)) c.academic_matches = c.academic_matches.slice(0, 12).map(slim);
+            if (Array.isArray(c.internet_matches)) c.internet_matches = c.internet_matches.slice(0, 8).map(slim);
+            return c;
+        }
+        _saveHistoryEntry(text, ai, source, citation) {
+            if (!this._historyEnabled) return;   // plan sin historial
+            try {
+                const payload = {
+                    text: String(text || '').slice(0, 15000),
+                    title: this._historyTitle(text),
+                    aiPct: ai ? Math.round(ai.ai_score) : null,
+                    overall: source ? Math.round((source.scores || {}).overall || 0) : null,
+                    cit: citation ? Math.round(Number(citation.citation_quality_score) || 0) : null,
+                    ai: ai ? this._trimResult(ai) : null,
+                    source: source ? this._trimResult(source) : null,
+                    citation: citation ? this._trimResult(citation) : null,
+                };
+                // CSRF lo inyecta el wrapper global de fetch (user_base.html).
+                fetch('/x_doc/history', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                }).catch(e => console.warn('[history] save failed', e));
+            } catch (e) { console.warn('[history] save failed', e); }
+        }
+        _historyTitle(text) {
+            const t = String(text || '').replace(/\s+/g, ' ').trim();
+            if (!t) return 'Untitled analysis';
+            const firstLine = t.split(/[.\n]/)[0].trim();
+            return (firstLine.length > 4 ? firstLine : t).slice(0, 80);
+        }
+        _relTime(ts) {
+            const s = Math.floor((Date.now() - ts) / 1000);
+            if (s < 60) return 'just now';
+            if (s < 3600) return Math.floor(s / 60) + 'm ago';
+            if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+            const d = Math.floor(s / 86400);
+            if (d === 1) return 'yesterday';
+            if (d < 7) return d + ' days ago';
+            return new Date(ts).toLocaleDateString();
+        }
+        _histGroup(ts) {
+            const d = Math.floor((Date.now() - ts) / 86400000);
+            if (d < 1) return 'Today';
+            if (d < 7) return 'Last 7 days';
+            if (d < 30) return 'This month';
+            return 'Older';
+        }
+
+        setupHistory() {
+            // El botón del nav-rail solo existe para planes con historial → gate.
+            const navBtn = document.getElementById('analysisHistoryNavBtn');
+            this._historyEnabled = !!navBtn;
+            this._histItems = [];
+            this._histFull = {};
+            if (navBtn) navBtn.addEventListener('click', e => { e.preventDefault(); this._openHistoryModal(); });
+
+            const modal = document.getElementById('analysisHistoryModal');
+            if (!modal) return;
+            const close = document.getElementById('histCloseBtn');
+            const clearAll = document.getElementById('histClearAll');
+            const search = document.getElementById('histSearchInput');
+            if (close) close.addEventListener('click', () => this._closeHistoryModal());
+            if (clearAll) clearAll.addEventListener('click', async () => {
+                if (!confirm('Clear all saved analyses?')) return;
+                try { await fetch('/x_doc/history', { method: 'DELETE' }); } catch (_) {}
+                this._histItems = []; this._histFull = {};
+                this._renderHistoryList('');
+            });
+            if (search) search.addEventListener('input', () => this._renderHistoryList(search.value));
+            modal.addEventListener('click', e => { if (e.target === modal) this._closeHistoryModal(); });
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape' && modal.style.display === 'flex') this._closeHistoryModal();
+            });
+        }
+        async _openHistoryModal() {
+            const modal = document.getElementById('analysisHistoryModal');
+            if (!modal) return;
+            const search = document.getElementById('histSearchInput');
+            if (search) search.value = '';
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            const listEl = document.getElementById('histListEl');
+            if (listEl) listEl.innerHTML = '<div class="xpa-hist-empty"><small>Loading…</small></div>';
+            try {
+                const r = await fetch('/x_doc/history');
+                const j = await r.json();
+                this._histItems = Array.isArray(j.items) ? j.items : [];
+            } catch (_) { this._histItems = []; }
+            this._histFull = {};
+            this._renderHistoryList('');
+            if (search) setTimeout(() => search.focus(), 50);
+        }
+        _closeHistoryModal() {
+            const modal = document.getElementById('analysisHistoryModal');
+            if (modal) modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        _renderHistoryList(filter) {
+            const listEl = document.getElementById('histListEl');
+            const prev = document.getElementById('histPreviewEl');
+            if (!listEl) return;
+            const q = String(filter || '').toLowerCase().trim();
+            const all = this._histItems || [];
+            const items = q ? all.filter(e => ((e.title || '') + ' ' + (e.preview || '')).toLowerCase().includes(q)) : all;
+
+            if (!items.length) {
+                listEl.innerHTML = `<div class="xpa-hist-empty">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+                    <div style="font-weight:600;color:#64748b">${all.length ? 'No matches' : 'No saved analyses yet'}</div>
+                    <small>${all.length ? 'Try another search.' : 'Run an analysis and it will appear here.'}</small>
+                </div>`;
+                if (prev) prev.innerHTML = '';
+                return;
+            }
+
+            const groups = {};
+            items.forEach(e => { const g = this._histGroup(e.ts); (groups[g] = groups[g] || []).push(e); });
+            const order = ['Today', 'Last 7 days', 'This month', 'Older'];
+            let html = '';
+            order.forEach(g => {
+                if (!groups[g]) return;
+                html += `<div class="xpa-hist-group-title">${g}</div>`;
+                groups[g].forEach(e => {
+                    const chips = [];
+                    if (e.aiPct != null) chips.push(`<span class="xpa-hist-chip" style="color:${e.aiPct >= 50 ? '#dc2626' : e.aiPct >= 25 ? '#b45309' : '#047857'};border-color:currentColor">${e.aiPct}% AI</span>`);
+                    if (e.overall != null) chips.push(`<span class="xpa-hist-chip" style="color:#b45309;border-color:#f59e0b55">${e.overall}% sim</span>`);
+                    if (e.cit != null) chips.push(`<span class="xpa-hist-chip" style="color:#064CDB;border-color:#064CDB44">cites ${e.cit}</span>`);
+                    html += `<div class="xpa-hist-item" data-id="${e.id}">
+                        <div class="xpa-hist-item-top">
+                            <span class="xpa-hist-item-title">${this._escapeHtml(e.title)}</span>
+                            <span class="xpa-hist-item-time">${this._relTime(e.ts)}</span>
+                        </div>
+                        ${chips.length ? `<div class="xpa-hist-chips">${chips.join('')}</div>` : ''}
+                    </div>`;
+                });
+            });
+            listEl.innerHTML = html;
+            listEl.querySelectorAll('.xpa-hist-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    listEl.querySelectorAll('.xpa-hist-item').forEach(x => x.classList.remove('active'));
+                    el.classList.add('active');
+                    this._previewHistory(el.dataset.id);
+                });
+            });
+            // Auto-seleccionar el primero.
+            const first = listEl.querySelector('.xpa-hist-item');
+            if (first) { first.classList.add('active'); this._previewHistory(first.dataset.id); }
+        }
+        // Trae la entrada completa (texto + resultados) con caché en memoria.
+        async _fetchHistoryFull(id) {
+            if (this._histFull[id]) return this._histFull[id];
+            try {
+                const r = await fetch(`/x_doc/history/${encodeURIComponent(id)}`);
+                if (!r.ok) return null;
+                const j = await r.json();
+                if (j && j.item) { this._histFull[id] = j.item; return j.item; }
+            } catch (_) {}
+            return null;
+        }
+        async _previewHistory(id) {
+            const prev = document.getElementById('histPreviewEl');
+            if (!prev) return;
+            prev.innerHTML = '<div class="xpa-hist-empty"><small>Loading…</small></div>';
+            const e = await this._fetchHistoryFull(id);
+            if (!e) { prev.innerHTML = '<div class="xpa-hist-empty"><small>Could not load this entry.</small></div>'; return; }
+            const stats = [];
+            if (e.aiPct != null) stats.push(['AI', e.aiPct + '%', e.aiPct >= 50 ? '#dc2626' : e.aiPct >= 25 ? '#b45309' : '#047857']);
+            if (e.overall != null) stats.push(['Similarity', e.overall + '%', '#b45309']);
+            if (e.cit != null) stats.push(['Citation quality', e.cit + '/100', '#064CDB']);
+            const statsHtml = stats.map(([l, v, c]) => `<div class="xpa-hist-stat"><div class="xpa-hist-stat-label">${l}</div><div class="xpa-hist-stat-value" style="color:${c}">${v}</div></div>`).join('');
+            prev.innerHTML = `
+                <h3 class="xpa-hist-preview-title">${this._escapeHtml(e.title)}</h3>
+                <div class="xpa-hist-preview-meta">${new Date(e.ts).toLocaleString()} · ${this._relTime(e.ts)}</div>
+                ${statsHtml ? `<div class="xpa-hist-stat-grid">${statsHtml}</div>` : ''}
+                <div class="xpa-hist-preview-text">${this._escapeHtml(String(e.text || '').slice(0, 2000))}${(e.text || '').length > 2000 ? '…' : ''}</div>
+                <div class="xpa-hist-actions">
+                    <button class="xpa-hist-open" id="histOpenBtn" type="button">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                        Open results
+                    </button>
+                    <button class="xpa-hist-del" id="histDelBtn" type="button">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        Delete
+                    </button>
+                </div>`;
+            const openBtn = document.getElementById('histOpenBtn');
+            const delBtn = document.getElementById('histDelBtn');
+            if (openBtn) openBtn.addEventListener('click', () => this._openHistoryEntry(e.id));
+            if (delBtn) delBtn.addEventListener('click', () => this._deleteHistory(e.id));
+        }
+        async _openHistoryEntry(id) {
+            const e = await this._fetchHistoryFull(id);
+            if (!e) return;
+            this._closeHistoryModal();
+            this._exitSplitMode();   // cierra cualquier vista abierta
+            this._analyzedText = e.text || '';
+            this._skipHistorySave = true;   // re-render sin re-guardar (evita duplicados)
+            setTimeout(() => this._enterMarktrackView(e.text || '', e.ai || null, e.source || null, e.citation || null), 60);
+        }
+        async _deleteHistory(id) {
+            try { await fetch(`/x_doc/history/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (_) {}
+            this._histItems = (this._histItems || []).filter(x => x.id !== id);
+            delete this._histFull[id];
+            const search = document.getElementById('histSearchInput');
+            this._renderHistoryList(search ? search.value : '');
+        }
+
         _enterMarktrackView(text, ai, source, citation) {
             if (document.querySelector('.ai-split-view')) return;
             const safeText = this._escapeHtml(text);
@@ -4075,6 +4294,11 @@ body.xp-file-preview .mode-switch-container {
 
             document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
             this._initSplitResizer();
+
+            // Guardar en el historial (texto + resultados) — salvo si venimos de reabrir
+            // una entrada del propio historial (evita duplicados).
+            if (this._skipHistorySave) { this._skipHistorySave = false; }
+            else { this._saveHistoryEntry(text, ai, source, citation); }
         }
 
         // ─── Combined view (AI detection + FinderX, tabbed) ────────────────────────
@@ -5500,6 +5724,60 @@ body.xp-file-preview .mode-switch-container {
                 </svg>
                 Accept
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- ─── Analysis History (command-menu style) ─────────────────────────────── -->
+<style id="xpa-hist-css">
+.xpa-hist-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.45);backdrop-filter:blur(2px);padding:16px}
+.xpa-hist-modal{background:#fff;border-radius:20px;width:min(1100px,calc(100dvw-32px));max-height:82dvh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,0.3);animation:xpaSlideUp .18s cubic-bezier(0.34,1.56,0.64,1)}
+.xpa-hist-head{display:flex;align-items:center;gap:10px;padding:0 16px;height:56px;border-bottom:1px solid #e6ebf2;flex-shrink:0}
+.xpa-hist-head svg.xpa-hist-search{color:#94a3b8;flex-shrink:0}
+.xpa-hist-head input{flex:1;border:none;outline:none;background:transparent;font-size:0.95rem;color:#0f172a}
+.xpa-hist-head input::placeholder{color:#94a3b8}
+.xpa-hist-clear{background:none;border:none;color:#94a3b8;font-size:0.74rem;font-weight:600;cursor:pointer;padding:4px 8px;border-radius:7px}
+.xpa-hist-clear:hover{color:#dc2626;background:#fef2f2}
+.xpa-hist-x{background:none;border:none;color:#9ca3af;font-size:0.95rem;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1}
+.xpa-hist-x:hover{background:#f3f4f6;color:#374151}
+.xpa-hist-body{display:grid;grid-template-columns:2fr 3fr;flex:1;min-height:0}
+.xpa-hist-list{overflow-y:auto;border-right:1px solid #e6ebf2;padding:10px;scrollbar-width:thin}
+.xpa-hist-group-title{font-size:0.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;padding:10px 10px 4px}
+.xpa-hist-item{display:flex;flex-direction:column;gap:3px;padding:9px 11px;border-radius:12px;cursor:pointer;transition:background .12s}
+.xpa-hist-item:hover{background:#f1f5f9}
+.xpa-hist-item.active{background:rgba(6,76,219,0.07)}
+.xpa-hist-item-top{display:flex;align-items:center;gap:8px}
+.xpa-hist-item-title{flex:1;min-width:0;font-size:0.84rem;font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xpa-hist-item-time{font-size:0.7rem;color:#94a3b8;flex-shrink:0}
+.xpa-hist-chips{display:flex;gap:5px;flex-wrap:wrap}
+.xpa-hist-chip{font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:20px;border:1px solid}
+.xpa-hist-preview{overflow-y:auto;padding:20px 22px;scrollbar-width:thin}
+.xpa-hist-preview-title{font-size:1.02rem;font-weight:700;color:#0f172a;margin:0 0 4px;line-height:1.3}
+.xpa-hist-preview-meta{font-size:0.74rem;color:#94a3b8;margin-bottom:14px}
+.xpa-hist-preview-text{font-size:0.82rem;line-height:1.6;color:#475569;background:#f8fafc;border:1px solid #e6ebf2;border-radius:12px;padding:14px;max-height:230px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.xpa-hist-stat-grid{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.xpa-hist-stat{flex:1 1 110px;background:#f8fafc;border:1px solid #e6ebf2;border-radius:10px;padding:9px 12px}
+.xpa-hist-stat-label{font-size:0.62rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}
+.xpa-hist-stat-value{font-size:1.15rem;font-weight:800}
+.xpa-hist-actions{display:flex;gap:10px;margin-top:18px}
+.xpa-hist-open{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#064CDB;color:#fff;border:none;border-radius:10px;padding:11px 16px;font-size:0.86rem;font-weight:700;cursor:pointer;transition:background .15s}
+.xpa-hist-open:hover{background:#0540b8}
+.xpa-hist-del{display:inline-flex;align-items:center;gap:6px;background:#fff;color:#dc2626;border:1px solid #fecaca;border-radius:10px;padding:11px 14px;font-size:0.82rem;font-weight:600;cursor:pointer}
+.xpa-hist-del:hover{background:#fef2f2}
+.xpa-hist-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94a3b8;text-align:center;padding:30px;gap:8px}
+@media(max-width:760px){.xpa-hist-body{grid-template-columns:1fr}.xpa-hist-preview{display:none}.xpa-hist-list{border-right:none}}
+</style>
+<div class="xpa-hist-overlay" id="analysisHistoryModal" style="display:none" role="dialog" aria-modal="true" aria-label="Analysis history">
+    <div class="xpa-hist-modal">
+        <div class="xpa-hist-head">
+            <svg class="xpa-hist-search" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <input id="histSearchInput" type="text" placeholder="Search your analyses…" autocomplete="off" spellcheck="false">
+            <button class="xpa-hist-clear" id="histClearAll" type="button">Clear all</button>
+            <button class="xpa-hist-x" id="histCloseBtn" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="xpa-hist-body">
+            <div class="xpa-hist-list" id="histListEl"></div>
+            <div class="xpa-hist-preview" id="histPreviewEl"></div>
         </div>
     </div>
 </div>

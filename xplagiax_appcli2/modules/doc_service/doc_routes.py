@@ -3947,3 +3947,122 @@ def citation_validation():
     logger.info('FinderX citation-validation OK → keys=%s',
                 list(result.keys()) if isinstance(result, dict) else None)
     return jsonify({'result': result}), 200
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Analysis history (pantalla "analysiss") — persistido en MySQL por usuario.
+# Solo planes Individual / Research Essentials / Institutes.
+# ════════════════════════════════════════════════════════════════════════════
+HISTORY_PLANS = {'Individual', 'Research Essentials', 'Institutes'}
+HISTORY_MAX_PER_USER = 50
+
+
+def _history_allowed():
+    return getattr(current_user, 'user_type', None) in HISTORY_PLANS
+
+
+def _trim_history_result(r):
+    """Quita campos pesados (abstract/full_text) — los paneles usan snippet/blocks."""
+    if not isinstance(r, dict):
+        return r
+    import copy
+    c = copy.deepcopy(r)
+    for key in ('academic_matches', 'internet_matches'):
+        arr = c.get(key)
+        if isinstance(arr, list):
+            arr = arr[:12]
+            for m in arr:
+                if isinstance(m, dict):
+                    m.pop('full_text', None)
+                    m.pop('abstract', None)
+            c[key] = arr
+    return c
+
+
+@x_doc.route('/history', methods=['POST'])
+@login_required
+def history_save():
+    if not _history_allowed():
+        return jsonify({'error': 'Your plan does not include analysis history.', 'allowed': False}), 403
+    from modules.models.model import AnalysisHistory
+    data = request.get_json(silent=True) or {}
+    text = (data.get('text') or '').strip()
+    if not text:
+        return jsonify({'error': 'Empty analysis.'}), 400
+
+    def _int(v):
+        try:
+            return int(round(float(v))) if v is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    entry = AnalysisHistory(
+        user_id=current_user.id,
+        title=(data.get('title') or text[:80]),
+        text=text[:15000],
+        ai=_trim_history_result(data.get('ai')),
+        source=_trim_history_result(data.get('source')),
+        citation=_trim_history_result(data.get('citation')),
+        ai_pct=_int(data.get('aiPct')),
+        overall=_int(data.get('overall')),
+        cit_score=_int(data.get('cit')),
+    )
+    try:
+        db.session.add(entry)
+        db.session.flush()
+        # Conservar solo las últimas N por usuario.
+        stale = (AnalysisHistory.query
+                 .filter_by(user_id=current_user.id)
+                 .order_by(AnalysisHistory.created_at.desc())
+                 .offset(HISTORY_MAX_PER_USER).all())
+        for s in stale:
+            db.session.delete(s)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception('history_save failed')
+        return jsonify({'error': 'Could not save history.'}), 500
+    return jsonify({'id': entry.history_id}), 201
+
+
+@x_doc.route('/history', methods=['GET'])
+@login_required
+def history_list():
+    if not _history_allowed():
+        return jsonify({'items': [], 'allowed': False}), 200
+    from modules.models.model import AnalysisHistory
+    rows = (AnalysisHistory.query
+            .filter_by(user_id=current_user.id)
+            .order_by(AnalysisHistory.created_at.desc())
+            .limit(HISTORY_MAX_PER_USER).all())
+    return jsonify({'items': [r.to_summary() for r in rows], 'allowed': True}), 200
+
+
+@x_doc.route('/history/<hid>', methods=['GET'])
+@login_required
+def history_get(hid):
+    from modules.models.model import AnalysisHistory
+    r = AnalysisHistory.query.filter_by(user_id=current_user.id, history_id=hid).first()
+    if not r:
+        return jsonify({'error': 'Not found.'}), 404
+    return jsonify({'item': r.to_full()}), 200
+
+
+@x_doc.route('/history/<hid>', methods=['DELETE'])
+@login_required
+def history_delete(hid):
+    from modules.models.model import AnalysisHistory
+    r = AnalysisHistory.query.filter_by(user_id=current_user.id, history_id=hid).first()
+    if r:
+        db.session.delete(r)
+        db.session.commit()
+    return jsonify({'ok': True}), 200
+
+
+@x_doc.route('/history', methods=['DELETE'])
+@login_required
+def history_clear():
+    from modules.models.model import AnalysisHistory
+    AnalysisHistory.query.filter_by(user_id=current_user.id).delete()
+    db.session.commit()
+    return jsonify({'ok': True}), 200

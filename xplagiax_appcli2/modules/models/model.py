@@ -1250,3 +1250,41 @@ class ItemHistory(db.Model):
             'date': self.created_at.strftime('%Y-%m-%d') if self.created_at else None,
             'user': f"{self.user.name or ''} {self.user.lastname or ''}".strip() or 'You'
         }
+
+
+# ── Analysis history (pantalla "analysiss") — texto + resultados por usuario ──
+# Solo se persiste para planes Individual / Research Essentials / Institutes
+# (la regla se aplica en las rutas, no en el modelo).
+class AnalysisHistory(db.Model):
+    __tablename__ = 'analysis_history'
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    history_id  = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
+    user_id     = db.Column(db.Integer, nullable=False, index=True)
+    title       = db.Column(db.String(255))
+    text        = db.Column(db.Text)          # texto analizado
+    ai          = db.Column(db.JSON)          # resultado IA (recortado)
+    source      = db.Column(db.JSON)          # resultado FinderX (recortado)
+    citation    = db.Column(db.JSON)          # resultado validación de citas
+    ai_pct      = db.Column(db.Integer)       # % IA
+    overall     = db.Column(db.Integer)       # % similitud
+    cit_score   = db.Column(db.Integer)       # calidad de citas /100
+    created_at  = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    def _ts_ms(self):
+        import calendar
+        return int(calendar.timegm(self.created_at.utctimetuple()) * 1000) if self.created_at else 0
+
+    def to_summary(self):
+        return {
+            'id': self.history_id,
+            'ts': self._ts_ms(),
+            'title': self.title or 'Untitled analysis',
+            'preview': (self.text or '')[:160],
+            'aiPct': self.ai_pct, 'overall': self.overall, 'cit': self.cit_score,
+        }
+
+    def to_full(self):
+        d = self.to_summary()
+        d.update({'text': self.text or '', 'ai': self.ai, 'source': self.source, 'citation': self.citation})
+        return d

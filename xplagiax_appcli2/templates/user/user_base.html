@@ -91,6 +91,17 @@
       </a>
       {% endif %}
 
+      <!-- Analysis history (clock) — only for Individual / Research Essentials / Institutes -->
+      {% if user_data.user_type in ['Individual', 'Research Essentials', 'Institutes'] %}
+      <a href="{{ url_for('x_users.analysis') }}" id="analysisHistoryNavBtn"
+        class="nav-btn" data-tip="Analysis history">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" />
+          <polyline points="12 7 12 12 15 14" />
+        </svg>
+      </a>
+      {% endif %}
+
       <div class="nav-spacer"></div>
 
       <!-- Mini Progress (Analysis Quota) -->
