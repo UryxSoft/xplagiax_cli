@@ -3906,3 +3906,44 @@ def finderx_report(job_id):
                 job_id, out['status'], list(inner.keys()) if isinstance(inner, dict) else None,
                 bool(result))
     return jsonify(out), 200
+
+
+@x_doc.route('/citation_validation', methods=['POST'])
+@login_required
+def citation_validation():
+    """Valida SOLO citas y referencias vía FinderX (:8000 /api/v1/citation-validation).
+
+    A diferencia de /finderx_check (búsqueda de fuentes/plagio), esto NO busca en el
+    corpus académico: solo detecta y valida las citas/referencias del texto. Es
+    síncrono (la API devuelve el resultado directo, sin job_id).
+    """
+    data = request.get_json(silent=True) or {}
+    text = (data.get('text') or '').strip()
+    if not text or len(text.split()) < 10:
+        return jsonify({'error': 'Please enter at least 10 words to analyze.'}), 400
+
+    headers = {'Content-Type': 'application/json', 'X-API-Key': FINDERX_SERVICE_API_KEY}
+    try:
+        resp = session_pool.post(
+            f'{FINDERX_SERVICE_BASE}/api/v1/citation-validation',
+            headers=headers,
+            json={'text': text[:50000], 'validate': True, 'enrich': False},
+            timeout=(5, 120),
+        )
+    except requests.exceptions.RequestException as exc:
+        logger.error('FinderX citation-validation failed: %s', exc)
+        return jsonify({'error': 'Could not reach the FinderX service.'}), 502
+    if not resp.ok:
+        logger.error('FinderX citation-validation returned %s: %s', resp.status_code, resp.text[:300])
+        return jsonify({'error': f'FinderX service error ({resp.status_code}).'}), 502
+
+    try:
+        rd = resp.json()
+    except ValueError:
+        return jsonify({'error': 'Invalid response from FinderX service.'}), 502
+
+    # La API envuelve el resultado bajo 'data'.
+    result = rd.get('data', rd) if isinstance(rd, dict) else rd
+    logger.info('FinderX citation-validation OK → keys=%s',
+                list(result.keys()) if isinstance(result, dict) else None)
+    return jsonify({'result': result}), 200

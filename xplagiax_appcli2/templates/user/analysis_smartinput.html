@@ -464,7 +464,7 @@ body.xp-file-preview .mode-switch-container {
 }
 .xpa-modal-x:hover { background:#f3f4f6; color:#374151; }
 .xpa-modal-body { padding: 20px 24px; }
-.xpa-modal-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.xpa-modal-cards { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
 .xpa-card {
     position: relative;
     display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -1788,19 +1788,66 @@ body.xp-file-preview .mode-switch-container {
             const textAnalysisBtn = document.getElementById('textAnalysisBtn');
             if (textAnalysisBtn) textAnalysisBtn.addEventListener('click', () => this.openAnalysisModal());
 
-            // Card toggle (skip disabled cards)
-            modal.querySelectorAll('.xpa-card').forEach(card => {
-                if (card.classList.contains('xpa-card-disabled')) return;
+            // ── Card selection ──────────────────────────────────────────────
+            const _card = t => modal.querySelector(`.xpa-card[data-type="${t}"]`);
+            const _set = (t, on) => {
+                const c = _card(t); if (!c) return;
+                c.classList.toggle('selected', !!on);
+                c.setAttribute('aria-checked', on ? 'true' : 'false');
+            };
+            const _is = t => { const c = _card(t); return !!(c && c.classList.contains('selected')); };
+            const _afterChange = () => {
+                const hint = document.getElementById('analysisModalHint');
+                if (hint) hint.style.display = 'none';
+                this._updateAcceptButtonState();
+            };
+
+            // AI TestPro — plain toggle.
+            const ai = _card('detect_ai');
+            if (ai) {
+                const toggle = () => { _set('detect_ai', !_is('detect_ai')); _afterChange(); };
+                ai.addEventListener('click', toggle);
+                ai.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+            }
+
+            // FinderX — selecting it also selects Citations (citations are included in FinderX).
+            const fx = _card('search_source');
+            if (fx) {
                 const toggle = () => {
-                    card.classList.toggle('selected');
-                    card.setAttribute('aria-checked', card.classList.contains('selected') ? 'true' : 'false');
-                    const hint = document.getElementById('analysisModalHint');
-                    if (hint) hint.style.display = 'none';
-                    this._updateAcceptButtonState();
+                    const on = !_is('search_source');
+                    _set('search_source', on);
+                    _set('validate_citations', on);   // couple: FinderX ⟹ Citations
+                    _afterChange();
                 };
-                card.addEventListener('click', toggle);
-                card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
-            });
+                fx.addEventListener('click', toggle);
+                fx.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+            }
+
+            // Citations & References — sub-check of FinderX.
+            //  · single click (FinderX OFF): toggle citations-only on/off.
+            //  · single click (FinderX ON): no-op — it's included; double-click to isolate.
+            //  · double click: citations-only → drop FinderX, keep Citations.
+            const cit = _card('validate_citations');
+            if (cit) {
+                cit.addEventListener('click', () => {
+                    if (_is('search_source')) return;            // coupled to FinderX → ignore single click
+                    _set('validate_citations', !_is('validate_citations'));
+                    _afterChange();
+                });
+                cit.addEventListener('dblclick', () => {
+                    _set('search_source', false);                // drop FinderX
+                    _set('validate_citations', true);            // citations-only
+                    _afterChange();
+                });
+                cit.addEventListener('keydown', e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        _set('search_source', false);
+                        _set('validate_citations', !_is('validate_citations'));
+                        _afterChange();
+                    }
+                });
+            }
 
             // Close buttons
             document.getElementById('analysisModalClose').addEventListener('click', () => this.closeAnalysisModal());
@@ -1822,18 +1869,9 @@ body.xp-file-preview .mode-switch-container {
                 this.closeAnalysisModal();
 
                 if (this.currentMode === 'text') {
-                    // AI TestPro (detect_ai) → detección de IA.
-                    // FinderX (search_source) → búsqueda de fuentes / plagio.
-                    // Ambos → vista combinada con pestañas.
-                    const wantAi = this._selectedModalTypes.includes('detect_ai');
-                    const wantSource = this._selectedModalTypes.includes('search_source');
-                    if (wantAi && wantSource) {
-                        await this.handleCombinedAnalysis();
-                    } else if (wantAi) {
-                        await this.handleTextAnalysis();
-                    } else if (wantSource) {
-                        await this.handleSourceSearch();
-                    }
+                    // detect_ai → IA · search_source → FinderX (fuentes/plagio)
+                    // validate_citations → solo validación de citas/referencias.
+                    await this.runAnalysesOnText(this.elements.textInput.value, this._selectedModalTypes);
                 } else {
                     showCustomLoadingOnDiv('inputWrapper');
                     await this.handleFileAnalysis();
@@ -2658,7 +2696,10 @@ body.xp-file-preview .mode-switch-container {
             this._analyzedText = text;   // guardado para similitud real con fuentes
             const wantAi = types.includes('detect_ai');
             const wantSource = types.includes('search_source');
-            if (!wantAi && !wantSource) {
+            // FinderX ya incluye análisis de citas; al pedir FinderX poblamos también
+            // el tab de Citations & References con el endpoint dedicado.
+            const wantCitations = types.includes('validate_citations') || wantSource;
+            if (!wantAi && !wantSource && !wantCitations) {
                 this.showError('Please select at least one analysis type.');
                 return;
             }
@@ -2668,35 +2709,31 @@ body.xp-file-preview .mode-switch-container {
             showCustomLoadingOnDiv('inputWrapper');
 
             try {
-                if (wantAi && wantSource) {
-                    const [aiSettled, srcSettled] = await Promise.allSettled([
-                        this._fetchAiResult(text),
-                        this._fetchSourceResult(text)
-                    ]);
-                    const aiResult = aiSettled.status === 'fulfilled' ? aiSettled.value : null;
-                    const sourceResult = srcSettled.status === 'fulfilled' ? srcSettled.value : null;
-                    hideCustomLoadingOnDiv('inputWrapper');
+                const [aiS, srcS, citS] = await Promise.allSettled([
+                    wantAi        ? this._fetchAiResult(text)       : Promise.resolve(null),
+                    wantSource    ? this._fetchSourceResult(text)   : Promise.resolve(null),
+                    wantCitations ? this._fetchCitationResult(text) : Promise.resolve(null),
+                ]);
+                hideCustomLoadingOnDiv('inputWrapper');
 
-                    if (aiResult || sourceResult) {
-                        if (aiResult && !sourceResult) {
-                            this.showError('FinderX failed: ' + (srcSettled.reason && srcSettled.reason.message || 'unknown error'));
-                        } else if (sourceResult && !aiResult) {
-                            this.showError('AI detection failed: ' + (aiSettled.reason && aiSettled.reason.message || 'unknown error'));
-                        }
-                        this._enterMarktrackView(text, aiResult, sourceResult);
-                    } else {
-                        const reason = (aiSettled.reason && aiSettled.reason.message)
-                            || (srcSettled.reason && srcSettled.reason.message) || 'unknown error';
-                        this.showError('Analysis failed: ' + reason);
-                    }
-                } else if (wantAi) {
-                    const result = await this._fetchAiResult(text);
-                    hideCustomLoadingOnDiv('inputWrapper');
-                    this._enterMarktrackView(text, result, null);
+                const aiResult       = aiS.status  === 'fulfilled' ? aiS.value  : null;
+                const sourceResult   = srcS.status === 'fulfilled' ? srcS.value : null;
+                const citationResult = citS.status === 'fulfilled' ? citS.value : null;
+
+                if (aiResult || sourceResult || citationResult) {
+                    // Avisar de los servicios pedidos que fallaron (sin bloquear el resto).
+                    if (wantAi && !aiResult)
+                        this.showError('AI detection failed: ' + ((aiS.reason && aiS.reason.message) || 'unknown error'));
+                    if (wantSource && !sourceResult)
+                        this.showError('FinderX failed: ' + ((srcS.reason && srcS.reason.message) || 'unknown error'));
+                    if (types.includes('validate_citations') && !wantSource && !citationResult)
+                        this.showError('Citation validation failed: ' + ((citS.reason && citS.reason.message) || 'unknown error'));
+                    this._enterMarktrackView(text, aiResult, sourceResult, citationResult);
                 } else {
-                    const result = await this._fetchSourceResult(text);
-                    hideCustomLoadingOnDiv('inputWrapper');
-                    this._enterMarktrackView(text, null, result);
+                    const reason = (aiS.reason && aiS.reason.message)
+                        || (srcS.reason && srcS.reason.message)
+                        || (citS.reason && citS.reason.message) || 'unknown error';
+                    this.showError('Analysis failed: ' + reason);
                 }
             } catch (error) {
                 hideCustomLoadingOnDiv('inputWrapper');
@@ -2791,6 +2828,20 @@ body.xp-file-preview .mode-switch-container {
             );
             const result = report && report.result ? report.result : null;
             if (!result) throw new Error('Unexpected response from FinderX service.');
+            return result;
+        }
+
+        // ─── Citations & References (FinderX /citation-validation, síncrono) ─────────
+        async _fetchCitationResult(text) {
+            const response = await fetch('/x_doc/citation_validation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            });
+            if (!response.ok) throw new Error(await this._errMsg(response));
+            const data = await response.json();
+            const result = (data && data.result) ? data.result : (data && data.data ? data.data : data);
+            if (!result || typeof result !== 'object') throw new Error('Unexpected response from citation service.');
             return result;
         }
 
@@ -2889,7 +2940,7 @@ body.xp-file-preview .mode-switch-container {
         _attributeAcademic(text, academic) {
             const arr = Array.isArray(academic) ? academic : [];
             const fullText = this._analyzedText || text || '';
-            let maxSim = 0;
+            let maxSim = 0, top = null;
             arr.forEach(m => {
                 // Comparar snippet con el texto del fragmento Y con el texto completo;
                 // usar el MAYOR de ambos para no perder copias cuando el fragmento es
@@ -2899,33 +2950,42 @@ body.xp-file-preview .mode-switch-container {
                     ? this._textContainment(fullText, m.snippet || '')
                     : simFrag;
                 m._sim = Math.max(simFrag, simFull);
-                if (m._sim > maxSim) maxSim = m._sim;
+                if (m._sim > maxSim) { maxSim = m._sim; top = m; }
             });
-            if (maxSim <= 0) return { best: null, bestSim: 0 };
-            // Umbral SAME más bajo: incluir fuentes con al menos 60% del score máximo
-            // (antes era min(0.5, max), que excluía fuentes con redacción ligeramente
-            // distinta en su snippet).
-            const SAME = maxSim * 0.60;
-            // Detectar si alguna fuente tiene un título que aparece en el texto
-            // analizado — fuerte indicador de que ES la fuente original.
+            if (!top || maxSim <= 0) return { best: null, bestSim: 0, directCopy: false };
+
             const fullNorm = this._normText(fullText);
-            let best = null;
-            arr.forEach(m => {
-                if ((m._sim || 0) < SAME) return;
-                if (!best) { best = m; return; }
-                // Priorizar fuente cuyo título aparece textualmente en el texto.
-                const mTitleInText = m.title && fullNorm.includes(this._normText(m.title));
-                const bTitleInText = best.title && fullNorm.includes(this._normText(best.title));
-                if (mTitleInText && !bTitleInText) { best = m; return; }
-                if (bTitleInText && !mTitleInText) return;
-                // Prefiere el año más antiguo (fuente original).
-                const y = Number(m.year) || 9999, by = Number(best.year) || 9999;
-                if (y < by) { best = m; return; }
-                if (y === by && (m._sim || 0) > (best._sim || 0)) best = m;
-            });
-            // bestSim = la MAYOR similitud encontrada (no la de best, que puede
-            // ser la fuente original con un snippet ligeramente distinto).
-            return { best, bestSim: maxSim };
+            // 1) Señal más fuerte: una fuente cuyo TÍTULO aparece literalmente en el
+            //    texto → casi seguro es la fuente original citada. (Entre ellas, la más antigua.)
+            const titleHits = arr.filter(m => m.title && (m._sim || 0) >= 0.30
+                && this._normText(m.title).length > 12
+                && fullNorm.includes(this._normText(m.title)));
+
+            let best;
+            if (titleHits.length) {
+                best = titleHits.reduce((b, m) => {
+                    const y = Number(m.year) || 9999, by = Number(b.year) || 9999;
+                    return (y < by || (y === by && (m._sim || 0) > (b._sim || 0))) ? m : b;
+                });
+            } else {
+                // 2) "Mismo pasaje" = fuentes cuyo snippet es casi idéntico al snippet de
+                //    la MEJOR fuente (duplicados del mismo pasaje), no solo parecido a tu
+                //    texto. Solo ahí preferimos la más antigua (la original); si las
+                //    coincidencias son fuentes DISTINTAS, gana la de mayor similitud.
+                best = top;
+                arr.forEach(m => {
+                    if (m === top || (m._sim || 0) < 0.30) return;
+                    if (this._textContainment(m.snippet || '', top.snippet || '') < 0.6) return; // pasaje distinto
+                    const y = Number(m.year) || 9999, by = Number(best.year) || 9999;
+                    if (y < by || (y === by && (m._sim || 0) > (best._sim || 0))) best = m;
+                });
+            }
+            const bestSim = best ? (best._sim || 0) : maxSim;
+            // Copia DIRECTA solo si el snippet coincidente es SUSTANCIAL: un título corto
+            // que comparte algunas palabras NO es evidencia de copia.
+            const bestWords = String((best && best.snippet) || '').trim().split(/\s+/).filter(Boolean).length;
+            const directCopy = bestSim >= 0.30 && bestWords >= 14;
+            return { best, bestSim, directCopy };
         }
         // Mejor coincidencia para el texto analizado completo.
         _bestAcademic(academic) {
@@ -3085,8 +3145,7 @@ body.xp-file-preview .mode-switch-container {
             //    Esto corrige el caso en que FinderX reporta los fragmentos como
             //    "originales" (sim=0) pero la fuente académica es idéntica (copia real).
             const _academic = Array.isArray(result.academic_matches) ? result.academic_matches : [];
-            const { best, bestSim } = this._bestAcademic(_academic);
-            const directCopy = bestSim >= 0.25;      // umbral reducido: 25% de n-gramas = copia textual
+            const { best, bestSim, directCopy } = this._bestAcademic(_academic);
             const directPct = Math.round(bestSim * 100);
             const bestTitle = best ? this._escapeHtml(best.title || 'the source below') : 'the source below';
 
@@ -3151,9 +3210,8 @@ body.xp-file-preview .mode-switch-container {
 
             // Similitud REAL del fragmento con las fuentes académicas. Corrige el caso
             // en que FinderX reporta sim=0 ("original") pero la fuente es idéntica.
-            const { best: acadBest, bestSim: acadSim } = this._attributeAcademic(fr.text_preview || '', academic);
+            const { best: acadBest, bestSim: acadSim, directCopy: directAcad } = this._attributeAcademic(fr.text_preview || '', academic);
             const acadPct = Math.round(acadSim * 100);
-            const directAcad = acadSim >= 0.25;          // umbral reducido: 25% = copia textual
             const sim = Math.max(rawSim, acadPct);       // similitud efectiva mostrada
 
             let status, color, explanation;
@@ -3321,8 +3379,7 @@ body.xp-file-preview .mode-switch-container {
             if (!hasHits) return '';
 
             // Similitud REAL + atribución de la fuente ORIGINAL (rellena m._sim).
-            const { best, bestSim } = this._bestAcademic(academic);
-            const directCopy = bestSim >= 0.25;
+            const { best, bestSim, directCopy } = this._bestAcademic(academic);
             if (!directCopy && overall < 20) return '';   // nada relevante que avisar
 
             // Dedup por URL/título; la fuente atribuida va primero, resto por similitud.
@@ -3573,9 +3630,9 @@ body.xp-file-preview .mode-switch-container {
             const overall = source ? Math.round((source.scores || {}).overall || 0) : 0;
             const originalPct = source ? Math.max(0, 100 - overall) : 0;
             const coverage = source ? Math.round(((source.citation_analysis || {}).citation_coverage) || 0) : 0;
-            const copy = source ? this._bestAcademic(source.academic_matches) : { best: null, bestSim: 0 };
+            const copy = source ? this._bestAcademic(source.academic_matches) : { best: null, bestSim: 0, directCopy: false };
             const copyPct = Math.round((copy.bestSim || 0) * 100);
-            const directCopy = (copy.bestSim || 0) >= 0.30;
+            const directCopy = !!copy.directCopy;
             const riskPct = Math.max(aiPct, directCopy ? copyPct : 0);
             const risk = riskPct >= 50 ? { t: 'High Risk', c: '#ef4444' } : riskPct >= 25 ? { t: 'Medium Risk', c: '#f59e0b' } : { t: 'Low Risk', c: '#10b981' };
 
@@ -3808,8 +3865,7 @@ body.xp-file-preview .mode-switch-container {
             const overall = Math.round((source.scores || {}).overall || 0);
             const conf = (source.scores || {}).confidence || 'n/a';
             const academic = Array.isArray(source.academic_matches) ? source.academic_matches : [];
-            const { best, bestSim } = this._bestAcademic(academic);
-            const directCopy = (bestSim || 0) >= 0.30;
+            const { best, bestSim, directCopy } = this._bestAcademic(academic);
             const copyPct = Math.round((bestSim || 0) * 100);
             const gColor = (directCopy || overall >= 50) ? '#dc2626' : overall >= 25 ? '#d97706' : '#059669';
             const head = `<div style="display:flex;align-items:center;gap:18px;margin-bottom:18px;">
@@ -3821,6 +3877,103 @@ body.xp-file-preview .mode-switch-container {
                 ? this._mtCorpusDark(academic, best, directCopy, copyPct, overall)
                 : '<div class="empty-state"><p>No academic matches found</p><small>Content appears original against the corpus.</small></div>';
             return `<h2 style="margin-bottom:14px;">Plagiarism Checker</h2>${head}${body}`;
+        }
+
+        // Citations & References tab — FinderX /citation-validation result.
+        _buildMtCitationsPanel(c) {
+            if (!c) return '<div class="empty-state"><p>Citation validation not run</p><small>Select “Citations &amp; References” and analyze.</small></div>';
+            const num = v => Number(v) || 0;
+            const qScore = Math.round(num(c.citation_quality_score));
+            const riskMap = {
+                low: { cls: 'score-high', t: 'Low Risk' }, medium: { cls: 'score-medium', t: 'Medium Risk' },
+                high: { cls: 'score-low', t: 'High Risk' }, critical: { cls: 'score-low', t: 'Critical' },
+            };
+            const rk = riskMap[String(c.overall_risk_level || 'low').toLowerCase()] || riskMap.low;
+            const fillCls = qScore >= 80 ? 'score-fill-high' : qScore >= 50 ? 'score-fill-medium' : 'score-fill-low';
+
+            const chips = [
+                ['Citations', num(c.citations_found)], ['References', num(c.references_found)],
+                ['Valid', num(c.valid_references)], ['Partial', num(c.partial_references)],
+                ['Not found', num(c.not_found_references)], ['Orphan cites', num(c.orphan_citations)],
+                ['Orphan refs', num(c.orphan_references)],
+            ].map(([k, v]) => `<div class="score-item"><span>${k}</span><span>${v}</span></div>`).join('');
+
+            const cr = c.coverage_report || {}, doi = cr.doi_stats || {};
+            const crHtml = `
+              <div class="insight-box">
+                <p style="margin:0 0 6px;font-weight:600;color:#334155;">Coverage report</p>
+                <div class="score-breakdown" style="margin-top:0">
+                  <div class="score-item"><span>Coverage (CCS)</span><span>${Math.round(num(cr.citation_coverage_score))}%</span></div>
+                  <div class="score-item"><span>Integrity (CII)</span><span>${Math.round(num(cr.citation_integrity_index))}%</span></div>
+                  <div class="score-item"><span>False-neg risk</span><span>${Math.round(num(cr.false_negative_risk))}%</span></div>
+                  <div class="score-item"><span>DOIs resolved</span><span>${num(doi.resolved)}/${num(doi.found_in_text)}</span></div>
+                </div>
+              </div>`;
+
+            const stMap = {
+                valid:   { col: '#047857', bg: 'rgba(16,185,129,0.12)', label: 'Verified' },
+                partial: { col: '#b45309', bg: 'rgba(245,158,11,0.14)', label: 'Partial' },
+            };
+            const refStatus = s => stMap[String(s || '').toLowerCase()]
+                || { col: '#dc2626', bg: 'rgba(239,68,68,0.12)', label: s ? String(s).replace(/_/g, ' ') : 'Unverified' };
+            const refs = Array.isArray(c.references) ? c.references : [];
+            const refsHtml = refs.length
+              ? `<div class="references-list"><h4>References (${refs.length})</h4>${refs.map(r => {
+                    const v = r.validation || {}, st = refStatus(v.status);
+                    const authors = Array.isArray(r.authors) ? this._escapeHtml(r.authors.slice(0, 4).join(', ')) : '';
+                    const title = this._escapeHtml(r.title || 'Untitled');
+                    const href = this._doiHref(r);
+                    const conf = (v.confidence != null) ? Math.round(v.confidence * 100) + '% confidence' : '';
+                    const titleHtml = href
+                        ? `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#064CDB;text-decoration:none;font-weight:600">${title}</a>`
+                        : `<span style="font-weight:600;color:#0f172a">${title}</span>`;
+                    const metaBits = [
+                        v.source_api ? 'via ' + this._escapeHtml(v.source_api) : '',
+                        conf,
+                        r.open_access ? '<span style="color:#047857">Open Access</span>' : '',
+                        r.pages ? 'pp. ' + this._escapeHtml(String(r.pages)) : '',
+                    ].filter(Boolean).join(' · ');
+                    return `<div class="reference-item">
+                        <span class="ref-status" style="background:${st.bg};color:${st.col}">${this._escapeHtml(st.label)}</span>
+                        <p style="color:#475569"><strong style="color:#0f172a">${authors}</strong>${r.year ? ' (' + this._escapeHtml(String(r.year)) + ')' : ''} — ${titleHtml}</p>
+                        ${metaBits ? `<div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;padding-right:70px">${metaBits}</div>` : ''}
+                    </div>`;
+                }).join('')}</div>`
+              : `<div class="empty-state"><p>No references detected</p><small>No bibliography entries found in the text.</small></div>`;
+
+            const cites = Array.isArray(c.citations) ? c.citations : [];
+            const citesHtml = cites.length
+              ? `<div class="references-list" style="margin-top:16px"><h4>In-text citations (${cites.length})</h4>${cites.map(ci => {
+                    const conf = (ci.confidence != null) ? Math.round(ci.confidence * 100) + '%' : '';
+                    const meta = [this._escapeHtml(ci.author || ''), ci.year ? this._escapeHtml(String(ci.year)) : '',
+                                  ci.style ? this._escapeHtml(ci.style) : '', conf].filter(Boolean).join(' · ');
+                    return `<div class="reference-item">
+                        <p style="color:#334155;font-style:italic;margin:0">“${this._escapeHtml(ci.raw_text || '')}”</p>
+                        ${meta ? `<div style="font-size:0.7rem;color:#94a3b8;margin-top:3px">${meta}</div>` : ''}
+                    </div>`;
+                }).join('')}</div>`
+              : '';
+
+            return `
+            <h2>Citations &amp; References</h2>
+            <div class="integrity-score">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <h4 style="margin:0;font-size:14px;font-weight:700;">Citation Quality</h4>
+                    <span class="score-badge ${rk.cls}">${rk.t}</span>
+                </div>
+                <div class="score-meter"><div class="score-value">${qScore}/100</div><div class="score-fill ${fillCls}" style="width:${qScore}%;"></div></div>
+                <div class="score-breakdown">
+                    <div class="score-item"><span>Style</span><span>${this._escapeHtml(c.detected_style || '—')}</span></div>
+                    <div class="score-item"><span>Consistency</span><span>${Math.round(num(c.style_consistency))}%</span></div>
+                    <div class="score-item"><span>Citation coverage</span><span>${Math.round(num(c.citation_coverage))}%</span></div>
+                    <div class="score-item"><span>Bibliography</span><span>${Math.round(num(c.bibliography_coverage))}%</span></div>
+                </div>
+            </div>
+            <h4 style="margin:18px 0 10px;">Summary</h4>
+            <div class="score-breakdown" style="margin-bottom:6px">${chips}</div>
+            ${crHtml}
+            ${refsHtml}
+            ${citesHtml}`;
         }
 
         _wireMtTabs(overlay) {
@@ -3845,7 +3998,7 @@ body.xp-file-preview .mode-switch-container {
             });
         }
 
-        _enterMarktrackView(text, ai, source) {
+        _enterMarktrackView(text, ai, source, citation) {
             if (document.querySelector('.ai-split-view')) return;
             const safeText = this._escapeHtml(text);
             const aiPct = ai ? Math.round(ai.ai_score) : 0;
@@ -3889,6 +4042,7 @@ body.xp-file-preview .mode-switch-container {
                                 <button class="tab active" data-tab="ov" type="button" title="Overview"><i class="fas fa-th-large"></i></button>
                                 <button class="tab" data-tab="ai" type="button" title="AI Detection"><i class="fas fa-microchip"></i></button>
                                 <button class="tab" data-tab="plag" type="button" title="Plagiarism"><i class="fas fa-shield-alt"></i></button>
+                                ${citation ? '<button class="tab" data-tab="cit" type="button" title="Citations & References"><i class="fas fa-quote-right"></i></button>' : ''}
                                 <button class="tab" data-tab="style" type="button" title="Style Analysis"><i class="fas fa-pen-nib"></i></button>
                                 <button class="tab" data-tab="refs" type="button" title="References Integrity"><i class="fas fa-book"></i></button>
                             </div>
@@ -3896,6 +4050,7 @@ body.xp-file-preview .mode-switch-container {
                                 <div class="tab-panel active" data-panel="ov">${this._buildMtOverview(ai, source)}</div>
                                 <div class="tab-panel" data-panel="ai">${this._buildMtAiPanel(ai)}</div>
                                 <div class="tab-panel" data-panel="plag">${this._buildMtPlagPanel(source)}</div>
+                                ${citation ? `<div class="tab-panel" data-panel="cit">${this._buildMtCitationsPanel(citation)}</div>` : ''}
                                 <div class="tab-panel" data-panel="style">${this._buildMtStylePanel(ai)}</div>
                                 <div class="tab-panel" data-panel="refs">${this._buildMtRefsPanel(ai)}</div>
                             </div>
@@ -5301,6 +5456,18 @@ body.xp-file-preview .mode-switch-container {
                     </div>
                     <div class="xpa-card-name">FinderX</div>
                     <div class="xpa-card-desc">Source &amp; plagiarism search</div>
+                    <span class="xpa-card-check">✓</span>
+                </div>
+                <!-- Citations & References (sub-check of FinderX) -->
+                <div class="xpa-card" data-type="validate_citations" role="checkbox" aria-checked="false" tabindex="0"
+                     title="Double-click for citations-only (skips the FinderX source search)">
+                    <div class="xpa-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783"/>
+                        </svg>
+                    </div>
+                    <div class="xpa-card-name">Citations &amp; References</div>
+                    <div class="xpa-card-desc">Validate citations &amp; references only — no FinderX source/plagiarism search</div>
                     <span class="xpa-card-check">✓</span>
                 </div>
                 <!-- Image Search — disabled -->
