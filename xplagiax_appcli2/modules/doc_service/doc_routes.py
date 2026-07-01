@@ -3784,6 +3784,10 @@ def analyze_text():
         logger.error('AI submit missing task_id: %s', str(sd)[:300])
         return jsonify({'error': 'Analysis service did not return a task id.'}), 502
 
+    # Bind task_id to this user's session so only they can poll it.
+    owned = session.get('_ai_tasks', [])
+    session['_ai_tasks'] = (owned + [task_id])[-20:]
+
     return jsonify({'done': False, 'task_id': task_id}), 202
 
 
@@ -3791,6 +3795,8 @@ def analyze_text():
 @login_required
 def analyze_status(task_id):
     """Proxy rápido del estado del análisis de IA (no bloquea el worker)."""
+    if task_id not in session.get('_ai_tasks', []):
+        return jsonify({'error': 'Task not found or access denied.'}), 403
     _, base_url = _ai_async_urls()
     headers = {'Content-Type': 'application/json', 'X-API-Key': AI_TEXT_SERVICE_API_KEY}
     try:
@@ -3869,6 +3875,10 @@ def finderx_check():
         logger.error('FinderX submit missing task_id: %s', str(sd)[:300])
         return jsonify({'error': 'FinderX did not return a job id.'}), 502
 
+    # Bind job_id to this user's session so only they can fetch the report.
+    owned = session.get('_fx_jobs', [])
+    session['_fx_jobs'] = (owned + [job_id])[-20:]
+
     return jsonify({'done': False, 'job_id': job_id, 'status': inner.get('status')}), 202
 
 
@@ -3876,6 +3886,8 @@ def finderx_check():
 @login_required
 def finderx_report(job_id):
     """Proxy rápido del reporte de FinderX (no bloquea el worker)."""
+    if job_id not in session.get('_fx_jobs', []):
+        return jsonify({'error': 'Job not found or access denied.'}), 403
     headers = {'Content-Type': 'application/json', 'X-API-Key': FINDERX_SERVICE_API_KEY}
     try:
         report = session_pool.get(

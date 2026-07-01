@@ -93,7 +93,7 @@
 
       <!-- Analysis history (clock) — only for Individual / Research Essentials / Institutes -->
       {% if user_data.user_type in ['Individual', 'Research Essentials', 'Institutes'] %}
-      <a href="{{ url_for('x_users.analysis') }}" id="analysisHistoryNavBtn"
+      <a href="/analysiss?history=1" id="analysisHistoryNavBtn"
         class="nav-btn" data-tip="Analysis history">
         <svg viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="9" />
