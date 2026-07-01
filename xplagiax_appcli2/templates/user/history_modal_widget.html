@@ -1,0 +1,611 @@
+{# History modal widget — included in user_base.html so it works on every page #}
+
+<style id="xpa-hist-css">
+/* ━━ KEYFRAMES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@keyframes xpaHistIn{from{opacity:0;transform:translateY(16px) scale(.975)}to{opacity:1;transform:none}}
+@keyframes xpaHistItemIn{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+@keyframes xpaSkel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.xpa-hist-modal,.xpa-h-list,.xpa-h-detail-panel,.xpa-h-item{animation:none!important;transition:none!important}.xpa-h-sc-fill{transition:none!important}}
+
+/* ━━ OVERLAY — mobile first: bottom sheet ━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-hist-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,17,34,.52);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:0}
+
+/* ━━ SHELL — mobile first ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-hist-modal{background:#fff;border-radius:22px 22px 0 0;width:100%;height:92dvh;max-height:92dvh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -6px 40px rgba(6,76,219,.14),0 -2px 12px rgba(0,0,0,.08);animation:xpaHistIn .22s cubic-bezier(.2,.8,.2,1);transition:width .28s cubic-bezier(.4,0,.2,1),height .28s cubic-bezier(.4,0,.2,1);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+/* Drag handle */
+.xpa-h-handle{width:36px;height:4px;background:#e2e8f0;border-radius:2px;margin:10px auto 0;flex-shrink:0}
+
+/* ━━ HEADER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-h-hdr{display:flex;align-items:stretch;height:52px;border-bottom:1px solid #e8edf5;flex-shrink:0;background:#fff}
+.xpa-h-hdr-left{display:flex;align-items:center;gap:8px;padding:0 14px;flex-shrink:0}
+.xpa-h-title{display:none;font-size:clamp(.82rem,1.8vw,.9rem);font-weight:700;color:#0f172a;letter-spacing:-.015em;white-space:nowrap}
+.xpa-h-count{display:none;align-items:center;justify-content:center;background:#f1f5f9;color:#64748b;font-size:.67rem;font-weight:700;border-radius:20px;padding:2px 8px;min-width:22px;letter-spacing:0}
+.xpa-h-hdr-right{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 0;flex:1;min-width:0}
+.xpa-h-search{display:flex;align-items:center;gap:7px;background:#f8fafc;border:1.5px solid #e8edf5;border-radius:10px;padding:0 10px;height:38px;flex:1;min-width:0;transition:border-color .15s,box-shadow .15s}
+.xpa-h-search:focus-within{border-color:#064CDB;box-shadow:0 0 0 3px rgba(6,76,219,.1);background:#fff}
+.xpa-h-search svg{color:#94a3b8;flex-shrink:0}
+.xpa-h-search input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:clamp(.82rem,2vw,.88rem);color:#0f172a}
+.xpa-h-search input::placeholder{color:#94a3b8}
+.xpa-h-search-clr{background:none;border:none;color:#94a3b8;cursor:pointer;padding:4px;display:none;align-items:center;justify-content:center;border-radius:6px;min-width:28px;min-height:28px;transition:color .1s}
+.xpa-h-search-clr:hover{color:#374151}
+.xpa-h-search input:not(:placeholder-shown)~.xpa-h-search-clr{display:inline-flex}
+.xpa-h-close{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;width:44px;height:44px;border-radius:10px;border:1.5px solid transparent;background:none;color:#64748b;cursor:pointer;transition:all .12s;flex-shrink:0}
+.xpa-h-close:hover{background:#f1f5f9;color:#374151;border-color:#e2e8f0}
+.xpa-h-close:focus-visible{outline:2px solid #064CDB;outline-offset:2px}
+
+/* ━━ FILTER CHIPS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-h-filters{display:flex;align-items:center;gap:6px;padding:8px 14px;border-bottom:1px solid #e8edf5;flex-shrink:0;background:#fff;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.xpa-h-filters::-webkit-scrollbar{display:none}
+.xpa-h-fchip{display:inline-flex;align-items:center;gap:5px;padding:0 12px;height:34px;border-radius:20px;border:1.5px solid #e2e8f0;background:none;font-size:.71rem;font-weight:600;color:#64748b;cursor:pointer;transition:all .12s;white-space:nowrap;flex-shrink:0}
+.xpa-h-fchip:hover{background:#f1f5f9;border-color:#d1d9e6;color:#374151}
+.xpa-h-fchip.active{background:#064CDB;border-color:#064CDB;color:#fff}
+.xpa-h-fchip:focus-visible{outline:2px solid #064CDB;outline-offset:2px}
+.xpa-h-fchip svg{width:11px;height:11px;flex-shrink:0}
+
+/* ━━ BODY — mobile: single panel with slide transition ━━━━━━━━━ */
+.xpa-h-body{flex:1;min-height:0;position:relative;overflow:hidden}
+
+/* ━━ LIST PANEL ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-h-list{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fff;transform:translateX(0);transition:transform .24s cubic-bezier(.4,0,.2,1);scrollbar-width:thin;scrollbar-color:#e2e8f0 transparent;will-change:transform}
+.xpa-h-list::-webkit-scrollbar{width:4px}
+.xpa-h-list::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:4px}
+.xpa-h-body.detail-open .xpa-h-list{transform:translateX(-100%)}
+
+/* ━━ DETAIL PANEL — mobile: slides in from right ━━━━━━━━━━━━━━━ */
+.xpa-h-detail-panel{position:absolute;inset:0;display:flex;flex-direction:column;background:#fafbfd;transform:translateX(100%);transition:transform .24s cubic-bezier(.4,0,.2,1);will-change:transform}
+.xpa-h-body.detail-open .xpa-h-detail-panel{transform:translateX(0)}
+
+/* Mobile back navigation bar */
+.xpa-h-detail-nav{display:flex;align-items:center;gap:8px;padding:0 14px;height:48px;border-bottom:1px solid #e8edf5;flex-shrink:0;background:#fff}
+.xpa-h-back-btn{display:inline-flex;align-items:center;gap:6px;min-width:44px;min-height:44px;padding:0 6px;border:none;background:none;color:#064CDB;font-size:.82rem;font-weight:600;cursor:pointer;border-radius:8px;transition:background .12s;letter-spacing:-.01em}
+.xpa-h-back-btn:hover{background:#eef3ff}
+.xpa-h-back-btn:focus-visible{outline:2px solid #064CDB;outline-offset:2px}
+.xpa-h-detail-content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;scrollbar-width:thin;scrollbar-color:#e2e8f0 transparent}
+.xpa-h-detail-content::-webkit-scrollbar{width:4px}
+.xpa-h-detail-content::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:4px}
+
+/* ━━ GROUP HEADERS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-h-group{font-size:.67rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;padding:14px 16px 5px;position:sticky;top:0;background:#fff;z-index:1}
+
+/* ━━ LIST ITEMS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-h-item{position:relative;display:flex;flex-direction:column;gap:5px;padding:12px 14px 11px 16px;cursor:pointer;border-left:3px solid transparent;transition:background .1s,border-color .15s;animation:xpaHistItemIn .18s ease both;min-height:58px}
+.xpa-h-item:hover{background:#f8fafc}
+.xpa-h-item.active{border-left-color:var(--risk-c,#064CDB);background:#f4f7fe}
+.xpa-h-item:focus-visible{outline:2px solid #064CDB;outline-offset:-2px}
+.xpa-h-item-r1{display:flex;align-items:center;gap:7px}
+.xpa-h-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--risk-c,#cbd5e1)}
+.xpa-h-ititle{flex:1;min-width:0;font-size:clamp(.78rem,2vw,.83rem);font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
+.xpa-h-itime{font-size:.68rem;color:#94a3b8;flex-shrink:0;font-weight:500;white-space:nowrap}
+.xpa-h-item-r2{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.xpa-h-badge{display:inline-flex;align-items:center;gap:3px;font-size:.64rem;font-weight:700;padding:2px 7px;border-radius:20px;border:1px solid;letter-spacing:.01em;white-space:nowrap}
+.xpa-h-iacts{display:flex;gap:3px;margin-left:auto;opacity:0;pointer-events:none;transition:opacity .1s;flex-shrink:0}
+.xpa-h-item:hover .xpa-h-iacts,.xpa-h-item.active .xpa-h-iacts{opacity:1;pointer-events:auto}
+@media(hover:none){.xpa-h-iacts{opacity:1;pointer-events:auto}}
+.xpa-h-iact{position:relative;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid transparent;background:none;color:#94a3b8;cursor:pointer;transition:all .1s}
+.xpa-h-iact:hover{background:#f1f5f9;color:#0f172a;border-color:#e2e8f0}
+.xpa-h-iact.del:hover{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+.xpa-h-iact:focus-visible{outline:2px solid #064CDB;outline-offset:2px}
+.xpa-h-tip{position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;font-size:.65rem;font-weight:600;white-space:nowrap;padding:4px 8px;border-radius:6px;pointer-events:none;opacity:0;transition:opacity .1s;z-index:20}
+.xpa-h-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#0f172a}
+.xpa-h-iact:hover .xpa-h-tip{opacity:1}
+@media(hover:none){.xpa-h-tip{display:none}}
+
+/* ━━ SKELETON ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-h-skel{padding:12px 16px;display:flex;flex-direction:column;gap:8px;border-left:3px solid transparent}
+.xpa-h-skel-bar{height:11px;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#e8edf5 50%,#f1f5f9 75%);background-size:200% 100%;animation:xpaSkel 1.6s ease-in-out infinite}
+
+/* ━━ DETAIL CONTENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-h-detail-inner{padding:clamp(16px,4vw,26px) clamp(16px,4vw,28px);display:flex;flex-direction:column;gap:clamp(14px,2.5vw,22px);flex:1}
+.xpa-h-d-head{display:flex;flex-direction:column;gap:7px}
+.xpa-h-d-title{font-size:clamp(.88rem,2.5vw,1.05rem);font-weight:700;color:#0f172a;line-height:1.35;letter-spacing:-.02em;word-break:break-word}
+.xpa-h-d-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.xpa-h-d-mtag{font-size:.72rem;font-weight:500;color:#64748b}
+.xpa-h-d-msep{width:3px;height:3px;border-radius:50%;background:#cbd5e1;flex-shrink:0}
+.xpa-h-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(90px,100%),1fr));gap:clamp(6px,1.5vw,10px)}
+.xpa-h-sc{background:#fff;border:1.5px solid #e8edf5;border-radius:13px;padding:clamp(10px,2vw,14px) clamp(10px,2vw,15px) clamp(8px,1.5vw,12px);display:flex;flex-direction:column;gap:4px;transition:border-color .15s,box-shadow .15s}
+.xpa-h-sc:hover{border-color:#d1d9e6;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.xpa-h-sc-label{font-size:.63rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+.xpa-h-sc-val{font-size:clamp(1.15rem,3vw,1.6rem);font-weight:800;line-height:1;letter-spacing:-.04em}
+.xpa-h-sc-bar{height:3px;border-radius:2px;background:#f1f5f9;overflow:hidden;margin-top:5px}
+.xpa-h-sc-fill{height:100%;border-radius:2px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.xpa-h-sc-sub{font-size:.68rem;color:#94a3b8;font-weight:500}
+.xpa-h-excerpt-lbl{font-size:.66rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
+.xpa-h-excerpt{flex:1;min-height:80px;font-size:clamp(.78rem,1.8vw,.82rem);line-height:1.65;color:#475569;background:#fff;border:1.5px solid #e8edf5;border-radius:13px;padding:clamp(12px,2vw,16px) clamp(12px,2vw,18px);overflow-y:auto;-webkit-overflow-scrolling:touch;white-space:pre-wrap;word-break:break-word;scrollbar-width:thin}
+
+/* ━━ EMPTY STATES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-h-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:100%;min-height:180px;padding:clamp(24px,5vw,40px);text-align:center}
+.xpa-h-empty-ico{width:50px;height:50px;display:flex;align-items:center;justify-content:center;background:#f1f5f9;border-radius:14px;color:#94a3b8;flex-shrink:0}
+.xpa-h-empty-t{font-size:.9rem;font-weight:700;color:#374151}
+.xpa-h-empty-s{font-size:.78rem;color:#94a3b8;max-width:230px;line-height:1.55}
+
+/* ━━ FOOTER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-h-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;padding-bottom:max(0px,env(safe-area-inset-bottom));height:48px;border-top:1px solid #e8edf5;flex-shrink:0;background:#fff}
+.xpa-h-ftr-l{display:flex;align-items:center;gap:4px}
+.xpa-h-ftr-r{display:flex;align-items:center;gap:3px}
+.xpa-h-ftr-icon,.xpa-h-ftr-sep{display:none}
+.xpa-h-ftr-btn{display:inline-flex;align-items:center;gap:5px;height:36px;padding:0 12px;border-radius:8px;border:1.5px solid transparent;background:none;font-size:.71rem;font-weight:600;color:#374151;cursor:pointer;transition:background .1s;white-space:nowrap;min-height:36px}
+.xpa-h-ftr-btn:hover{background:#f1f5f9}
+.xpa-h-ftr-btn:disabled{opacity:.35;cursor:not-allowed}
+.xpa-h-ftr-btn:disabled:hover{background:none}
+.xpa-h-ftr-btn:focus-visible{outline:2px solid #064CDB;outline-offset:2px}
+.xpa-h-kbd{display:none;font-size:.62rem;font-weight:500;color:#94a3b8;border:1px solid #e2e8f0;border-radius:5px;padding:1px 5px;background:#f8fafc;line-height:1.4}
+
+/* ━━ MINIMIZED (desktop only) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-hist-modal.minimized{width:min(620px,47vw)!important;height:min(440px,46vh)!important}
+.xpa-hist-modal.minimized .xpa-h-detail-panel{display:none}
+.xpa-hist-modal.minimized .xpa-h-list{position:static;transform:none}
+.xpa-hist-modal.minimized .xpa-h-hdr-left{flex:1}
+.xpa-hist-modal.minimized .xpa-h-hdr-right{display:none}
+
+@media(min-width:480px){
+  .xpa-hist-modal{border-radius:24px 24px 0 0;height:88dvh}
+}
+@media(min-width:640px){
+  .xpa-hist-overlay{align-items:center;padding:20px}
+  .xpa-hist-modal{width:min(720px,94vw);height:min(760px,88dvh);border-radius:20px;box-shadow:0 32px 80px rgba(6,76,219,.18),0 8px 24px rgba(0,0,0,.13)}
+  .xpa-h-handle{display:none}
+  .xpa-h-hdr{height:56px}
+  .xpa-h-title{display:block}
+  .xpa-h-count{display:inline-flex}
+  .xpa-h-hdr-left{padding:0 18px}
+}
+@media(min-width:1024px){
+  .xpa-hist-modal{width:min(1280px,96vw);height:min(900px,94vh)}
+  .xpa-h-body{display:grid;grid-template-columns:38% 1fr}
+  .xpa-h-list{position:static;transform:none!important;transition:none;border-right:1px solid #e8edf5}
+  .xpa-h-detail-panel{position:static;transform:none!important;transition:none}
+  .xpa-h-detail-nav{display:none}
+  .xpa-h-hdr-left{flex:0 0 38%;border-right:1px solid #e8edf5}
+  .xpa-h-ftr-icon{display:inline-flex;width:34px;height:34px;border-radius:8px;border:1.5px solid transparent;background:none;color:#64748b;cursor:pointer;transition:all .12s}
+  .xpa-h-ftr-icon:hover{background:#f1f5f9;color:#374151;border-color:#e2e8f0}
+  .xpa-h-ftr-sep{display:block;width:1px;height:18px;background:#e8edf5;margin:0 5px}
+  .xpa-h-kbd{display:inline-block}
+  .xpa-hist-modal.minimized .xpa-h-body{grid-template-columns:1fr}
+  .xpa-hist-modal.minimized .xpa-h-list{border-right:none}
+  .xpa-hist-modal.minimized .xpa-h-hdr-left{flex:1;border-right:none}
+}
+@media(min-width:1440px){.xpa-hist-modal{width:min(1440px,96vw);height:min(960px,94vh)}}
+@media(min-width:1920px){.xpa-hist-modal{width:min(1680px,96vw);height:min(1020px,94vh)}}
+@media(min-width:2560px){.xpa-hist-modal{width:min(1800px,88vw);height:min(1080px,92vh)}}
+</style>
+
+<!-- ── Modal HTML ─────────────────────────────────────────────── -->
+<div class="xpa-hist-overlay" id="analysisHistoryModal" style="display:none" role="dialog" aria-modal="true" aria-label="Analysis history" aria-labelledby="xpaHistTitle">
+    <div class="xpa-hist-modal">
+        <div class="xpa-h-handle" aria-hidden="true"></div>
+        <div class="xpa-h-hdr">
+            <div class="xpa-h-hdr-left">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#064CDB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                <span class="xpa-h-title" id="xpaHistTitle">Analysis History</span>
+                <span class="xpa-h-count" id="histCountBadge">0</span>
+            </div>
+            <div class="xpa-h-hdr-right">
+                <div class="xpa-h-search">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input id="histSearchInput" type="text" placeholder="Search analyses…" autocomplete="off" spellcheck="false" aria-label="Search history">
+                    <button class="xpa-h-search-clr" id="histSearchClr" type="button" aria-label="Clear search" tabindex="-1">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <button class="xpa-h-close" id="histCloseBtn" type="button" aria-label="Close history">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="xpa-h-filters" id="histFilterBar" role="tablist" aria-label="Filter analyses">
+            <button class="xpa-h-fchip active" data-filter="all" type="button" role="tab" aria-selected="true">All</button>
+            <button class="xpa-h-fchip" data-filter="ai" type="button" role="tab" aria-selected="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>
+                AI Detection
+            </button>
+            <button class="xpa-h-fchip" data-filter="finderx" type="button" role="tab" aria-selected="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                FinderX
+            </button>
+            <button class="xpa-h-fchip" data-filter="citations" type="button" role="tab" aria-selected="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                Citations
+            </button>
+        </div>
+        <div class="xpa-h-body" id="histBody">
+            <div class="xpa-h-list" id="histListEl" role="listbox" aria-label="Analysis entries"></div>
+            <div class="xpa-h-detail-panel">
+                <div class="xpa-h-detail-nav">
+                    <button class="xpa-h-back-btn" id="histBackBtn" type="button" aria-label="Back to list">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        All analyses
+                    </button>
+                </div>
+                <div class="xpa-h-detail-content" id="histPreviewEl">
+                    <div class="xpa-h-empty">
+                        <div class="xpa-h-empty-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div>
+                        <p class="xpa-h-empty-t">Select an analysis</p>
+                        <p class="xpa-h-empty-s">Tap any entry to preview its results.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xpa-h-footer">
+            <div class="xpa-h-ftr-l">
+                <button class="xpa-h-ftr-icon" id="histMinimizeBtn" type="button" aria-label="Minimize">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/></svg>
+                </button>
+                <div class="xpa-h-ftr-sep"></div>
+                <button class="xpa-h-ftr-btn" id="histClearAll" type="button">Clear all</button>
+            </div>
+            <div class="xpa-h-ftr-r">
+                <button class="xpa-h-ftr-btn" id="histFtrOpen" type="button" disabled>
+                    <span>Open</span><span class="xpa-h-kbd">⏎</span>
+                </button>
+                <button class="xpa-h-ftr-btn" id="histFtrDelete" type="button" disabled>
+                    <span>Delete</span><span class="xpa-h-kbd">⌘⇧D</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Standalone history controller (works on every page) ───── -->
+<script>
+(function () {
+    'use strict';
+
+    function _esc(str) {
+        const el = document.createElement('div');
+        el.textContent = String(str);
+        return el.innerHTML;
+    }
+    function _rel(ts) {
+        const s = Math.floor((Date.now() - ts) / 1000);
+        if (s < 60) return 'just now';
+        if (s < 3600) return Math.floor(s / 60) + 'm ago';
+        if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+        const d = Math.floor(s / 86400);
+        if (d === 1) return 'yesterday';
+        if (d < 7) return d + ' days ago';
+        return new Date(ts).toLocaleDateString();
+    }
+    function _group(ts) {
+        const d = Math.floor((Date.now() - ts) / 86400000);
+        if (d < 1) return 'Today';
+        if (d < 7) return 'Last 7 days';
+        if (d < 30) return 'This month';
+        return 'Older';
+    }
+    function _riskColor(e) {
+        const max = Math.max(e.aiPct ?? 0, e.overall ?? 0);
+        if (max >= 75) return '#dc2626';
+        if (max >= 50) return '#ea580c';
+        if (max >= 25) return '#d97706';
+        if (e.aiPct != null || e.overall != null) return '#059669';
+        return '#cbd5e1';
+    }
+
+    class HistoryModalCtrl {
+        constructor() {
+            this._items = [];
+            this._full  = {};
+            this._filter = 'all';
+            this._ready = false;
+            this._init();
+        }
+
+        _init() {
+            // Intercept nav button on every page
+            const navBtn = document.getElementById('analysisHistoryNavBtn');
+            if (navBtn) {
+                navBtn.removeAttribute('href');
+                navBtn.style.cursor = 'pointer';
+                navBtn.addEventListener('click', e => { e.preventDefault(); this.open(); });
+            }
+
+            // Auto-open when URL has ?history=1
+            if (new URLSearchParams(location.search).get('history') === '1') {
+                history.replaceState({}, '', location.pathname);
+                setTimeout(() => this.open(), 120);
+            }
+
+            const modal = document.getElementById('analysisHistoryModal');
+            if (!modal) return;
+
+            document.getElementById('histCloseBtn')?.addEventListener('click', () => this.close());
+            document.getElementById('histBackBtn')?.addEventListener('click', () => {
+                const b = document.getElementById('histBody');
+                if (b) b.classList.remove('detail-open');
+            });
+            document.getElementById('histMinimizeBtn')?.addEventListener('click', () => this._toggleMinimize());
+            document.getElementById('histFtrOpen')?.addEventListener('click', () => {
+                const a = document.querySelector('.xpa-h-item.active');
+                if (a) this._openEntry(a.dataset.id);
+            });
+            document.getElementById('histFtrDelete')?.addEventListener('click', () => {
+                const a = document.querySelector('.xpa-h-item.active');
+                if (a) this._deleteEntry(a.dataset.id);
+            });
+
+            const search = document.getElementById('histSearchInput');
+            document.getElementById('histSearchClr')?.addEventListener('click', () => {
+                if (search) { search.value = ''; search.focus(); this._renderList(''); }
+            });
+            if (search) search.addEventListener('input', () => this._renderList(search.value));
+
+            document.getElementById('histClearAll')?.addEventListener('click', async () => {
+                if (!confirm('Clear all saved analyses? This cannot be undone.')) return;
+                try { await fetch('/x_doc/history', { method: 'DELETE' }); } catch (_) {}
+                this._items = []; this._full = {};
+                this._setCount(0);
+                this._renderList('');
+            });
+
+            document.getElementById('histFilterBar')?.addEventListener('click', e => {
+                const chip = e.target.closest('[data-filter]');
+                if (!chip) return;
+                document.querySelectorAll('.xpa-h-fchip').forEach(c => { c.classList.remove('active'); c.setAttribute('aria-selected', 'false'); });
+                chip.classList.add('active'); chip.setAttribute('aria-selected', 'true');
+                this._filter = chip.dataset.filter;
+                this._renderList(search ? search.value : '');
+            });
+
+            modal.addEventListener('click', e => { if (e.target === modal) this.close(); });
+            document.addEventListener('keydown', e => {
+                if (modal.style.display !== 'flex') return;
+                const active = document.querySelector('.xpa-h-item.active');
+                if (e.key === 'Escape') { this.close(); return; }
+                if (e.key === 'Enter' && !e.shiftKey && active) { e.preventDefault(); this._openEntry(active.dataset.id); }
+                if (e.key === 'D' && (e.metaKey || e.ctrlKey) && e.shiftKey && active) { e.preventDefault(); this._deleteEntry(active.dataset.id); }
+                if (e.key === 'ArrowDown') { e.preventDefault(); this._nav(1); }
+                if (e.key === 'ArrowUp')   { e.preventDefault(); this._nav(-1); }
+            });
+
+            this._ready = true;
+        }
+
+        async open() {
+            const modal = document.getElementById('analysisHistoryModal');
+            if (!modal) return;
+            const search = document.getElementById('histSearchInput');
+            if (search) search.value = '';
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            // Skeleton rows
+            const listEl = document.getElementById('histListEl');
+            if (listEl) listEl.innerHTML = Array.from({length: 5}, (_, i) => `
+                <div class="xpa-h-skel" style="animation-delay:${i * 60}ms">
+                    <div class="xpa-h-skel-bar" style="width:${60 + Math.random() * 30}%;height:11px"></div>
+                    <div class="xpa-h-skel-bar" style="width:${30 + Math.random() * 20}%;height:9px;opacity:.6"></div>
+                </div>`).join('');
+
+            // Reset filters
+            document.querySelectorAll('.xpa-h-fchip').forEach(c => { c.classList.remove('active'); c.setAttribute('aria-selected', 'false'); });
+            const allChip = document.querySelector('[data-filter="all"]');
+            if (allChip) { allChip.classList.add('active'); allChip.setAttribute('aria-selected', 'true'); }
+            this._filter = 'all';
+
+            // Fetch list
+            try {
+                const r = await fetch('/x_doc/history');
+                const j = await r.json();
+                this._items = Array.isArray(j.items) ? j.items : [];
+            } catch (_) { this._items = []; }
+            this._full = {};
+            this._renderList('');
+            if (search) setTimeout(() => search.focus(), 60);
+        }
+
+        close() {
+            const overlay = document.getElementById('analysisHistoryModal');
+            if (overlay) overlay.style.display = 'none';
+            document.body.style.overflow = '';
+            const body = document.getElementById('histBody');
+            if (body) body.classList.remove('detail-open');
+            const inner = overlay && overlay.querySelector('.xpa-hist-modal');
+            if (inner && inner.classList.contains('minimized')) {
+                inner.classList.remove('minimized');
+                const btn = document.getElementById('histMinimizeBtn');
+                if (btn) btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/></svg>`;
+            }
+        }
+
+        _setCount(n) {
+            const b = document.getElementById('histCountBadge');
+            if (b) b.textContent = n;
+        }
+
+        _renderList(filter) {
+            const listEl = document.getElementById('histListEl');
+            if (!listEl) return;
+            const q = String(filter || '').toLowerCase().trim();
+            const all = this._items || [];
+            let items = all;
+            if (this._filter === 'ai')        items = items.filter(e => e.aiPct != null);
+            if (this._filter === 'finderx')   items = items.filter(e => e.overall != null);
+            if (this._filter === 'citations') items = items.filter(e => e.cit != null);
+            if (q) items = items.filter(e => ((e.title || '') + ' ' + (e.preview || '')).toLowerCase().includes(q));
+
+            this._setCount(all.length);
+
+            if (!items.length) {
+                listEl.innerHTML = `<div class="xpa-h-empty">
+                    <div class="xpa-h-empty-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div>
+                    <p class="xpa-h-empty-t">${all.length ? 'No matches found' : 'No analyses yet'}</p>
+                    <p class="xpa-h-empty-s">${all.length ? 'Try adjusting your search or filter.' : 'Run your first analysis and it will appear here.'}</p>
+                </div>`;
+                const det = document.getElementById('histPreviewEl');
+                if (det) det.innerHTML = `<div class="xpa-h-empty"><div class="xpa-h-empty-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div><p class="xpa-h-empty-t">Select an analysis</p><p class="xpa-h-empty-s">Tap any entry to preview its results.</p></div>`;
+                this._syncFooter(false);
+                return;
+            }
+
+            const groups = {};
+            items.forEach(e => { const g = _group(e.ts); (groups[g] = groups[g] || []).push(e); });
+            const order = ['Today', 'Last 7 days', 'This month', 'Older'];
+            let html = '', delay = 0;
+            order.forEach(g => {
+                if (!groups[g]) return;
+                html += `<div class="xpa-h-group">${g}</div>`;
+                groups[g].forEach(e => {
+                    const rc = _riskColor(e);
+                    const badges = [];
+                    if (e.aiPct != null) { const c = e.aiPct>=50?'#dc2626':e.aiPct>=25?'#d97706':'#059669'; badges.push(`<span class="xpa-h-badge" style="color:${c};border-color:${c}33;background:${c}0d">${e.aiPct}% AI</span>`); }
+                    if (e.overall != null) { const c = e.overall>=50?'#dc2626':e.overall>=25?'#d97706':'#059669'; badges.push(`<span class="xpa-h-badge" style="color:${c};border-color:${c}33;background:${c}0d">${e.overall}% Sim</span>`); }
+                    if (e.cit != null) badges.push(`<span class="xpa-h-badge" style="color:#064CDB;border-color:#064CDB33;background:#064CDB0d">Cites: ${e.cit}</span>`);
+                    html += `<div class="xpa-h-item" data-id="${e.id}" style="--risk-c:${rc};animation-delay:${delay}ms" role="option" tabindex="0" aria-label="${_esc(e.title)}">
+                        <div class="xpa-h-item-r1">
+                            <span class="xpa-h-dot"></span>
+                            <span class="xpa-h-ititle">${_esc(e.title)}</span>
+                            <span class="xpa-h-itime">${_rel(e.ts)}</span>
+                        </div>
+                        <div class="xpa-h-item-r2">
+                            ${badges.join('')}
+                            <div class="xpa-h-iacts">
+                                <button class="xpa-h-iact" type="button" data-action="open" aria-label="Open analysis">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+                                    <span class="xpa-h-tip">Open analysis</span>
+                                </button>
+                                <button class="xpa-h-iact del" type="button" data-action="delete" aria-label="Delete entry">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                    <span class="xpa-h-tip">Delete entry</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+                    delay = Math.min(delay + 25, 200);
+                });
+            });
+            listEl.innerHTML = html;
+            listEl.querySelectorAll('.xpa-h-item').forEach(el => {
+                el.addEventListener('click', ev => {
+                    const btn = ev.target.closest('[data-action]');
+                    if (btn) { ev.stopPropagation(); btn.dataset.action === 'open' ? this._openEntry(el.dataset.id) : this._deleteEntry(el.dataset.id); return; }
+                    listEl.querySelectorAll('.xpa-h-item').forEach(x => x.classList.remove('active'));
+                    el.classList.add('active');
+                    this._preview(el.dataset.id);
+                    this._syncFooter(true);
+                    const body = document.getElementById('histBody');
+                    if (body && window.innerWidth < 1024) body.classList.add('detail-open');
+                });
+            });
+            const first = listEl.querySelector('.xpa-h-item');
+            if (first) { first.classList.add('active'); this._preview(first.dataset.id); this._syncFooter(true); }
+            else { this._syncFooter(false); }
+        }
+
+        async _fetchFull(id) {
+            if (this._full[id]) return this._full[id];
+            try {
+                const r = await fetch(`/x_doc/history/${encodeURIComponent(id)}`);
+                if (!r.ok) return null;
+                const j = await r.json();
+                if (j && j.item) { this._full[id] = j.item; return j.item; }
+            } catch (_) {}
+            return null;
+        }
+
+        async _preview(id) {
+            const detail = document.getElementById('histPreviewEl');
+            if (!detail) return;
+            detail.innerHTML = `<div class="xpa-h-detail-inner">
+                <div class="xpa-h-d-head">
+                    <div class="xpa-h-skel-bar" style="width:70%;height:18px"></div>
+                    <div class="xpa-h-skel-bar" style="width:45%;height:11px;margin-top:4px;opacity:.5"></div>
+                </div>
+                <div class="xpa-h-scores">${Array.from({length:3},()=>`<div class="xpa-h-sc"><div class="xpa-h-skel-bar" style="width:50%;height:9px"></div><div class="xpa-h-skel-bar" style="width:60%;height:22px;margin-top:8px"></div></div>`).join('')}</div>
+                <div class="xpa-h-skel-bar" style="width:100%;height:120px;border-radius:13px"></div>
+            </div>`;
+            const e = await this._fetchFull(id);
+            if (!e) {
+                detail.innerHTML = `<div class="xpa-h-empty"><div class="xpa-h-empty-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></div><p class="xpa-h-empty-t">Could not load entry</p><p class="xpa-h-empty-s">Try again or check your connection.</p></div>`;
+                return;
+            }
+            const aiC  = e.aiPct  != null ? (e.aiPct  >= 50 ? '#dc2626' : e.aiPct  >= 25 ? '#d97706' : '#059669') : null;
+            const simC = e.overall != null ? (e.overall >= 50 ? '#dc2626' : e.overall >= 25 ? '#d97706' : '#059669') : null;
+            const cards = [
+                e.aiPct  != null ? `<div class="xpa-h-sc"><div class="xpa-h-sc-label">AI Content</div><div class="xpa-h-sc-val" style="color:${aiC}">${e.aiPct}%</div><div class="xpa-h-sc-bar"><div class="xpa-h-sc-fill" style="width:${e.aiPct}%;background:${aiC}"></div></div><div class="xpa-h-sc-sub">${e.aiPct>=50?'High risk':e.aiPct>=25?'Moderate':'Low risk'}</div></div>` : '',
+                e.overall != null ? `<div class="xpa-h-sc"><div class="xpa-h-sc-label">Similarity</div><div class="xpa-h-sc-val" style="color:${simC}">${e.overall}%</div><div class="xpa-h-sc-bar"><div class="xpa-h-sc-fill" style="width:${e.overall}%;background:${simC}"></div></div><div class="xpa-h-sc-sub">${e.overall>=50?'High match':e.overall>=25?'Partial match':'Low match'}</div></div>` : '',
+                e.cit    != null ? `<div class="xpa-h-sc"><div class="xpa-h-sc-label">Citations</div><div class="xpa-h-sc-val" style="color:#064CDB">${e.cit}<span style="font-size:.8rem;font-weight:600;color:#94a3b8">/100</span></div><div class="xpa-h-sc-bar"><div class="xpa-h-sc-fill" style="width:${e.cit}%;background:#064CDB"></div></div><div class="xpa-h-sc-sub">Quality score</div></div>` : '',
+            ].filter(Boolean).join('');
+            const dateStr = new Date(e.ts).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'});
+            const timeStr = new Date(e.ts).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'});
+            detail.innerHTML = `<div class="xpa-h-detail-inner">
+                <div class="xpa-h-d-head">
+                    <h3 class="xpa-h-d-title">${_esc(e.title)}</h3>
+                    <div class="xpa-h-d-meta">
+                        <span class="xpa-h-d-mtag">${dateStr}</span>
+                        <span class="xpa-h-d-msep"></span>
+                        <span class="xpa-h-d-mtag">${timeStr}</span>
+                        <span class="xpa-h-d-msep"></span>
+                        <span class="xpa-h-d-mtag">${_rel(e.ts)}</span>
+                    </div>
+                </div>
+                ${cards ? `<div class="xpa-h-scores">${cards}</div>` : ''}
+                <div style="display:flex;flex-direction:column;flex:1;gap:8px;min-height:0">
+                    <div class="xpa-h-excerpt-lbl">Document excerpt</div>
+                    <div class="xpa-h-excerpt">${_esc(String(e.text||'').slice(0,2400))}${(e.text||'').length>2400?'\n…':''}</div>
+                </div>
+            </div>`;
+        }
+
+        async _openEntry(id) {
+            const e = await this._fetchFull(id);
+            if (!e) return;
+            this.close();
+            // If the AdvancedInputComponent (analysiss page) is loaded, use it directly
+            const adv = window._advComp;
+            if (adv && typeof adv._enterMarktrackView === 'function') {
+                adv._skipHistorySave = true;
+                adv._analyzedText = e.text || '';
+                if (typeof adv._exitSplitMode === 'function') adv._exitSplitMode();
+                setTimeout(() => adv._enterMarktrackView(e.text || '', e.ai || null, e.source || null, e.citation || null), 60);
+            } else {
+                // Navigate to analysiss and open the entry there
+                window.location.href = '/analysiss?open_history=' + encodeURIComponent(id);
+            }
+        }
+
+        async _deleteEntry(id) {
+            try { await fetch(`/x_doc/history/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (_) {}
+            this._items = (this._items || []).filter(x => x.id !== id);
+            delete this._full[id];
+            const search = document.getElementById('histSearchInput');
+            this._renderList(search ? search.value : '');
+        }
+
+        _toggleMinimize() {
+            const modal = document.querySelector('#analysisHistoryModal .xpa-hist-modal');
+            const btn   = document.getElementById('histMinimizeBtn');
+            if (!modal) return;
+            const minimized = modal.classList.toggle('minimized');
+            if (btn) {
+                btn.setAttribute('aria-label', minimized ? 'Restore' : 'Minimize');
+                btn.innerHTML = minimized
+                    ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>`
+                    : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/></svg>`;
+            }
+        }
+
+        _syncFooter(sel) {
+            const o = document.getElementById('histFtrOpen');
+            const d = document.getElementById('histFtrDelete');
+            if (o) o.disabled = !sel;
+            if (d) d.disabled = !sel;
+        }
+
+        _nav(dir) {
+            const items = [...document.querySelectorAll('.xpa-h-item')];
+            if (!items.length) return;
+            const cur = items.findIndex(el => el.classList.contains('active'));
+            const next = items[Math.max(0, Math.min(items.length - 1, cur + dir))];
+            if (!next || next === items[cur]) return;
+            items.forEach(x => x.classList.remove('active'));
+            next.classList.add('active');
+            next.scrollIntoView({ block: 'nearest' });
+            this._preview(next.dataset.id);
+            this._syncFooter(true);
+        }
+    }
+
+    window._histCtrl = new HistoryModalCtrl();
+})();
+</script>
