@@ -1537,15 +1537,58 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* mobile: full-screen sheet */
+/* ── Mobile: full-screen bottom sheet ──────────────────────── */
 @media (max-width: 600px) {
-  .acct-modal-overlay { padding: 0; align-items: flex-end; }
+  .acct-modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+    background: rgba(6, 14, 36, .50);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
   .acct-modal {
     width: 100%;
-    height: 95dvh;
+    height: 96dvh;
     border-radius: 20px 20px 0 0;
     border-bottom: none;
+    border-left: none;
+    border-right: none;
+    box-shadow: 0 -8px 32px rgba(6,14,36,.22), 0 -2px 8px rgba(0,0,0,.08);
+    transform: translateY(100%);
+    transition: transform .38s cubic-bezier(.32,1.18,.50,1), opacity .22s ease;
   }
+  .acct-modal-overlay.open .acct-modal {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  /* Drag handle visual affordance */
+  .acct-modal::before {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px; height: 4px;
+    border-radius: 2px;
+    background: rgba(0,0,0,.14);
+    z-index: 1;
+  }
+  .acct-modal__bar {
+    padding: 0 12px 0 16px;
+    height: 48px;
+  }
+  .acct-modal__title { font-size: 13px; }
+  .acct-modal__close { width: 38px; height: 38px; }
+  /* Safe area: handled inside iframe content via sm-root */
+}
+
+/* ── Small phones ≤360px ───────────────────────────────────── */
+@media (max-width: 360px) {
+  .acct-modal { height: 97dvh; border-radius: 16px 16px 0 0; }
+  .acct-modal__bar { height: 44px; padding: 0 10px 0 14px; }
+  .acct-modal__title { font-size: 12.5px; }
+  .acct-modal__title svg { width: 14px; height: 14px; }
 }
 
 /* ── Settings link in nav rail ──────────────────────────────────── */

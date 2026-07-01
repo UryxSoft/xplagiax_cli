@@ -3678,11 +3678,11 @@ body.xp-file-preview .mode-switch-container {
             const style = this._mtStyleScore(ai ? ai.stylometric : null);
             const refs = this._mtRefsScore(ai ? ai.citation : null);
             const alerts = [
-                { goto: 'ai', high: aiPct >= 50, icon: 'fa-microchip', title: 'AI-Generated Content', txt: ai ? `${aiPct}% of the text shows AI patterns` : 'AI detection not run', btn: 'View Details' },
-                { goto: 'style', high: !!(style && style.cls === 'score-low'), icon: 'fa-pen-nib', title: 'Style Analysis', txt: style ? style.label : 'Not analyzed', btn: 'View Style' },
-                { goto: 'refs', high: false, icon: 'fa-book-open', title: 'References Integrity', txt: refs.total ? refs.label : 'No references detected', btn: 'View References' },
-                { goto: 'plag', high: directCopy, icon: 'fa-copy', title: 'Plagiarism Report', txt: source ? (directCopy ? `${copyPct}% direct match — likely copied` : `${overall}% semantic — no direct copies`) : 'Not run', btn: 'View Report' },
-            ];
+                ai     ? { goto: 'ai',   high: aiPct >= 50,                         icon: 'fa-microchip',  title: 'AI-Generated Content',    txt: `${aiPct}% of the text shows AI patterns`,                                              btn: 'View Details' } : null,
+                source ? { goto: 'plag', high: directCopy,                            icon: 'fa-copy',       title: 'Plagiarism Report',        txt: directCopy ? `${copyPct}% direct match — likely copied` : `${overall}% semantic — no direct copies`, btn: 'View Report'  } : null,
+                (ai && ai.stylometric) ? { goto: 'style', high: !!(style && style.cls === 'score-low'), icon: 'fa-pen-nib', title: 'Style Analysis', txt: style ? style.label : 'Not analyzed', btn: 'View Style' } : null,
+                (ai && ai.citation && refs.total > 0) ? { goto: 'refs', high: false, icon: 'fa-book-open',  title: 'References Integrity',     txt: refs.label,                                                                             btn: 'View References' } : null,
+            ].filter(Boolean);
             const alertCards = alerts.map(a => `
                 <div class="alert-card ${a.high ? 'alert-high' : 'alert-medium'}" style="border-left-color:${a.high ? '#ef4444' : '#3b82f6'};">
                     <div class="alert-icon"><i class="fas ${a.icon}"></i></div>
@@ -4085,6 +4085,11 @@ body.xp-file-preview .mode-switch-container {
             const overall = source ? Math.round((source.scores || {}).overall || 0) : 0;
             const aiColor = aiPct >= 50 ? '#ef4444' : aiPct >= 25 ? '#f59e0b' : '#10b981';
             const srcLbl = this._sourceLabel(overall);
+            const hasAi    = !!ai;
+            const hasPlag  = !!source;
+            const hasCit   = !!citation;
+            const hasStyle = !!(ai && ai.stylometric);
+            const hasRefs  = !!(ai && ai.citation && Array.isArray(ai.citation.references) && ai.citation.references.length > 0);
 
             const overlay = document.createElement('div');
             overlay.id = 'aiAnalysisSplitView';
@@ -4120,19 +4125,19 @@ body.xp-file-preview .mode-switch-container {
                         <div class="analysis-panels">
                             <div class="tabs" role="tablist">
                                 <button class="tab active" data-tab="ov" type="button" title="Overview"><i class="fas fa-th-large"></i></button>
-                                <button class="tab" data-tab="ai" type="button" title="AI Detection"><i class="fas fa-microchip"></i></button>
-                                <button class="tab" data-tab="plag" type="button" title="Plagiarism"><i class="fas fa-shield-alt"></i></button>
-                                ${citation ? '<button class="tab" data-tab="cit" type="button" title="Citations & References"><i class="fas fa-quote-right"></i></button>' : ''}
-                                <button class="tab" data-tab="style" type="button" title="Style Analysis"><i class="fas fa-pen-nib"></i></button>
-                                <button class="tab" data-tab="refs" type="button" title="References Integrity"><i class="fas fa-book"></i></button>
+                                ${hasAi    ? '<button class="tab" data-tab="ai"   type="button" title="AI Detection"><i class="fas fa-microchip"></i></button>'          : ''}
+                                ${hasPlag  ? '<button class="tab" data-tab="plag" type="button" title="Plagiarism"><i class="fas fa-shield-alt"></i></button>'           : ''}
+                                ${hasCit   ? '<button class="tab" data-tab="cit"  type="button" title="Citations &amp; References"><i class="fas fa-quote-right"></i></button>' : ''}
+                                ${hasStyle ? '<button class="tab" data-tab="style" type="button" title="Style Analysis"><i class="fas fa-pen-nib"></i></button>'         : ''}
+                                ${hasRefs  ? '<button class="tab" data-tab="refs" type="button" title="References Integrity"><i class="fas fa-book"></i></button>'       : ''}
                             </div>
                             <div class="tab-content">
                                 <div class="tab-panel active" data-panel="ov">${this._buildMtOverview(ai, source)}</div>
-                                <div class="tab-panel" data-panel="ai">${this._buildMtAiPanel(ai)}</div>
-                                <div class="tab-panel" data-panel="plag">${this._buildMtPlagPanel(source)}</div>
-                                ${citation ? `<div class="tab-panel" data-panel="cit">${this._buildMtCitationsPanel(citation)}</div>` : ''}
-                                <div class="tab-panel" data-panel="style">${this._buildMtStylePanel(ai)}</div>
-                                <div class="tab-panel" data-panel="refs">${this._buildMtRefsPanel(ai)}</div>
+                                ${hasAi    ? `<div class="tab-panel" data-panel="ai">${this._buildMtAiPanel(ai)}</div>`                   : ''}
+                                ${hasPlag  ? `<div class="tab-panel" data-panel="plag">${this._buildMtPlagPanel(source)}</div>`           : ''}
+                                ${hasCit   ? `<div class="tab-panel" data-panel="cit">${this._buildMtCitationsPanel(citation)}</div>`    : ''}
+                                ${hasStyle ? `<div class="tab-panel" data-panel="style">${this._buildMtStylePanel(ai)}</div>`            : ''}
+                                ${hasRefs  ? `<div class="tab-panel" data-panel="refs">${this._buildMtRefsPanel(ai)}</div>`              : ''}
                             </div>
                         </div>
                     </div>
