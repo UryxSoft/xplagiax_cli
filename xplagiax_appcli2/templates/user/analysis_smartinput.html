@@ -639,6 +639,11 @@ body.xp-file-preview .mode-switch-container {
 @keyframes xpaSegPulse{0%{box-shadow:0 0 0 0 rgba(99,102,241,.45)}70%{box-shadow:0 0 0 8px rgba(99,102,241,0)}100%{box-shadow:0 0 0 0 rgba(99,102,241,0)}}
 .xpa-seg-hl{transition:filter .15s ease}
 .xpa-seg-pulse{animation:xpaSegPulse 1.1s ease-out 1;filter:brightness(1.06) saturate(1.15)}
+/* Resaltado AZUL de citas in-text (Citations & References) */
+.xpa-cite-hl{background:rgba(6,76,219,.12);border-radius:3px;padding:0 2px;box-shadow:inset 0 -2px 0 #064CDB;cursor:pointer;scroll-margin:70px;transition:background .15s}
+.xpa-cite-hl:hover{background:rgba(6,76,219,.24)}
+@keyframes xpaCitePulse{0%{box-shadow:0 0 0 0 rgba(6,76,219,.5)}70%{box-shadow:0 0 0 9px rgba(6,76,219,0)}100%{box-shadow:0 0 0 0 rgba(6,76,219,0)}}
+.xpa-cite-pulse{animation:xpaCitePulse 1.1s ease-out 1;background:rgba(6,76,219,.3)!important}
 
 /* Comparación "Your text vs Academic source" */
 .xpa-cmp-label{font-size:0.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#94a3b8;margin:6px 0 2px}
@@ -671,7 +676,7 @@ body.xp-file-preview .mode-switch-container {
    el streaming de .ai-split-results-scroll). El base .analysis-block arranca en
    opacity:0 -> forzarlos visibles y con la paleta clara/estandar de la app. */
 .xpa-mt .analysis-block{opacity:1;transform:none;background:#fff;border:1px solid #e8edf5;box-shadow:0 1px 2px rgba(15,23,42,.04);border-radius:12px;padding:12px 14px;margin-bottom:10px;color:#0f172a}
-.xpa-mt .analysis-block.seg-orig-block{opacity:.62}
+.xpa-mt .analysis-block.seg-clean-block{background:#fbfffe}
 .xpa-mt .analysis-block:hover{box-shadow:0 6px 18px -10px rgba(15,23,42,.22)}
 .xpa-mt .block-header{margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #eef2f7}
 .xpa-mt .block-icon{width:28px;height:28px;font-size:.8rem;background:#f1f5f9}
@@ -682,6 +687,69 @@ body.xp-file-preview .mode-switch-container {
 .xpa-mt .confidence-bar{height:5px;background:#eef2f7}
 .xpa-mt .section-title{font-size:14px;font-weight:700;color:#0f172a;margin:0 0 10px}
 .xpa-mt .section-title::before{background:#064CDB}
+/* FinderX plag panel — disenio profesional (paleta estandar de la app) */
+.xpa-mt .plag-hero{display:flex;gap:16px;align-items:center;background:linear-gradient(135deg,#f8fafc,#eef2ff);border:1.5px solid #e8edf5;border-radius:16px;padding:15px 17px;margin-bottom:14px}
+.xpa-mt .plag-hero-ring{width:78px;height:78px;flex-shrink:0}
+.xpa-mt .plag-hero-main{flex:1;min-width:0}
+.xpa-mt .plag-hero-verdict{font-size:1rem;font-weight:800;letter-spacing:-.02em;line-height:1.25;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.xpa-mt .plag-hero-sub{font-size:.78rem;color:#64748b;line-height:1.5;margin-top:5px}
+.xpa-mt .plag-badge{display:inline-flex;align-items:center;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:20px}
+.xpa-mt .plag-scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px;margin-bottom:14px}
+.xpa-mt .plag-score{background:#fff;border:1px solid #e8edf5;border-radius:12px;padding:10px 8px;text-align:center}
+.xpa-mt .plag-score-v{font-size:1.2rem;font-weight:800;letter-spacing:-.04em;line-height:1}
+.xpa-mt .plag-score-l{font-size:.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-top:5px}
+.xpa-mt .plag-score-h{font-size:.6rem;color:#94a3b8;margin-top:2px;line-height:1.3}
+.xpa-mt .plag-note{display:flex;gap:8px;align-items:flex-start;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:9px 12px;font-size:.76rem;color:#92400e;line-height:1.5;margin-bottom:14px}
+.xpa-mt .plag-note svg{flex-shrink:0;margin-top:1px;color:#d97706}
+.xpa-mt .plag-sec-title{display:flex;align-items:center;gap:8px;font-size:.7rem;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:.06em;margin:20px 0 10px}
+.xpa-mt .plag-sec-count{background:#f1f5f9;color:#475569;font-size:.62rem;font-weight:700;border-radius:20px;padding:2px 8px}
+.xpa-mt .plag-cmp-wrap{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.xpa-mt .plag-cmp-col{background:#f8fafc;border:1px solid #e8edf5;border-radius:10px;padding:9px 11px}
+.xpa-mt .plag-cmp-h{display:flex;align-items:center;gap:6px;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.xpa-mt .plag-cmp-t{font-size:.79rem;line-height:1.55;color:#334155;white-space:pre-wrap;word-break:break-word}
+.xpa-mt .plag-meta{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:20px;padding-top:12px;border-top:1px dashed #e2e8f0;font-size:.68rem;color:#94a3b8}
+.xpa-mt .plag-meta b{color:#64748b;font-weight:700}
+@media(min-width:560px){.xpa-mt .plag-cmp-wrap{flex-direction:row}.xpa-mt .plag-cmp-col{flex:1;min-width:0}}
+/* Citations & References — tarjetas numeradas y enlazables (paleta de la app) */
+.xpa-mt .xcite-quality{display:flex;gap:14px;align-items:center;background:linear-gradient(135deg,#f8fafc,#eef2ff);border:1.5px solid #e8edf5;border-radius:16px;padding:14px 16px;margin-bottom:16px}
+.xpa-mt .xcite-q-ring{position:relative;width:72px;height:72px;flex-shrink:0}
+.xpa-mt .xcite-q-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.15rem;font-weight:800;letter-spacing:-.04em}
+.xpa-mt .xcite-q-num span{font-size:.55rem;color:#94a3b8;font-weight:700;margin-left:1px}
+.xpa-mt .xcite-q-main{flex:1;min-width:0}
+.xpa-mt .xcite-q-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+.xpa-mt .xcite-q-title{font-size:.82rem;font-weight:700;color:#0f172a}
+.xpa-mt .xcite-risk{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border-radius:20px}
+.xpa-mt .xcite-q-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.xpa-mt .xcite-q-metrics>div{display:flex;flex-direction:column;gap:1px;background:#fff;border:1px solid #e8edf5;border-radius:9px;padding:6px 4px;text-align:center;min-width:0}
+.xpa-mt .xcite-q-metrics b{font-size:.8rem;font-weight:800;color:#0f172a;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xpa-mt .xcite-q-metrics span{font-size:.53rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.03em}
+.xpa-mt .xcite-sec-h{display:flex;align-items:center;gap:8px;font-size:.7rem;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:.06em;margin:16px 0 10px}
+.xpa-mt .xcite-count{background:#f1f5f9;color:#475569;font-size:.62rem;font-weight:700;border-radius:20px;padding:2px 8px}
+.xpa-mt .xcite-hint{font-size:.68rem;color:#94a3b8;margin:0 0 9px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.xpa-mt .xcite-hint-dot{display:inline-block;width:11px;height:11px;border-radius:3px;background:rgba(6,76,219,.14);box-shadow:inset 0 -2px 0 #064CDB;flex-shrink:0}
+.xpa-mt .xcite-list{display:flex;flex-direction:column;gap:8px}
+.xpa-mt .xcite-item{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #e8edf5;border-radius:12px;padding:10px 12px;transition:border-color .12s,box-shadow .12s,transform .12s}
+.xpa-mt .xcite-item.clk{cursor:pointer}
+.xpa-mt .xcite-item.clk:hover{border-color:#bfcfef;box-shadow:0 4px 14px -8px rgba(6,76,219,.3);transform:translateY(-1px)}
+.xpa-mt .xcite-item.clk:focus-visible{outline:2px solid #064CDB;outline-offset:2px}
+.xpa-mt .xcite-item.xcite-flash{border-color:#064CDB;box-shadow:0 0 0 3px rgba(6,76,219,.15)}
+.xpa-mt .xcite-num{flex-shrink:0;width:22px;height:22px;border-radius:7px;background:#f1f5f9;color:#64748b;font-size:.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.xpa-mt .xcite-num--blue{background:rgba(6,76,219,.1);color:#064CDB}
+.xpa-mt .xcite-body{flex:1;min-width:0}
+.xpa-mt .xcite-title-line{font-size:.8rem;line-height:1.45;color:#475569;word-break:break-word}
+.xpa-mt .xcite-link{color:#064CDB;text-decoration:none;font-weight:600}
+.xpa-mt .xcite-link:hover{text-decoration:underline}
+.xpa-mt .xcite-intext{font-size:.82rem;font-style:italic;color:#334155;line-height:1.4;word-break:break-word}
+.xpa-mt .xcite-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:6px}
+.xpa-mt .xcite-status{font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:5px}
+.xpa-mt .xcite-conf{display:inline-flex;align-items:center;gap:5px;font-size:.66rem;font-weight:700;color:#64748b}
+.xpa-mt .xcite-conf-bar{display:inline-block;width:40px;height:4px;background:#eef2f7;border-radius:2px;overflow:hidden}
+.xpa-mt .xcite-conf-bar>span{display:block;height:100%;border-radius:2px}
+.xpa-mt .xcite-conf-chip{font-size:.62rem;font-weight:700;color:#064CDB;background:rgba(6,76,219,.08);border-radius:5px;padding:1px 6px}
+.xpa-mt .xcite-metabits{font-size:.68rem;color:#94a3b8}
+.xpa-mt .xcite-jump{flex-shrink:0;color:#cbd5e1;display:flex;align-items:center;margin-top:2px}
+.xpa-mt .xcite-item.clk:hover .xcite-jump{color:#064CDB}
+@media(min-width:560px){.xpa-mt .xcite-q-ring{width:80px;height:80px}}
 @keyframes mtFade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .xpa-mt h2{font-size:18px;font-weight:700;color:#0f172a;margin:8px 0 16px}
 .xpa-mt h3{font-size:15px;font-weight:700;color:#0f172a;margin:0 0 12px}
@@ -3357,54 +3425,66 @@ body.xp-file-preview .mode-switch-container {
         }
 
         // ─── New segment block for /api/v1/academic-check structure ─────────────
-        _buildSegmentBlockHtml(seg) {
-            const matchScore   = Math.round(Number(seg.match_score) || 0);
-            const semanticPct  = Math.round((Number(seg.semantic_score) || 0) * 100);
-            const ngramPct     = Math.round((Number(seg.ngram_containment) || 0) * 100);
-            const contiguous   = Number(seg.contiguous_words) || 0;
-            const decision     = String(seg.decision || '').toLowerCase();
-            const confidence   = String(seg.confidence || 'none').toLowerCase();
-            const reason       = seg.reason || '';
-            const src          = seg.matched_source || null;
-            const isPlag       = decision === 'plagiarism';
-            const idx          = (seg.segment_index != null ? seg.segment_index : '') ;
-            const charRange    = (seg.char_start != null && seg.char_end != null)
-                ? `chars ${seg.char_start}–${seg.char_end}` : '';
-
+        _buildSegmentBlockHtml(seg, opts) {
+            opts = opts || {};
+            const num = v => Number(v) || 0;
+            const matchScore  = Math.round(num(seg.match_score));
+            const semanticPct = Math.round(num(seg.semantic_score) * 100);
+            const ngramPct    = Math.round(num(seg.ngram_containment) * 100);
+            const contiguous  = num(seg.contiguous_words);
+            const decision    = String(seg.decision || '').toLowerCase();
+            const confidence  = String(seg.confidence || 'none').toLowerCase();
+            const reason      = seg.reason || '';
+            const src         = seg.matched_source || null;
+            const isPlag      = decision === 'plagiarism';
+            const idx         = seg.segment_index != null ? seg.segment_index : '';
+            const charRange   = (seg.char_start != null && seg.char_end != null) ? `chars ${seg.char_start}–${seg.char_end}` : '';
+            const preview     = this._escapeHtml(seg.text_preview || '');
             const confColorMap = { high: '#dc2626', medium: '#d97706', low: '#f59e0b', none: '#94a3b8' };
             const confColor    = confColorMap[confidence] || '#94a3b8';
-            let color, statusLabel;
-            if (isPlag && confidence === 'high')   { color = '#dc2626'; statusLabel = 'Plagiarism detected'; }
-            else if (isPlag)                        { color = '#d97706'; statusLabel = 'Possible plagiarism'; }
-            else                                    { color = '#059669'; statusLabel = 'Original content';   }
+            const metric = (val, lbl, col) => `<div class="seg-metric"><span class="seg-metric-val" style="color:${col}">${val}</span><span class="seg-metric-lbl">${lbl}</span></div>`;
 
-            const preview = this._escapeHtml(seg.text_preview || '');
-
-            // Compact view for original segments
+            // Cleared / original segment: calm card that still explains WHY it is not plagiarism.
             if (!isPlag) {
-                return `<div class="analysis-block seg-orig-block">
+                return `<div class="analysis-block seg-clean-block" style="border-left:3px solid #34d399">
                     <div class="block-header">
                         <div class="block-info">
-                            <div class="block-icon" style="color:${color}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                            <div class="block-icon" style="color:#059669"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
                             <div>
-                                <div class="block-type" style="color:${color};font-size:.78rem">Original${idx !== '' ? ` · #${Number(idx)+1}` : ''}</div>
-                                ${charRange ? `<div class="block-confidence"><span class="seg-pos-badge">${charRange}</span></div>` : ''}
+                                <div class="block-type" style="color:#059669;font-size:.85rem">Original${idx !== '' ? ` · #${Number(idx) + 1}` : ''}</div>
+                                <div class="block-confidence" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+                                    <span class="seg-conf-chip" style="background:#0596691a;color:#059669">cleared</span>
+                                    ${charRange ? `<span class="seg-pos-badge">${charRange}</span>` : ''}
+                                </div>
                             </div>
                         </div>
+                        <div class="confidence-meter" style="min-width:72px">
+                            <div style="text-align:right;font-size:.78rem;font-weight:700;color:#059669;margin-bottom:3px">${matchScore}%</div>
+                            <div class="confidence-bar"><div class="confidence-fill" style="width:${matchScore}%;background:#059669"></div></div>
+                        </div>
                     </div>
-                    <div class="block-content" style="color:#94a3b8;font-style:italic;font-size:.75rem">"${preview.slice(0, 100)}${preview.length > 100 ? '…' : ''}"</div>
+                    <div class="block-content" style="color:#475569">"${preview}"</div>
+                    ${reason ? `<div class="seg-reason"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>${this._escapeHtml(reason)}</div>` : ''}
+                    <div class="seg-metrics">
+                        ${metric(ngramPct + '%', 'Literal', ngramPct >= 25 ? '#d97706' : '#94a3b8')}
+                        ${metric(semanticPct + '%', 'Semantic', '#64748b')}
+                        ${metric(matchScore + '%', 'Match', '#64748b')}
+                    </div>
                 </div>`;
             }
 
-            // Source card
+            // Flagged segment.
+            const color = confidence === 'high' ? '#dc2626' : '#d97706';
+            const statusLabel = confidence === 'high' ? 'Plagiarism detected' : 'Possible plagiarism';
+
             let sourceHtml = '';
             if (src) {
-                const title  = this._escapeHtml(src.title || 'Source');
-                const url    = src.url || (src.doi ? `https://doi.org/${src.doi}` : null);
+                const title = this._escapeHtml(src.title || 'Source');
+                const url = src.url || (src.doi ? `https://doi.org/${src.doi}` : null);
                 const titleHtml = url
                     ? `<a class="seg-source-link" href="${url}" target="_blank" rel="noopener noreferrer">${title}</a>`
                     : `<strong class="seg-source-link" style="color:#0f172a">${title}</strong>`;
-                const meta = [
+                const metaLine = [
                     src.provider ? this._escapeHtml(src.provider) : '',
                     src.source_type ? this._escapeHtml(src.source_type) : '',
                     src.doi ? `DOI: ${this._escapeHtml(src.doi)}` : '',
@@ -3412,24 +3492,37 @@ body.xp-file-preview .mode-switch-container {
                 sourceHtml = `<div class="seg-source-box">
                     <div class="seg-source-title">Matched source</div>
                     ${titleHtml}
-                    ${meta ? `<div class="seg-source-meta">${meta}</div>` : ''}
+                    ${metaLine ? `<div class="seg-source-meta">${metaLine}</div>` : ''}
                 </div>`;
             }
 
-            const metricsHtml = (ngramPct || semanticPct || contiguous) ? `<div class="seg-metrics">
-                ${ngramPct   ? `<div class="seg-metric"><span class="seg-metric-val" style="color:${color}">${ngramPct}%</span><span class="seg-metric-lbl">N-gram</span></div>` : ''}
-                ${semanticPct ? `<div class="seg-metric"><span class="seg-metric-val" style="color:#064CDB">${semanticPct}%</span><span class="seg-metric-lbl">Semantic</span></div>` : ''}
-                ${contiguous  ? `<div class="seg-metric"><span class="seg-metric-val" style="color:#475569">${contiguous}</span><span class="seg-metric-lbl">Consec. words</span></div>` : ''}
-            </div>` : '';
+            const srcSnippet = opts.sourceSnippet ? this._escapeHtml(opts.sourceSnippet) : '';
+            const cmpHtml = `<div class="plag-cmp-wrap">
+                <div class="plag-cmp-col" style="border-left:3px solid ${color}">
+                    <div class="plag-cmp-h" style="color:${color}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Your text</div>
+                    <div class="plag-cmp-t">"${preview}"</div>
+                </div>
+                ${srcSnippet ? `<div class="plag-cmp-col" style="border-left:3px solid #94a3b8">
+                    <div class="plag-cmp-h" style="color:#64748b"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Source excerpt</div>
+                    <div class="plag-cmp-t">"${srcSnippet}"</div>
+                </div>` : ''}
+            </div>`;
 
-            return `<div class="analysis-block">
+            const metricsHtml = `<div class="seg-metrics">
+                ${metric(ngramPct + '%', 'Literal', color)}
+                ${metric(semanticPct + '%', 'Semantic', '#064CDB')}
+                ${metric(contiguous, 'Consec.', '#475569')}
+                ${metric(matchScore + '%', 'Match', color)}
+            </div>`;
+
+            return `<div class="analysis-block seg-flag-block" style="border-left:3px solid ${color}">
                 <div class="block-header">
                     <div class="block-info">
                         <div class="block-icon" style="color:${color}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 22h16a2 2 0 0 0 1.73-4Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
                         <div>
                             <div class="block-type" style="color:${color}">${statusLabel}</div>
                             <div class="block-confidence" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-                                ${idx !== '' ? `<span>#${Number(idx)+1}</span><span style="color:#cbd5e1">·</span>` : ''}
+                                ${idx !== '' ? `<span>#${Number(idx) + 1}</span><span style="color:#cbd5e1">·</span>` : ''}
                                 <span class="seg-conf-chip" style="background:${confColor}1a;color:${confColor}">${confidence} confidence</span>
                                 ${charRange ? `<span class="seg-pos-badge">${charRange}</span>` : ''}
                             </div>
@@ -3440,10 +3533,8 @@ body.xp-file-preview .mode-switch-container {
                         <div class="confidence-bar"><div class="confidence-fill" style="width:${matchScore}%;background:${color}"></div></div>
                     </div>
                 </div>
-                <div class="block-content">"${preview}"</div>
-                ${reason ? `<div class="seg-reason">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-                    ${this._escapeHtml(reason)}</div>` : ''}
+                ${reason ? `<div class="seg-reason"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>${this._escapeHtml(reason)}</div>` : ''}
+                ${cmpHtml}
                 ${metricsHtml}
                 ${sourceHtml}
             </div>`;
@@ -3500,7 +3591,8 @@ body.xp-file-preview .mode-switch-container {
                 const titleHtml = doiUrl
                     ? `<a href="${doiUrl}" target="_blank" rel="noopener noreferrer" style="color:#064CDB;text-decoration:none">${title}</a>`
                     : title;
-                const snippet = m.snippet ? `<div style="font-size:0.78rem;color:#64748b;margin-top:4px">${this._escapeHtml(m.snippet)}</div>` : '';
+                const _snip = String(m.snippet || '').trim();
+                const snippet = (_snip && _snip.toLowerCase() !== String(m.title || '').toLowerCase().trim()) ? `<div style="font-size:0.78rem;color:#64748b;margin-top:4px">${this._escapeHtml(_snip)}</div>` : '';
                 return `<div class="analysis-block" style="padding:12px">
                     <div style="font-weight:600;font-size:0.86rem">${titleHtml}</div>
                     <div style="font-size:0.78rem;color:#94a3b8;margin-top:2px">${authors}${year ? ' · ' + year : ''}${provider ? ' · ' + provider : ''}${oa}</div>
@@ -3778,30 +3870,42 @@ body.xp-file-preview .mode-switch-container {
             return { score, total, label, cls };
         }
 
-        _buildMtOverview(ai, source) {
-            const aiPct = ai ? Math.round(ai.ai_score) : 0;
-            const humanPct = ai ? Math.round(ai.human_score) : 0;
-            const overall = source ? Math.round((source.scores || {}).overall || 0) : 0;
+        _buildMtOverview(ai, source, citation) {
+            const num = v => Number(v) || 0;
+            const aiPct = ai ? Math.round(num(ai.ai_score)) : 0;
+            const humanPct = ai ? Math.round(num(ai.human_score) || (100 - aiPct)) : 0;
+
+            // Plagio: MISMOS números que el tab "Plagiarism check".
+            const scores = (source && source.scores) || {};
+            const overall = source ? Math.round(num(scores.overall)) : 0;
+            const exact = source ? Math.round(num(scores.exact)) : 0;
             const originalPct = source ? Math.max(0, 100 - overall) : 0;
-            const coverage = source ? Math.round(((source.citation_analysis || {}).citation_coverage) || 0) : 0;
-            const copy = source ? this._bestAcademic(source.academic_matches) : { best: null, bestSim: 0, directCopy: false };
-            const copyPct = Math.round((copy.bestSim || 0) * 100);
-            const directCopy = !!copy.directCopy;
-            const riskPct = Math.max(aiPct, directCopy ? copyPct : 0);
+            const summary = (source && source.segment_summary) || {};
+            const segs = (source && Array.isArray(source.segment_matches)) ? source.segment_matches : [];
+            const flaggedN = source ? (num(summary.segments_flagged) || segs.filter(x => String(x.decision || '').toLowerCase() === 'plagiarism').length) : 0;
+            const plagFlagged = flaggedN > 0;
+
+            // Citas: MISMO score que muestra el tab "Citations & References".
+            const citScore = citation ? Math.round(num(citation.citation_quality_score)) : 0;
+            const citRiskLvl = String((citation && citation.overall_risk_level) || 'low').toLowerCase();
+            const citRiskLabel = { low: 'Low risk', medium: 'Moderate', high: 'High risk', critical: 'Critical' }[citRiskLvl] || 'Low risk';
+
+            // Riesgo de integridad = lo peor entre IA y plagio REAL confirmado (coherente con el veredicto del tab).
+            const plagRisk = plagFlagged ? Math.max(overall, exact) : 0;
+            const riskPct = Math.max(aiPct, plagRisk);
             const risk = riskPct >= 50 ? { t: 'High Risk', c: '#ef4444' } : riskPct >= 25 ? { t: 'Medium Risk', c: '#f59e0b' } : { t: 'Low Risk', c: '#10b981' };
 
-            // Rings y leyenda SIEMPRE ordenados de mayor a menor: el valor más alto es
-            // el anillo exterior (radio mayor) y va decreciendo hacia el centro.
-            const metrics = [
-                { color: '#10b981', name: 'Human', sub: 'Written', value: humanPct },
-                { color: '#a78bfa', name: 'Original', sub: 'Unique', value: originalPct },
-                { color: '#f59e0b', name: 'Similarity', sub: 'Semantic', value: overall },
-                { color: '#ef4444', name: 'AI', sub: 'Generated', value: aiPct },
-                { color: '#3b82f6', name: 'References', sub: 'Citations', value: coverage },
-            ].sort((a, b) => b.value - a.value);
+            // Anillos Apple: un anillo por análisis realizado, con el % REAL de su tab.
+            const metrics = [];
+            if (ai)       metrics.push({ color: '#ef4444', name: 'AI',         sub: 'Generated', value: aiPct });
+            if (ai)       metrics.push({ color: '#10b981', name: 'Human',      sub: 'Written',   value: humanPct });
+            if (source)   metrics.push({ color: '#f59e0b', name: 'Similarity', sub: 'Sources',   value: overall });
+            if (citation) metrics.push({ color: '#064CDB', name: 'Citations',  sub: 'Quality',   value: citScore });
+            if (!metrics.length) metrics.push({ color: '#a78bfa', name: 'Original', sub: 'Unique', value: originalPct });
+            metrics.sort((a, b) => b.value - a.value);
             const radii = [62, 50, 38, 26, 14];
             const rings = `<svg viewBox="0 0 140 140" style="width:140px;height:140px;flex-shrink:0;overflow:visible;">
-                ${metrics.map((m, i) => this._mtRing(radii[i], m.color, m.value)).join('')}</svg>`;
+                ${metrics.map((m, i) => this._mtRing(radii[i] || 14, m.color, m.value)).join('')}</svg>`;
             const legend = `<div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;">
                 ${metrics.map(m => this._mtLegendRow(m.color, m.name, m.sub, m.value)).join('')}</div>`;
             const dist = `<div style="height:12px;border-radius:6px;overflow:hidden;display:flex;gap:1px;background:transparent;">
@@ -3812,10 +3916,14 @@ body.xp-file-preview .mode-switch-container {
             const style = this._mtStyleScore(ai ? ai.stylometric : null);
             const refs = this._mtRefsScore(ai ? ai.citation : null);
             const alerts = [
-                ai     ? { goto: 'ai',   high: aiPct >= 50,                         icon: 'fa-microchip',  title: 'AI-Generated Content',    txt: `${aiPct}% of the text shows AI patterns`,                                              btn: 'View Details' } : null,
-                source ? { goto: 'plag', high: directCopy,                            icon: 'fa-copy',       title: 'Plagiarism Report',        txt: directCopy ? `${copyPct}% direct match — likely copied` : `${overall}% semantic — no direct copies`, btn: 'View Report'  } : null,
+                ai       ? { goto: 'ai',   high: aiPct >= 50, icon: 'fa-microchip', title: 'AI-Generated Content', txt: `${aiPct}% of the text shows AI patterns`, btn: 'View Details' } : null,
+                source   ? { goto: 'plag', high: plagFlagged, icon: plagFlagged ? 'fa-copy' : 'fa-shield-alt', title: 'Plagiarism Report',
+                             txt: plagFlagged ? `${flaggedN} passage${flaggedN === 1 ? '' : 's'} match known sources · ${exact}% literal copy`
+                                              : `No copied passages · ${overall}% thematic similarity`, btn: 'View Report' } : null,
+                citation ? { goto: 'cit',  high: (citRiskLvl === 'high' || citRiskLvl === 'critical'), icon: 'fa-quote-right', title: 'Citations & References',
+                             txt: `Quality ${citScore}/100 · ${citRiskLabel}`, btn: 'View Citations' } : null,
                 (ai && ai.stylometric) ? { goto: 'style', high: !!(style && style.cls === 'score-low'), icon: 'fa-pen-nib', title: 'Style Analysis', txt: style ? style.label : 'Not analyzed', btn: 'View Style' } : null,
-                (ai && ai.citation && refs.total > 0) ? { goto: 'refs', high: false, icon: 'fa-book-open',  title: 'References Integrity',     txt: refs.label,                                                                             btn: 'View References' } : null,
+                (ai && ai.citation && refs.total > 0) ? { goto: 'refs', high: refs.cls === 'score-low', icon: 'fa-book-open', title: 'References Integrity', txt: refs.label, btn: 'View References' } : null,
             ].filter(Boolean);
             const alertCards = alerts.map(a => `
                 <div class="alert-card ${a.high ? 'alert-high' : 'alert-medium'}" style="border-left-color:${a.high ? '#ef4444' : '#3b82f6'};">
@@ -3837,7 +3945,7 @@ body.xp-file-preview .mode-switch-container {
                     <span class="score-badge" style="background:${risk.c}1a;color:${risk.c};border:1px solid ${risk.c};">${risk.t}</span>
                 </div>
                 <div style="margin-bottom:16px;">
-                    <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:4px;"><span>Document Integrity Risk Level</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:4px;"><span>Document Integrity Risk Level</span><span style="font-weight:700;color:${risk.c}">${riskPct}%</span></div>
                     <div class="score-meter" style="height:8px;margin:0;"><div style="height:100%;width:${Math.max(8, riskPct)}%;background:${risk.c};transition:width .6s;"></div></div>
                 </div>
                 <div>
@@ -4017,167 +4125,250 @@ body.xp-file-preview .mode-switch-container {
         _buildMtPlagPanel(source) {
             if (!source) return '<div class="empty-state"><p>Plagiarism check not run</p><small>Select "FinderX" and analyze.</small></div>';
 
-            const num     = v => Number(v) || 0;
-            const scores  = source.scores || {};
-            const overall = Math.round(scores.overall || 0);
-            const exact   = Math.round(scores.exact || 0);
-            const semantic = Math.round(scores.semantic || 0);
-            const conf    = scores.confidence || 'n/a';
+            const num = v => Number(v) || 0;
+            const esc = s => this._escapeHtml(String(s == null ? '' : s));
+            const scores = source.scores || {};
+            const overall = Math.round(num(scores.overall));
+            const exact = Math.round(num(scores.exact));
+            const semantic = Math.round(num(scores.semantic));
+            const conf = String(scores.confidence || 'n/a');
 
-            const summary  = source.segment_summary || {};
-            const analyzed = num(summary.segments_analyzed);
-            const flagged  = num(summary.segments_flagged);
-            const flagRatio = num(summary.flagged_ratio);
-            const byDec    = summary.by_decision || {};
-
-            const segs     = Array.isArray(source.segment_matches) ? source.segment_matches : [];
+            const summary = source.segment_summary || {};
+            const analyzedRaw = num(summary.segments_analyzed);
+            const segs = Array.isArray(source.segment_matches) ? source.segment_matches : [];
             const academic = Array.isArray(source.academic_matches) ? source.academic_matches : [];
+            const meta = source.metadata || {};
+            const language = source.language ? String(source.language).toUpperCase() : '';
 
-            const gColor  = overall >= 50 ? '#dc2626' : overall >= 25 ? '#d97706' : '#059669';
-            const verdict = overall >= 50 ? 'High similarity detected'
-                          : overall >= 25 ? 'Moderate similarity' : 'Mostly original';
+            const flaggedSegs = segs.filter(x => String(x.decision || '').toLowerCase() === 'plagiarism');
+            const cleanSegs   = segs.filter(x => String(x.decision || '').toLowerCase() !== 'plagiarism');
+            const analyzed = analyzedRaw || segs.length;
+            const flaggedN = num(summary.segments_flagged) || flaggedSegs.length;
+            const cleanN   = Math.max(0, analyzed - flaggedN);
+            const ratio    = summary.flagged_ratio != null ? num(summary.flagged_ratio) : (analyzed ? flaggedN / analyzed : 0);
+            const hasFlag  = flaggedN > 0;
 
-            const head = `<div style="display:flex;align-items:center;gap:18px;margin-bottom:16px;">
-                <div style="width:80px;height:80px;flex-shrink:0;">${this._mtGauge(overall, gColor)}</div>
-                <div>
-                    <strong style="color:${gColor};font-size:15px;">${verdict}</strong>
-                    <p style="margin:4px 0 2px;font-size:12px;color:#64748b;">
-                        Exact: <b style="color:#334155">${exact}%</b>&ensp;·&ensp;Semantic: <b style="color:#334155">${semantic}%</b>
-                    </p>
-                    <p style="margin:0;font-size:12px;color:#64748b;">Confidence: <b style="color:#334155">${this._escapeHtml(String(conf))}</b></p>
+            const colFor = v => v >= 50 ? '#dc2626' : v >= 25 ? '#d97706' : '#059669';
+            const ringColor = colFor(overall);
+
+            // Verdict is driven by ACTUAL segment flags so it never contradicts the score tiles / note.
+            let vColor, vLabel, vBadge, vBadgeCol, vSub;
+            if (hasFlag) {
+                vColor = (overall >= 50 || exact >= 50) ? '#dc2626' : '#d97706';
+                vLabel = 'Plagiarism detected';
+                vBadge = 'Action needed'; vBadgeCol = vColor;
+                vSub = `${flaggedN} of ${analyzed} analyzed segment${analyzed === 1 ? '' : 's'} match known sources — review the highlighted passages below and cite or rewrite them.`;
+            } else {
+                vColor = '#059669';
+                vLabel = 'No copied passages found';
+                vBadge = 'Clear'; vBadgeCol = '#059669';
+                vSub = `None of the ${analyzed} analyzed segment${analyzed === 1 ? '' : 's'} contain literal copies of external sources.`;
+            }
+
+            const head = `<div class="plag-hero">
+                <div class="plag-hero-ring">${this._mtGauge(overall, ringColor)}</div>
+                <div class="plag-hero-main">
+                    <div class="plag-hero-verdict" style="color:${vColor}">${vLabel}<span class="plag-badge" style="background:${vBadgeCol}1a;color:${vBadgeCol}">${vBadge}</span></div>
+                    <div class="plag-hero-sub">${vSub}</div>
                 </div>
             </div>`;
 
-            // Segment summary chips (only when we have real segment data)
-            const summaryRow = (analyzed > 0) ? `<div class="score-breakdown" style="margin-bottom:16px;">
+            const scoreTiles = `<div class="plag-scores">
+                <div class="plag-score"><div class="plag-score-v" style="color:${colFor(overall)}">${overall}%</div><div class="plag-score-l">Overall</div><div class="plag-score-h">Similarity to sources</div></div>
+                <div class="plag-score"><div class="plag-score-v" style="color:${colFor(exact)}">${exact}%</div><div class="plag-score-l">Exact</div><div class="plag-score-h">Literal text overlap</div></div>
+                <div class="plag-score"><div class="plag-score-v" style="color:#064CDB">${semantic}%</div><div class="plag-score-l">Semantic</div><div class="plag-score-h">Meaning overlap</div></div>
+                <div class="plag-score"><div class="plag-score-v" style="color:#475569;text-transform:capitalize;font-size:.98rem">${esc(conf)}</div><div class="plag-score-l">Confidence</div><div class="plag-score-h">Detection certainty</div></div>
+            </div>`;
+
+            const summaryRow = analyzed > 0 ? `<div class="score-breakdown" style="margin-bottom:14px">
                 <div class="score-item"><span>Segments</span><span>${analyzed}</span></div>
-                <div class="score-item"><span>Flagged</span><span style="color:${flagged > 0 ? '#dc2626' : '#059669'}">${flagged}</span></div>
-                <div class="score-item"><span>Original</span><span style="color:#059669">${num(byDec.original) || Math.max(0, analyzed - flagged)}</span></div>
-                <div class="score-item"><span>Flagged ratio</span><span>${(flagRatio * 100).toFixed(1)}%</span></div>
+                <div class="score-item"><span>Flagged</span><span style="color:${flaggedN > 0 ? '#dc2626' : '#059669'}">${flaggedN}</span></div>
+                <div class="score-item"><span>Clean</span><span style="color:#059669">${cleanN}</span></div>
+                <div class="score-item"><span>Flagged ratio</span><span>${(ratio * 100).toFixed(1)}%</span></div>
             </div>` : '';
 
-            // Flagged segment cards
-            const flaggedSegs = segs.filter(s => String(s.decision || '').toLowerCase() === 'plagiarism');
-            let segBody;
-            if (segs.length > 0) {
-                // New segment_matches structure
-                segBody = flaggedSegs.length
-                    ? `<h4 style="margin:0 0 10px;font-size:11px;text-transform:uppercase;color:#94a3b8;letter-spacing:.08em;">
-                        Flagged Segments (${flaggedSegs.length})</h4>
-                       ${flaggedSegs.map(s => this._buildSegmentBlockHtml(s)).join('')}`
-                    : `<div class="empty-state"><p>No plagiarism detected</p><small>All ${analyzed} segments appear original.</small></div>`;
-            } else {
-                // Fallback: old academic_matches display
-                const { best, bestSim, directCopy } = this._bestAcademic(academic);
-                const copyPct = Math.round((bestSim || 0) * 100);
-                segBody = academic.length
-                    ? this._mtCorpusDark(academic, best, directCopy, copyPct, overall)
-                    : `<div class="empty-state"><p>No academic matches found</p><small>Content appears original against the corpus.</small></div>`;
+            const noteHtml = (!hasFlag && (overall >= 25 || exact >= 25)) ? `<div class="plag-note">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                <span>The <b>${overall}% overall</b> score reflects thematic overlap with the academic sources listed below (shared topic &amp; vocabulary), not copied text. No citation is required unless your work was derived from them.</span>
+            </div>` : '';
+
+            // Resolve a source excerpt for each flagged segment from academic_matches (by DOI or title).
+            const acadByKey = {};
+            const normDoi = d => String(d || '').toLowerCase().replace(/^https?:\/\/(dx\.)?doi\.org\//, '').trim();
+            academic.forEach(m => {
+                const d = normDoi(m.doi);
+                if (d) acadByKey['doi:' + d] = m;
+                if (m.title) acadByKey['title:' + String(m.title).toLowerCase().trim()] = m;
+            });
+            const resolveSnippet = sr => {
+                if (!sr) return '';
+                const d = normDoi(sr.doi);
+                const m = (d && acadByKey['doi:' + d]) || (sr.title && acadByKey['title:' + String(sr.title).toLowerCase().trim()]);
+                if (!m || !m.snippet) return '';
+                return String(m.snippet).toLowerCase().trim() === String(m.title || '').toLowerCase().trim() ? '' : m.snippet;
+            };
+
+            let segBody = '';
+            if (flaggedSegs.length) {
+                segBody += `<div class="plag-sec-title">Flagged passages<span class="plag-sec-count">${flaggedSegs.length}</span></div>`;
+                segBody += flaggedSegs.map(x => this._buildSegmentBlockHtml(x, { sourceSnippet: resolveSnippet(x.matched_source) })).join('');
+            }
+            if (cleanSegs.length) {
+                segBody += `<div class="plag-sec-title">Analyzed segments — cleared<span class="plag-sec-count">${cleanSegs.length}</span></div>`;
+                segBody += cleanSegs.map(x => this._buildSegmentBlockHtml(x)).join('');
+            }
+            if (!segs.length) {
+                segBody = `<div class="empty-state"><p>${academic.length ? 'No copied passages' : 'No academic matches found'}</p><small>${academic.length ? 'See the matched sources below.' : 'Content appears original against the corpus.'}</small></div>`;
             }
 
-            // Academic sources list (only when not already shown by _mtCorpusDark fallback)
-            const acadSection = (segs.length > 0 && academic.length)
-                ? `<div style="margin-top:16px">${this._buildAcademicMatchesHtml(academic)}</div>`
-                : '';
+            const acadSection = academic.length ? this._buildAcademicMatchesHtml(academic) : '';
 
-            return `<h2 style="margin-bottom:14px;">FinderX — Plagiarism Checker</h2>${head}${summaryRow}${segBody}${acadSection}`;
+            const metaBits = [
+                language ? `<span><b>Language</b> ${esc(language)}</span>` : '',
+                meta.chunks_analyzed != null ? `<span><b>Chunks analyzed</b> ${num(meta.chunks_analyzed)}</span>` : '',
+                meta.processing_time_ms != null ? `<span><b>Processed in</b> ${(num(meta.processing_time_ms) / 1000).toFixed(1)}s</span>` : '',
+            ].filter(Boolean).join('');
+            const metaHtml = metaBits ? `<div class="plag-meta">${metaBits}</div>` : '';
+
+            return `<h2 style="margin-bottom:14px;">FinderX — Plagiarism Checker</h2>${head}${scoreTiles}${summaryRow}${noteHtml}${segBody}${acadSection}${metaHtml}`;
         }
 
         // Citations & References tab — FinderX /citation-validation result.
         _buildMtCitationsPanel(c) {
-            if (!c) return '<div class="empty-state"><p>Citation validation not run</p><small>Select “Citations &amp; References” and analyze.</small></div>';
+            if (!c) return '<div class="empty-state"><p>Citation validation not run</p><small>Select "Citations & References" and analyze.</small></div>';
             const num = v => Number(v) || 0;
+            const esc = v => this._escapeHtml(String(v == null ? '' : v));
             const qScore = Math.round(num(c.citation_quality_score));
+            const riskLvl = String(c.overall_risk_level || 'low').toLowerCase();
             const riskMap = {
-                low: { cls: 'score-high', t: 'Low Risk' }, medium: { cls: 'score-medium', t: 'Medium Risk' },
-                high: { cls: 'score-low', t: 'High Risk' }, critical: { cls: 'score-low', t: 'Critical' },
+                low:      { c: '#047857', bg: '#ecfdf5', t: 'Low Risk' },
+                medium:   { c: '#b45309', bg: '#fffbeb', t: 'Moderate' },
+                high:     { c: '#dc2626', bg: '#fef2f2', t: 'High Risk' },
+                critical: { c: '#dc2626', bg: '#fef2f2', t: 'Critical' },
             };
-            const rk = riskMap[String(c.overall_risk_level || 'low').toLowerCase()] || riskMap.low;
-            const fillCls = qScore >= 80 ? 'score-fill-high' : qScore >= 50 ? 'score-fill-medium' : 'score-fill-low';
+            const rk = riskMap[riskLvl] || riskMap.low;
+            const qColor = qScore >= 80 ? '#059669' : qScore >= 50 ? '#d97706' : '#dc2626';
+            const C = 2 * Math.PI * 32;
 
-            const chips = [
-                ['Citations', num(c.citations_found)], ['References', num(c.references_found)],
-                ['Valid', num(c.valid_references)], ['Partial', num(c.partial_references)],
-                ['Not found', num(c.not_found_references)], ['Orphan cites', num(c.orphan_citations)],
-                ['Orphan refs', num(c.orphan_references)],
-            ].map(([k, v]) => `<div class="score-item"><span>${k}</span><span>${v}</span></div>`).join('');
+            const refs  = Array.isArray(c.references) ? c.references : [];
+            const cites = Array.isArray(c.citations)  ? c.citations  : [];
+
+            // Link references -> in-text citations by surname|year.
+            const lastName = v => {
+                const str = String(v || '').replace(/\bet al\.?/gi, '').trim();
+                if (!str) return '';
+                if (str.indexOf(',') !== -1) { const p = str.split(',')[0].trim().split(/\s+/).filter(Boolean); return (p.pop() || '').toLowerCase(); }
+                const w = str.split(/\s+/).filter(Boolean); return (w[0] || '').toLowerCase();
+            };
+            const citeKey = {};
+            cites.forEach((ci, i) => {
+                const k = lastName(ci.author).toLowerCase() + '|' + (ci.year != null ? String(ci.year) : '');
+                if (k.length > 1 && citeKey[k] == null) citeKey[k] = i;
+            });
+            const refCiteIdx = r => {
+                const a = Array.isArray(r.authors) && r.authors.length ? r.authors[0] : '';
+                const k = lastName(a).toLowerCase() + '|' + (r.year != null ? String(r.year) : '');
+                return citeKey[k] != null ? citeKey[k] : null;
+            };
+
+            // Quality hero (animated ring + metric tiles).
+            const qHero = `<div class="xcite-quality">
+                <div class="xcite-q-ring">
+                    <svg viewBox="0 0 76 76" style="width:100%;height:100%">
+                        <circle cx="38" cy="38" r="32" fill="none" stroke="#eef2f7" stroke-width="7"/>
+                        <circle class="ar-arc" cx="38" cy="38" r="32" fill="none" stroke="${qColor}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}" data-final="${((1 - qScore / 100) * C).toFixed(1)}" transform="rotate(-90 38 38)"/>
+                    </svg>
+                    <div class="xcite-q-num" style="color:${qColor}">${qScore}<span>/100</span></div>
+                </div>
+                <div class="xcite-q-main">
+                    <div class="xcite-q-top"><span class="xcite-q-title">Citation Quality</span><span class="xcite-risk" style="background:${rk.bg};color:${rk.c}">${rk.t}</span></div>
+                    <div class="xcite-q-metrics">
+                        <div><b title="${esc(c.detected_style || '—')}">${esc(c.detected_style || '—')}</b><span>Style</span></div>
+                        <div><b>${Math.round(num(c.style_consistency))}%</b><span>Consistency</span></div>
+                        <div><b>${Math.round(num(c.citation_coverage))}%</b><span>Coverage</span></div>
+                        <div><b>${Math.round(num(c.bibliography_coverage))}%</b><span>Biblio.</span></div>
+                    </div>
+                </div>
+            </div>`;
+
+            const chip = (k, v, col) => `<div class="score-item"><span>${k}</span><span${col ? ` style="color:${col}"` : ''}>${v}</span></div>`;
+            const summary = `<div class="xcite-sec-h"><span>Summary</span></div>
+            <div class="score-breakdown" style="margin-bottom:14px">
+                ${chip('Citations', num(c.citations_found))}
+                ${chip('References', num(c.references_found))}
+                ${chip('Valid', num(c.valid_references), '#059669')}
+                ${chip('Partial', num(c.partial_references), num(c.partial_references) > 0 ? '#d97706' : '')}
+                ${chip('Not found', num(c.not_found_references), num(c.not_found_references) > 0 ? '#dc2626' : '')}
+                ${chip('Orphan cites', num(c.orphan_citations), num(c.orphan_citations) > 0 ? '#d97706' : '')}
+                ${chip('Orphan refs', num(c.orphan_references), num(c.orphan_references) > 0 ? '#d97706' : '')}
+            </div>`;
 
             const cr = c.coverage_report || {}, doi = cr.doi_stats || {};
-            const crHtml = `
-              <div class="insight-box">
-                <p style="margin:0 0 6px;font-weight:600;color:#334155;">Coverage report</p>
-                <div class="score-breakdown" style="margin-top:0">
-                  <div class="score-item"><span>Coverage (CCS)</span><span>${Math.round(num(cr.citation_coverage_score))}%</span></div>
-                  <div class="score-item"><span>Integrity (CII)</span><span>${Math.round(num(cr.citation_integrity_index))}%</span></div>
-                  <div class="score-item"><span>False-neg risk</span><span>${Math.round(num(cr.false_negative_risk))}%</span></div>
-                  <div class="score-item"><span>DOIs resolved</span><span>${num(doi.resolved)}/${num(doi.found_in_text)}</span></div>
-                </div>
-              </div>`;
+            const coverage = (cr.citation_coverage_score != null || cr.citation_integrity_index != null || doi.found_in_text != null) ? `<div class="score-breakdown" style="margin-bottom:14px">
+                ${chip('Coverage (CCS)', Math.round(num(cr.citation_coverage_score)) + '%')}
+                ${chip('Integrity (CII)', Math.round(num(cr.citation_integrity_index)) + '%')}
+                ${chip('False-neg risk', Math.round(num(cr.false_negative_risk)) + '%')}
+                ${chip('DOIs resolved', num(doi.resolved) + '/' + num(doi.found_in_text))}
+            </div>` : '';
 
             const stMap = {
                 valid:   { col: '#047857', bg: 'rgba(16,185,129,0.12)', label: 'Verified' },
                 partial: { col: '#b45309', bg: 'rgba(245,158,11,0.14)', label: 'Partial' },
             };
-            const refStatus = s => stMap[String(s || '').toLowerCase()]
-                || { col: '#dc2626', bg: 'rgba(239,68,68,0.12)', label: s ? String(s).replace(/_/g, ' ') : 'Unverified' };
-            const refs = Array.isArray(c.references) ? c.references : [];
+            const refStatus = st => stMap[String(st || '').toLowerCase()] || { col: '#dc2626', bg: 'rgba(239,68,68,0.12)', label: st ? esc(String(st).replace(/_/g, ' ')) : 'Unverified' };
+
+            const refItems = refs.map((r, i) => {
+                const v = r.validation || {}, st = refStatus(v.status);
+                const authors = Array.isArray(r.authors) ? esc(r.authors.slice(0, 4).join(', ')) : '';
+                const title = esc(r.title || 'Untitled');
+                const href = this._doiHref(r);
+                const conf = v.confidence != null ? Math.round(v.confidence * 100) : null;
+                const cIdx = refCiteIdx(r);
+                const titleHtml = href
+                    ? `<a href="${href}" target="_blank" rel="noopener noreferrer" class="xcite-link" onclick="event.stopPropagation()">${title}</a>`
+                    : `<span style="font-weight:600;color:#0f172a">${title}</span>`;
+                const metaBits = [
+                    v.source_api ? 'via ' + esc(String(v.source_api).replace(/_/g, ' ')) : '',
+                    r.open_access ? '<span style="color:#047857;font-weight:600">Open Access</span>' : '',
+                    r.pages ? 'pp. ' + esc(String(r.pages)) : '',
+                ].filter(Boolean).join(' · ');
+                const confCol = conf != null ? (conf >= 70 ? '#059669' : conf >= 40 ? '#d97706' : '#dc2626') : '#94a3b8';
+                return `<div class="xcite-item${cIdx != null ? ' clk' : ''}"${cIdx != null ? ` data-cite-focus="${cIdx}" tabindex="0" role="button" aria-label="Highlight this citation in the text"` : ''}>
+                    <span class="xcite-num">${i + 1}</span>
+                    <div class="xcite-body">
+                        <div class="xcite-title-line"><strong style="color:#0f172a">${authors}</strong>${r.year ? ` <span style="color:#64748b">(${esc(String(r.year))})</span>` : ''} — ${titleHtml}</div>
+                        <div class="xcite-meta">
+                            <span class="xcite-status" style="background:${st.bg};color:${st.col}">${esc(st.label)}</span>
+                            ${conf != null ? `<span class="xcite-conf"><span class="xcite-conf-bar"><span style="width:${conf}%;background:${confCol}"></span></span>${conf}%</span>` : ''}
+                            ${metaBits ? `<span class="xcite-metabits">${metaBits}</span>` : ''}
+                        </div>
+                    </div>
+                    ${cIdx != null ? `<span class="xcite-jump" title="Highlight in text"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 10 4 15l5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg></span>` : ''}
+                </div>`;
+            }).join('');
             const refsHtml = refs.length
-              ? `<div class="references-list"><h4>References (${refs.length})</h4>${refs.map(r => {
-                    const v = r.validation || {}, st = refStatus(v.status);
-                    const authors = Array.isArray(r.authors) ? this._escapeHtml(r.authors.slice(0, 4).join(', ')) : '';
-                    const title = this._escapeHtml(r.title || 'Untitled');
-                    const href = this._doiHref(r);
-                    const conf = (v.confidence != null) ? Math.round(v.confidence * 100) + '% confidence' : '';
-                    const titleHtml = href
-                        ? `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#064CDB;text-decoration:none;font-weight:600">${title}</a>`
-                        : `<span style="font-weight:600;color:#0f172a">${title}</span>`;
-                    const metaBits = [
-                        v.source_api ? 'via ' + this._escapeHtml(v.source_api) : '',
-                        conf,
-                        r.open_access ? '<span style="color:#047857">Open Access</span>' : '',
-                        r.pages ? 'pp. ' + this._escapeHtml(String(r.pages)) : '',
-                    ].filter(Boolean).join(' · ');
-                    return `<div class="reference-item">
-                        <span class="ref-status" style="background:${st.bg};color:${st.col}">${this._escapeHtml(st.label)}</span>
-                        <p style="color:#475569"><strong style="color:#0f172a">${authors}</strong>${r.year ? ' (' + this._escapeHtml(String(r.year)) + ')' : ''} — ${titleHtml}</p>
-                        ${metaBits ? `<div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;padding-right:70px">${metaBits}</div>` : ''}
-                    </div>`;
-                }).join('')}</div>`
-              : `<div class="empty-state"><p>No references detected</p><small>No bibliography entries found in the text.</small></div>`;
+                ? `<div class="xcite-sec-h"><span>References</span><span class="xcite-count">${refs.length}</span></div><div class="xcite-list">${refItems}</div>`
+                : `<div class="empty-state"><p>No references detected</p><small>No bibliography entries found in the text.</small></div>`;
 
-            const cites = Array.isArray(c.citations) ? c.citations : [];
+            const citeItems = cites.map((ci, i) => {
+                const conf = ci.confidence != null ? Math.round(ci.confidence * 100) : null;
+                const meta = [esc(ci.author || ''), ci.year ? esc(String(ci.year)) : '', ci.style ? esc(String(ci.style).toUpperCase()) : ''].filter(Boolean).join(' · ');
+                return `<div class="xcite-item clk" data-cite-focus="${i}" tabindex="0" role="button" aria-label="Highlight this citation in the text">
+                    <span class="xcite-num xcite-num--blue">${i + 1}</span>
+                    <div class="xcite-body">
+                        <div class="xcite-intext">"${esc(ci.raw_text || '')}"</div>
+                        ${(meta || conf != null) ? `<div class="xcite-meta">${meta ? `<span class="xcite-metabits">${meta}</span>` : ''}${conf != null ? `<span class="xcite-conf-chip">${conf}%</span>` : ''}</div>` : ''}
+                    </div>
+                    <span class="xcite-jump" title="Highlight in text"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+                </div>`;
+            }).join('');
             const citesHtml = cites.length
-              ? `<div class="references-list" style="margin-top:16px"><h4>In-text citations (${cites.length})</h4>${cites.map(ci => {
-                    const conf = (ci.confidence != null) ? Math.round(ci.confidence * 100) + '%' : '';
-                    const meta = [this._escapeHtml(ci.author || ''), ci.year ? this._escapeHtml(String(ci.year)) : '',
-                                  ci.style ? this._escapeHtml(ci.style) : '', conf].filter(Boolean).join(' · ');
-                    return `<div class="reference-item">
-                        <p style="color:#334155;font-style:italic;margin:0">“${this._escapeHtml(ci.raw_text || '')}”</p>
-                        ${meta ? `<div style="font-size:0.7rem;color:#94a3b8;margin-top:3px">${meta}</div>` : ''}
-                    </div>`;
-                }).join('')}</div>`
-              : '';
+                ? `<div class="xcite-sec-h" style="margin-top:18px"><span>In-text citations</span><span class="xcite-count">${cites.length}</span></div>
+                   <p class="xcite-hint"><span class="xcite-hint-dot"></span> Highlighted in blue in your text — click any entry to jump to it.</p>
+                   <div class="xcite-list">${citeItems}</div>`
+                : '';
 
-            return `
-            <h2>Citations &amp; References</h2>
-            <div class="integrity-score">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <h4 style="margin:0;font-size:14px;font-weight:700;">Citation Quality</h4>
-                    <span class="score-badge ${rk.cls}">${rk.t}</span>
-                </div>
-                <div class="score-meter"><div class="score-value">${qScore}/100</div><div class="score-fill ${fillCls}" style="width:${qScore}%;"></div></div>
-                <div class="score-breakdown">
-                    <div class="score-item"><span>Style</span><span>${this._escapeHtml(c.detected_style || '—')}</span></div>
-                    <div class="score-item"><span>Consistency</span><span>${Math.round(num(c.style_consistency))}%</span></div>
-                    <div class="score-item"><span>Citation coverage</span><span>${Math.round(num(c.citation_coverage))}%</span></div>
-                    <div class="score-item"><span>Bibliography</span><span>${Math.round(num(c.bibliography_coverage))}%</span></div>
-                </div>
-            </div>
-            <h4 style="margin:18px 0 10px;">Summary</h4>
-            <div class="score-breakdown" style="margin-bottom:6px">${chips}</div>
-            ${crHtml}
-            ${refsHtml}
-            ${citesHtml}`;
+            return `<h2 style="margin-bottom:14px;">Citations &amp; References</h2>${qHero}${summary}${coverage}${refsHtml}${citesHtml}`;
         }
 
         _wireMtTabs(overlay) {
@@ -4193,6 +4384,20 @@ body.xp-file-preview .mode-switch-container {
             overlay.addEventListener('click', e => {
                 const b = e.target.closest('[data-goto]');
                 if (b) { e.preventDefault(); go(b.dataset.goto); }
+            });
+            // Citations: card -> highlight the matching citation in the text (and back).
+            overlay.querySelectorAll('[data-cite-focus]').forEach(elc => {
+                const jump = () => this._focusCitation(elc.dataset.citeFocus);
+                elc.addEventListener('click', jump);
+                elc.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); jump(); } });
+            });
+            const textEl = overlay.querySelector('#aiSplitTextContent');
+            if (textEl) textEl.addEventListener('click', e => {
+                const m = e.target.closest('.xpa-cite-hl');
+                if (!m) return;
+                go('cit');
+                const card = overlay.querySelector(`.xcite-item[data-cite-focus="${m.dataset.cite}"]`);
+                if (card) { card.scrollIntoView({ block: 'nearest' }); card.classList.add('xcite-flash'); setTimeout(() => card.classList.remove('xcite-flash'), 1200); }
             });
         }
         _animateMtRings(overlay) {
@@ -4315,7 +4520,7 @@ body.xp-file-preview .mode-switch-container {
                                 ${hasRefs  ? '<button class="tab" data-tab="refs" type="button" title="References Integrity"><i class="fas fa-book"></i></button>'       : ''}
                             </div>
                             <div class="tab-content">
-                                <div class="tab-panel active" data-panel="ov">${this._buildMtOverview(ai, source)}</div>
+                                <div class="tab-panel active" data-panel="ov">${this._buildMtOverview(ai, source, citation)}</div>
                                 ${hasAi    ? `<div class="tab-panel" data-panel="ai">${this._buildMtAiPanel(ai)}</div>`                   : ''}
                                 ${hasPlag  ? `<div class="tab-panel" data-panel="plag">${this._buildMtPlagPanel(source)}</div>`           : ''}
                                 ${hasCit   ? `<div class="tab-panel" data-panel="cit">${this._buildMtCitationsPanel(citation)}</div>`    : ''}
@@ -4339,6 +4544,7 @@ body.xp-file-preview .mode-switch-container {
                 overlay.classList.add('visible');
                 this._animateMtRings(overlay);
                 if (ai && Array.isArray(ai.blocks)) this._highlightSegments(ai.blocks);
+                if (citation && Array.isArray(citation.citations)) this._highlightCitations(citation.citations);
             });
 
             document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
@@ -4710,6 +4916,47 @@ body.xp-file-preview .mode-switch-container {
             void mark.offsetWidth;
             mark.classList.add('xpa-seg-pulse');
             setTimeout(() => mark.classList.remove('xpa-seg-pulse'), 1300);
+        }
+
+        // Subraya en AZUL las citas in-text dentro de #aiSplitTextContent (coexiste con
+        // el resaltado de segmentos de IA: recorre nodos de texto sin destruir marks previos).
+        _highlightCitations(citations) {
+            const el = document.getElementById('aiSplitTextContent');
+            if (!el || !Array.isArray(citations) || !citations.length) return;
+            const targets = citations.map((ci, i) => ({ i, needle: String(ci.raw_text || '').trim() }))
+                .filter(t => t.needle.length >= 2);
+            targets.forEach(t => {
+                const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+                    acceptNode: node => {
+                        if (node.parentElement && node.parentElement.closest('.xpa-cite-hl')) return NodeFilter.FILTER_REJECT;
+                        return node.nodeValue.indexOf(t.needle) !== -1 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+                    }
+                });
+                const node = walker.nextNode();
+                if (!node) return;
+                const pos = node.nodeValue.indexOf(t.needle);
+                if (pos === -1) return;
+                const range = document.createRange();
+                range.setStart(node, pos);
+                range.setEnd(node, pos + t.needle.length);
+                const mark = document.createElement('mark');
+                mark.id = 'xpaCite' + t.i;
+                mark.className = 'xpa-cite-hl';
+                mark.dataset.cite = t.i;
+                mark.title = 'In-text citation';
+                try { range.surroundContents(mark); } catch (e) { /* el rango cruza un limite de elemento -> omitir */ }
+            });
+        }
+
+        // Desplaza el panel de texto a la cita i y la resalta con un pulso azul.
+        _focusCitation(i) {
+            const mark = document.getElementById('xpaCite' + i);
+            if (!mark) return;
+            mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            mark.classList.remove('xpa-cite-pulse');
+            void mark.offsetWidth;
+            mark.classList.add('xpa-cite-pulse');
+            setTimeout(() => mark.classList.remove('xpa-cite-pulse'), 1300);
         }
 
         _enterSplitMode(text, result) {
