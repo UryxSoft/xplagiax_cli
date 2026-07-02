@@ -12,6 +12,7 @@ from flask_login import current_user, login_required
 import requests
 import tempfile
 import uuid
+from itsdangerous import URLSafeSerializer, BadSignature
 #import clamd  # pip install clamd
 from datetime import datetime, timedelta
 from modules.doc_service.modules.doc_analysis_task import DocAnalysisTask
@@ -3735,6 +3736,30 @@ def _ai_async_urls():
     return submit_url, submit_url.rsplit('/', 1)[0]
 
 
+def _sign_job(kind, real_id):
+    """Firma (real_id, user_id) en un token URL-safe sin estado.
+
+    Reemplaza el binding por cookie de sesion, que sufria una carrera cuando el
+    front lanza varios analisis en paralelo (Promise.allSettled): el Set-Cookie
+    de una respuesta pisaba el de otra y se perdia el job -> 403 al pedir el
+    reporte. Firmar con SECRET_KEY es stateless y no depende de la cookie.
+    """
+    ser = URLSafeSerializer(current_app.secret_key, salt='xpx-job-' + kind)
+    return ser.dumps([str(real_id), current_user.id])
+
+
+def _unsign_job(kind, token):
+    """Verifica un token de _sign_job; devuelve el id real o None si es invalido/ajeno."""
+    ser = URLSafeSerializer(current_app.secret_key, salt='xpx-job-' + kind)
+    try:
+        real_id, uid = ser.loads(token)
+    except (BadSignature, ValueError, TypeError):
+        return None
+    if str(uid) != str(current_user.id):
+        return None
+    return real_id
+
+
 @x_doc.route('/analyze_text', methods=['POST'])
 @login_required
 def analyze_text():
@@ -3784,19 +3809,20 @@ def analyze_text():
         logger.error('AI submit missing task_id: %s', str(sd)[:300])
         return jsonify({'error': 'Analysis service did not return a task id.'}), 502
 
-    # Bind task_id to this user's session so only they can poll it.
-    owned = session.get('_ai_tasks', [])
-    session['_ai_tasks'] = (owned + [task_id])[-20:]
+    # Token firmado sin estado (evita la carrera de la cookie con analisis en paralelo).
+    token = _sign_job('ai', task_id)
 
-    return jsonify({'done': False, 'task_id': task_id}), 202
+    return jsonify({'done': False, 'task_id': token}), 202
 
 
 @x_doc.route('/analyze_status/<task_id>', methods=['GET'])
 @login_required
 def analyze_status(task_id):
     """Proxy rápido del estado del análisis de IA (no bloquea el worker)."""
-    if task_id not in session.get('_ai_tasks', []):
+    real_id = _unsign_job('ai', task_id)
+    if real_id is None:
         return jsonify({'error': 'Task not found or access denied.'}), 403
+    task_id = real_id
     _, base_url = _ai_async_urls()
     headers = {'Content-Type': 'application/json', 'X-API-Key': AI_TEXT_SERVICE_API_KEY}
     try:
@@ -3875,19 +3901,20 @@ def finderx_check():
         logger.error('FinderX submit missing task_id: %s', str(sd)[:300])
         return jsonify({'error': 'FinderX did not return a job id.'}), 502
 
-    # Bind job_id to this user's session so only they can fetch the report.
-    owned = session.get('_fx_jobs', [])
-    session['_fx_jobs'] = (owned + [job_id])[-20:]
+    # Token firmado sin estado (evita la carrera de la cookie con analisis en paralelo).
+    token = _sign_job('fx', job_id)
 
-    return jsonify({'done': False, 'job_id': job_id, 'status': inner.get('status')}), 202
+    return jsonify({'done': False, 'job_id': token, 'status': inner.get('status')}), 202
 
 
 @x_doc.route('/finderx_report/<job_id>', methods=['GET'])
 @login_required
 def finderx_report(job_id):
     """Proxy rápido del reporte de FinderX (no bloquea el worker)."""
-    if job_id not in session.get('_fx_jobs', []):
+    real_id = _unsign_job('fx', job_id)
+    if real_id is None:
         return jsonify({'error': 'Job not found or access denied.'}), 403
+    job_id = real_id
     headers = {'Content-Type': 'application/json', 'X-API-Key': FINDERX_SERVICE_API_KEY}
     try:
         report = session_pool.get(

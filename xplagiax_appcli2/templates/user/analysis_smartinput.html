@@ -667,6 +667,21 @@ body.xp-file-preview .mode-switch-container {
 .xpa-mt .tab-content::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
 .xpa-mt .tab-panel{display:none;animation:mtFade .3s ease}
 .xpa-mt .tab-panel.active{display:block}
+/* Bloques del marktrack: se renderizan estaticos (sin .slide-up, que solo anade
+   el streaming de .ai-split-results-scroll). El base .analysis-block arranca en
+   opacity:0 -> forzarlos visibles y con la paleta clara/estandar de la app. */
+.xpa-mt .analysis-block{opacity:1;transform:none;background:#fff;border:1px solid #e8edf5;box-shadow:0 1px 2px rgba(15,23,42,.04);border-radius:12px;padding:12px 14px;margin-bottom:10px;color:#0f172a}
+.xpa-mt .analysis-block.seg-orig-block{opacity:.62}
+.xpa-mt .analysis-block:hover{box-shadow:0 6px 18px -10px rgba(15,23,42,.22)}
+.xpa-mt .block-header{margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #eef2f7}
+.xpa-mt .block-icon{width:28px;height:28px;font-size:.8rem;background:#f1f5f9}
+.xpa-mt .block-type{font-size:.85rem;font-weight:700;line-height:1.2}
+.xpa-mt .block-confidence{font-size:.72rem;line-height:1.3;color:#64748b}
+.xpa-mt .block-content{color:#334155;font-size:.82rem;line-height:1.55}
+.xpa-mt .confidence-meter{min-width:72px}
+.xpa-mt .confidence-bar{height:5px;background:#eef2f7}
+.xpa-mt .section-title{font-size:14px;font-weight:700;color:#0f172a;margin:0 0 10px}
+.xpa-mt .section-title::before{background:#064CDB}
 @keyframes mtFade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .xpa-mt h2{font-size:18px;font-weight:700;color:#0f172a;margin:8px 0 16px}
 .xpa-mt h3{font-size:15px;font-weight:700;color:#0f172a;margin:0 0 12px}
