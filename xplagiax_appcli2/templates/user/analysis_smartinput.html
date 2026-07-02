@@ -464,7 +464,7 @@ body.xp-file-preview .mode-switch-container {
 }
 .xpa-modal-x:hover { background:#f3f4f6; color:#374151; }
 .xpa-modal-body { padding: 20px 24px; }
-.xpa-modal-cards { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
+.xpa-modal-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
 .xpa-card {
     position: relative;
     display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -1806,7 +1806,15 @@ body.xp-file-preview .mode-switch-container {
             const fileAnalysisBtn = document.getElementById('fileAnalysisBtn');
             if (fileAnalysisBtn) fileAnalysisBtn.addEventListener('click', () => this.openAnalysisModal());
             const textAnalysisBtn = document.getElementById('textAnalysisBtn');
-            if (textAnalysisBtn) textAnalysisBtn.addEventListener('click', () => this.openAnalysisModal());
+            if (textAnalysisBtn) {
+                textAnalysisBtn.addEventListener('click', () => this.openAnalysisModal());
+                const _syncBtn = () => {
+                    const hasText = !!(this.elements.textInput && this.elements.textInput.value.trim());
+                    textAnalysisBtn.disabled = !hasText;
+                };
+                _syncBtn();
+                if (this.elements.textInput) this.elements.textInput.addEventListener('input', _syncBtn);
+            }
 
             // ── Card selection ──────────────────────────────────────────────
             const _card = t => modal.querySelector(`.xpa-card[data-type="${t}"]`);
@@ -4034,7 +4042,6 @@ body.xp-file-preview .mode-switch-container {
             return c;
         }
         _saveHistoryEntry(text, ai, source, citation) {
-            if (!this._historyEnabled) return;   // plan sin historial
             try {
                 const payload = {
                     text: String(text || '').slice(0, 15000),
@@ -5526,7 +5533,7 @@ body.xp-file-preview .mode-switch-container {
         </div>
         <div class="xpa-modal-body">
             <div class="xpa-modal-cards">
-                <!-- AI TestPro -->
+                <!-- Row 1 col 1 — AI TestPro -->
                 <div class="xpa-card" data-type="detect_ai" role="checkbox" aria-checked="false" tabindex="0">
                     <div class="xpa-card-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
@@ -5537,7 +5544,7 @@ body.xp-file-preview .mode-switch-container {
                     <div class="xpa-card-desc">Detect AI-generated content</div>
                     <span class="xpa-card-check">✓</span>
                 </div>
-                <!-- FinderX -->
+                <!-- Row 1 col 2 — FinderX -->
                 <div class="xpa-card" data-type="search_source" role="checkbox" aria-checked="false" tabindex="0">
                     <div class="xpa-card-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
@@ -5548,19 +5555,7 @@ body.xp-file-preview .mode-switch-container {
                     <div class="xpa-card-desc">Source &amp; plagiarism search</div>
                     <span class="xpa-card-check">✓</span>
                 </div>
-                <!-- Citations & References (sub-check of FinderX) -->
-                <div class="xpa-card" data-type="validate_citations" role="checkbox" aria-checked="false" tabindex="0"
-                     title="Double-click for citations-only (skips the FinderX source search)">
-                    <div class="xpa-card-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783"/>
-                        </svg>
-                    </div>
-                    <div class="xpa-card-name">Citations &amp; References</div>
-                    <div class="xpa-card-desc">Validate citations &amp; references only — no FinderX source/plagiarism search</div>
-                    <span class="xpa-card-check">✓</span>
-                </div>
-                <!-- Image Search — disabled -->
+                <!-- Row 1 col 3 — Image Search -->
                 <div class="xpa-card xpa-card-disabled" data-type="analysis_image" role="checkbox" aria-checked="false" aria-disabled="true" tabindex="-1">
                     <div class="xpa-card-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
@@ -5569,6 +5564,41 @@ body.xp-file-preview .mode-switch-container {
                         </svg>
                     </div>
                     <div class="xpa-card-name">Image Search</div>
+                    <div class="xpa-card-desc" style="color:#d1d5db;">Reverse web search</div>
+                    <span class="xpa-card-check">✓</span>
+                </div>
+                <!-- Row 2 col 1 — AI Plugins -->
+                <div class="xpa-card xpa-card-disabled" data-type="ai_plugins" role="checkbox" aria-checked="false" aria-disabled="true" tabindex="-1">
+                    <div class="xpa-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M6 0a.5.5 0 0 1 .5.5V3h3V.5a.5.5 0 0 1 1 0V3h1a.5.5 0 0 1 .5.5v3A3.5 3.5 0 0 1 8.5 10c-.002.434-.01.845-.04 1.22-.041.514-.126 1.003-.317 1.424a2.08 2.08 0 0 1-.97 1.028C6.725 13.9 6.169 14 5.5 14c-.998 0-1.61.33-1.974.718A1.92 1.92 0 0 0 3 16H2c0-.616.232-1.367.797-1.968C3.374 13.42 4.261 13 5.5 13c.581 0 .962-.088 1.218-.219.241-.123.4-.3.514-.55.121-.266.193-.621.23-1.09.027-.34.035-.718.037-1.141A3.5 3.5 0 0 1 4 6.5v-3a.5.5 0 0 1 .5-.5h1V.5A.5.5 0 0 1 6 0"/>
+                        </svg>
+                    </div>
+                    <div class="xpa-card-name">AI Plugins</div>
+                    <div class="xpa-card-desc" style="color:#d1d5db;">Coming soon</div>
+                    <span class="xpa-card-check">✓</span>
+                </div>
+                <!-- Row 2 col 2 — Citations & References -->
+                <div class="xpa-card" data-type="validate_citations" role="checkbox" aria-checked="false" tabindex="0"
+                     title="Double-click for citations-only (skips the FinderX source search)">
+                    <div class="xpa-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783"/>
+                        </svg>
+                    </div>
+                    <div class="xpa-card-name">Citations &amp; References</div>
+                    <div class="xpa-card-desc">Validate citations &amp; references</div>
+                    <span class="xpa-card-check">✓</span>
+                </div>
+                <!-- Row 2 col 3 — AI Image Detect -->
+                <div class="xpa-card xpa-card-disabled" data-type="ai_image_detect" role="checkbox" aria-checked="false" aria-disabled="true" tabindex="-1">
+                    <div class="xpa-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0"/>
+                            <path d="M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4zm.5 2a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m9 2.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0"/>
+                        </svg>
+                    </div>
+                    <div class="xpa-card-name">AI Image Detect</div>
                     <div class="xpa-card-desc" style="color:#d1d5db;">Coming soon</div>
                     <span class="xpa-card-check">✓</span>
                 </div>

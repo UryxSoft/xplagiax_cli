@@ -61,7 +61,7 @@
 .xpa-h-back-btn{display:inline-flex;align-items:center;gap:6px;min-width:44px;min-height:44px;padding:0 6px;border:none;background:none;color:#064CDB;font-size:.82rem;font-weight:600;cursor:pointer;border-radius:8px;transition:background .12s;letter-spacing:-.01em}
 .xpa-h-back-btn:hover{background:#eef3ff}
 .xpa-h-back-btn:focus-visible{outline:2px solid #064CDB;outline-offset:2px}
-.xpa-h-detail-content{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.xpa-h-detail-content{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#e2e8f0 transparent}
 .xpa-h-detail-content::-webkit-scrollbar{width:4px}
 .xpa-h-detail-content::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:4px}
 
@@ -96,7 +96,7 @@
 .xpa-h-skel-bar{height:11px;border-radius:6px;background:linear-gradient(90deg,#f1f5f9 25%,#e8edf5 50%,#f1f5f9 75%);background-size:200% 100%;animation:xpaSkel 1.6s ease-in-out infinite}
 
 /* ━━ DETAIL CONTENT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-.xpa-h-detail-inner{padding:clamp(16px,4vw,26px) clamp(16px,4vw,28px);display:flex;flex-direction:column;gap:clamp(14px,2.5vw,22px);flex:1;min-height:0}
+.xpa-h-detail-inner{padding:clamp(16px,4vw,26px) clamp(16px,4vw,28px);display:flex;flex-direction:column;gap:clamp(14px,2.5vw,22px)}
 .xpa-h-d-head{display:flex;flex-direction:column;gap:7px}
 .xpa-h-d-title{font-size:clamp(.88rem,2.5vw,1.05rem);font-weight:700;color:#0f172a;line-height:1.35;letter-spacing:-.02em;word-break:break-word}
 .xpa-h-d-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -111,7 +111,10 @@
 .xpa-h-sc-fill{height:100%;border-radius:2px;transition:width .5s cubic-bezier(.4,0,.2,1)}
 .xpa-h-sc-sub{font-size:.68rem;color:#94a3b8;font-weight:500}
 .xpa-h-excerpt-lbl{font-size:.66rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em}
-.xpa-h-excerpt{flex:1;min-height:0;font-size:clamp(.78rem,1.8vw,.82rem);line-height:1.65;color:#475569;background:#fff;border:1.5px solid #e8edf5;border-radius:13px;padding:clamp(12px,2vw,16px) clamp(12px,2vw,18px);overflow-y:auto;-webkit-overflow-scrolling:touch;white-space:pre-wrap;word-break:break-word;scrollbar-width:thin}
+.xpa-h-excerpt{min-height:clamp(110px,18vh,180px);max-height:clamp(220px,44vh,520px);font-size:clamp(.78rem,1.8vw,.82rem);line-height:1.65;color:#475569;background:#fff;border:1.5px solid #e8edf5;border-radius:13px;padding:clamp(12px,2vw,16px) clamp(12px,2vw,18px);overflow-y:auto;-webkit-overflow-scrolling:touch;white-space:pre-wrap;word-break:break-word;scrollbar-width:thin;scrollbar-color:#e2e8f0 transparent;overscroll-behavior:contain}
+.xpa-h-excerpt::-webkit-scrollbar{width:4px}
+.xpa-h-excerpt::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px;transition:background .15s}
+.xpa-h-excerpt:hover::-webkit-scrollbar-thumb{background:#94a3b8}
 
 /* ━━ EMPTY STATES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .xpa-h-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:100%;min-height:180px;padding:clamp(24px,5vw,40px);text-align:center}
@@ -540,9 +543,9 @@
                     </div>
                 </div>
                 ${cards ? `<div class="xpa-h-scores">${cards}</div>` : ''}
-                <div style="display:flex;flex-direction:column;flex:1;gap:8px;min-height:0">
+                <div style="display:flex;flex-direction:column;gap:8px">
                     <div class="xpa-h-excerpt-lbl">Document excerpt</div>
-                    <div class="xpa-h-excerpt">${_esc(String(e.text||'').slice(0,2400))}${(e.text||'').length>2400?'\n…':''}</div>
+                    <div class="xpa-h-excerpt">${_esc(String(e.text||''))}</div>
                 </div>
             </div>`;
         }
