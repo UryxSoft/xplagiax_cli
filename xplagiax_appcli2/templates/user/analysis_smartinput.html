@@ -644,6 +644,15 @@ body.xp-file-preview .mode-switch-container {
 .xpa-cite-hl:hover{background:rgba(6,76,219,.24)}
 @keyframes xpaCitePulse{0%{box-shadow:0 0 0 0 rgba(6,76,219,.5)}70%{box-shadow:0 0 0 9px rgba(6,76,219,0)}100%{box-shadow:0 0 0 0 rgba(6,76,219,0)}}
 .xpa-cite-pulse{animation:xpaCitePulse 1.1s ease-out 1;background:rgba(6,76,219,.3)!important}
+/* Subrayados APILADOS: un tramo puede tener hallazgos de varios analisis a la vez */
+.xpa-hl{border-radius:2px;padding:0 1px;scroll-margin:70px;transition:background .15s}
+.xpa-hl-clk{cursor:pointer}
+.xpa-hl-clk:hover{filter:brightness(.96)}
+@keyframes xpaHlPulse{0%{outline-color:rgba(6,76,219,.65)}100%{outline-color:rgba(6,76,219,0)}}
+.xpa-hl-pulse{outline:2px solid rgba(6,76,219,.65);outline-offset:2px;border-radius:3px;animation:xpaHlPulse 1.15s ease-out 1;background:rgba(6,76,219,.26)!important}
+.xpa-hl-legend{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-left:auto;text-transform:none;letter-spacing:0}
+.xpa-hl-leg{display:inline-flex;align-items:center;gap:5px;font-size:.62rem;font-weight:600;color:#64748b}
+.xpa-hl-leg-dot{width:16px;height:4px;border-radius:2px;display:inline-block;flex-shrink:0}
 
 /* Comparación "Your text vs Academic source" */
 .xpa-cmp-label{font-size:0.68rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#94a3b8;margin:6px 0 2px}
@@ -4393,7 +4402,7 @@ body.xp-file-preview .mode-switch-container {
             });
             const textEl = overlay.querySelector('#aiSplitTextContent');
             if (textEl) textEl.addEventListener('click', e => {
-                const m = e.target.closest('.xpa-cite-hl');
+                const m = e.target.closest('[data-cite]');
                 if (!m) return;
                 go('cit');
                 const card = overlay.querySelector(`.xcite-item[data-cite-focus="${m.dataset.cite}"]`);
@@ -4543,8 +4552,7 @@ body.xp-file-preview .mode-switch-container {
             requestAnimationFrame(() => {
                 overlay.classList.add('visible');
                 this._animateMtRings(overlay);
-                if (ai && Array.isArray(ai.blocks)) this._highlightSegments(ai.blocks);
-                if (citation && Array.isArray(citation.citations)) this._highlightCitations(citation.citations);
+                this._highlightAllFindings(ai, source, citation);
             });
 
             document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
@@ -4953,10 +4961,120 @@ body.xp-file-preview .mode-switch-container {
             const mark = document.getElementById('xpaCite' + i);
             if (!mark) return;
             mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            mark.classList.remove('xpa-cite-pulse');
+            mark.classList.remove('xpa-hl-pulse');
             void mark.offsetWidth;
-            mark.classList.add('xpa-cite-pulse');
-            setTimeout(() => mark.classList.remove('xpa-cite-pulse'), 1300);
+            mark.classList.add('xpa-hl-pulse');
+            setTimeout(() => mark.classList.remove('xpa-hl-pulse'), 1300);
+        }
+
+        // Resaltado UNIFICADO del texto: AI + Plagio + Citas. Un mismo tramo puede
+        // recibir VARIOS subrayados apilados (uno por análisis con hallazgo) para que el
+        // usuario vea de un vistazo qué análisis marcaron cada segmento.
+        _highlightAllFindings(ai, source, citation) {
+            const el = document.getElementById('aiSplitTextContent');
+            if (!el) return;
+            const full = el.textContent || '';
+            const len = full.length;
+            if (!len) return;
+
+            const KIND = { ai: { c: '#ef4444', label: 'AI-generated' }, plag: { c: '#f59e0b', label: 'Plagiarism' }, cit: { c: '#064CDB', label: 'Citation' } };
+            const norm = t => String(t || '').toLowerCase().replace(/\s+/g, ' ');
+            const ranges = [];
+
+            // AI: coincidencia por substring; sólo bloques marcados como IA.
+            if (ai && Array.isArray(ai.blocks)) {
+                let cursor = 0;
+                ai.blocks.forEach(b => {
+                    const frag = String(b.text || '').trim();
+                    if (!frag) return;
+                    let idx = full.indexOf(frag, cursor);
+                    if (idx === -1) idx = full.indexOf(frag.slice(0, 30), cursor);
+                    if (idx === -1) return;
+                    const end = Math.min(len, idx + frag.length);
+                    if (String(b.type || '').toLowerCase() === 'ai') ranges.push({ start: idx, end, kind: 'ai' });
+                    cursor = end;
+                });
+            }
+
+            // Plagio: usar char_start/char_end si son válidos y coinciden con el preview; si no, substring.
+            if (source && Array.isArray(source.segment_matches)) {
+                source.segment_matches.forEach(seg => {
+                    if (String(seg.decision || '').toLowerCase() !== 'plagiarism') return;
+                    const cs = seg.char_start, ce = seg.char_end;
+                    const head = norm(seg.text_preview).slice(0, 14);
+                    let placed = false;
+                    if (Number.isFinite(cs) && Number.isFinite(ce) && cs >= 0 && ce <= len && ce > cs) {
+                        const ok = head.length < 6 || norm(full.slice(cs, cs + 60)).indexOf(head) !== -1;
+                        if (ok) { ranges.push({ start: cs, end: ce, kind: 'plag' }); placed = true; }
+                    }
+                    if (!placed) {
+                        const frag = String(seg.text_preview || '').trim().replace(/[.…]+$/, '');
+                        if (frag.length >= 8) {
+                            let idx = full.indexOf(frag);
+                            if (idx === -1) idx = full.indexOf(frag.slice(0, 40));
+                            if (idx !== -1) ranges.push({ start: idx, end: Math.min(len, idx + frag.length), kind: 'plag' });
+                        }
+                    }
+                });
+            }
+
+            // Citas in-text: cada una en su primera aparición libre.
+            if (citation && Array.isArray(citation.citations)) {
+                const used = [];
+                citation.citations.forEach((ci, i) => {
+                    const frag = String(ci.raw_text || '').trim();
+                    if (frag.length < 2) return;
+                    let from = 0, idx;
+                    while ((idx = full.indexOf(frag, from)) !== -1 && used.indexOf(idx) !== -1) from = idx + 1;
+                    if (idx === -1) return;
+                    used.push(idx);
+                    ranges.push({ start: idx, end: Math.min(len, idx + frag.length), kind: 'cit', citeIdx: i });
+                });
+            }
+
+            if (!ranges.length) return;
+
+            // Partición en tramos que no se solapan; cada tramo conoce el conjunto de análisis que lo cubren.
+            const cuts = new Set([0, len]);
+            ranges.forEach(r => { cuts.add(r.start); cuts.add(r.end); });
+            const pts = Array.from(cuts).filter(p => p >= 0 && p <= len).sort((a, b) => a - b);
+            const esc = str => str.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+            const order = ['ai', 'plag', 'cit'];
+            const present = new Set();
+            const citeAssigned = {};
+            let html = '';
+            for (let p = 0; p < pts.length - 1; p++) {
+                const a = pts[p], b = pts[p + 1];
+                if (b <= a) continue;
+                const piece = esc(full.slice(a, b));
+                const cov = ranges.filter(r => r.start <= a && r.end >= b);
+                if (!cov.length) { html += piece; continue; }
+                const kinds = order.filter(k => cov.some(r => r.kind === k));
+                kinds.forEach(k => present.add(k));
+                const shadow = kinds.map((k, n) => `inset 0 ${-2 * (n + 1)}px 0 ${KIND[k].c}`).join(',');
+                const pad = kinds.length * 2 + 1;
+                const bg = KIND[kinds[kinds.length - 1]].c + '14';
+                const citR = cov.find(r => r.kind === 'cit');
+                let attrs = `class="xpa-hl${citR ? ' xpa-hl-clk' : ''}" style="box-shadow:${shadow};padding-bottom:${pad}px;background:${bg}"`;
+                if (citR) {
+                    attrs += ` data-cite="${citR.citeIdx}"`;
+                    if (!citeAssigned[citR.citeIdx]) { attrs += ` id="xpaCite${citR.citeIdx}"`; citeAssigned[citR.citeIdx] = true; }
+                }
+                attrs += ` title="${kinds.map(k => KIND[k].label).join(' + ')}"`;
+                html += `<mark ${attrs}>${piece}</mark>`;
+            }
+            el.innerHTML = html;
+
+            // Leyenda de colores (sólo los análisis que realmente subrayaron algo).
+            const left = el.closest('.ai-split-left');
+            const header = left && left.querySelector('.ai-split-panel-header');
+            if (header) {
+                let legend = header.querySelector('.xpa-hl-legend');
+                if (!legend) { legend = document.createElement('div'); legend.className = 'xpa-hl-legend'; header.appendChild(legend); }
+                legend.innerHTML = order.filter(k => present.has(k))
+                    .map(k => `<span class="xpa-hl-leg"><span class="xpa-hl-leg-dot" style="background:${KIND[k].c}"></span>${KIND[k].label}</span>`)
+                    .join('');
+            }
         }
 
         _enterSplitMode(text, result) {
