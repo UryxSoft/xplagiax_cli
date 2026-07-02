@@ -725,102 +725,21 @@ body.xp-file-preview .mode-switch-container {
 .xpa-mt .empty-state p{font-size:14px;font-weight:600;color:#64748b;margin:0 0 4px}
 .xpa-mt .empty-state small{font-size:12px;color:#94a3b8}
 .xpa-mt .ar-arc{transition:stroke-dashoffset .9s cubic-bezier(.34,1.56,.64,1)}
-/* ── Citations Panel ──────────────────────────────────────────────── */
-.cit-panel{display:flex;flex-direction:column;gap:14px}
-.cit-hero{display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,#f8fafc 0%,#eef2ff 100%);border:1.5px solid #e8edf5;border-radius:16px;padding:16px 18px}
-.cit-ring-wrap{position:relative;width:80px;height:80px;flex-shrink:0}
-.cit-ring-svg{width:80px;height:80px;transform:rotate(-90deg)}
-.cit-ring-track{fill:none;stroke:#e8edf5;stroke-width:7}
-.cit-ring-prog{fill:none;stroke-width:7;stroke-linecap:round}
-.cit-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;pointer-events:none}
-.cit-ring-score{font-size:1.35rem;font-weight:800;letter-spacing:-.04em}
-.cit-ring-denom{font-size:.6rem;font-weight:600;color:#94a3b8;margin-top:1px}
-.cit-hero-right{flex:1;min-width:0}
-.cit-hero-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-.cit-hero-title{font-size:.79rem;font-weight:700;color:#0f172a;letter-spacing:-.01em}
-.cit-risk-badge{display:inline-flex;align-items:center;font-size:.63rem;font-weight:700;letter-spacing:.03em;padding:3px 8px;border-radius:20px;text-transform:uppercase}
-.cit-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.cit-stat{display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border:1px solid #e8edf5;border-radius:10px;padding:7px 5px;text-align:center}
-.cit-stat-n{font-size:1.1rem;font-weight:800;letter-spacing:-.04em;line-height:1;color:#0f172a}
-.cit-stat-n--blue{color:#064CDB}.cit-stat-n--slate{color:#475569}.cit-stat-n--green{color:#047857}
-.cit-stat-l{font-size:.57rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;line-height:1.2}
-.cit-alerts{display:flex;flex-direction:column;gap:5px}
-.cit-alert-item{display:flex;align-items:flex-start;gap:7px;padding:8px 12px;border-radius:10px;font-size:.73rem;font-weight:500;line-height:1.45}
-.cit-alert-warn{background:rgba(245,158,11,.08);color:#92400e;border:1px solid rgba(245,158,11,.2)}
-.cit-alert-warn svg{flex-shrink:0;margin-top:1px}
-.cit-section-label{font-size:.6rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
-.cit-metrics-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
-.cit-metric-card{background:#fff;border:1.5px solid #e8edf5;border-radius:12px;padding:11px 13px}
-.cit-mc-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px;gap:6px}
-.cit-mc-label{font-size:.66rem;font-weight:600;color:#64748b;white-space:nowrap}
-.cit-mc-val{font-size:.9rem;font-weight:800;letter-spacing:-.03em;white-space:nowrap}
-.cit-mc-sub{font-size:.6rem;color:#94a3b8;margin-top:4px;line-height:1.3}
-.cit-mbar{height:3px;background:#f1f5f9;border-radius:2px;overflow:hidden;margin-top:3px}
-.cit-mbar-fill{height:100%;border-radius:2px}
-.cit-section-hdr{display:flex;align-items:center;gap:7px;margin-bottom:8px}
-.cit-count-chip{display:inline-flex;align-items:center;justify-content:center;background:#f1f5f9;color:#475569;font-size:.63rem;font-weight:700;border-radius:20px;padding:2px 7px;min-width:20px}
-.cit-refs-list{display:flex;flex-direction:column;gap:6px}
-.cit-ref-card{display:flex;background:#fff;border:1.5px solid #e8edf5;border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .15s,box-shadow .15s;outline:none}
-.cit-ref-card:hover{border-color:#c7d2e6;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.cit-ref-card:focus-visible{box-shadow:0 0 0 3px rgba(6,76,219,.14);border-color:#064CDB}
-.cit-ref-card--hl{border-color:#064CDB!important;box-shadow:0 0 0 2px rgba(6,76,219,.1)!important}
-.cit-ref-accent{width:4px;flex-shrink:0}
-.cit-ref-main{flex:1;min-width:0;padding:10px 12px}
-.cit-ref-header{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:5px}
-.cit-ref-badges-row{display:flex;align-items:center;gap:4px;flex-wrap:wrap;min-width:0}
-.cit-badge{display:inline-flex;align-items:center;font-size:.59rem;font-weight:700;padding:2px 5px;border-radius:4px;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
-.cit-badge--oa{background:rgba(6,76,219,.1);color:#064CDB}
-.cit-badge--cite{background:#f1f5f9;color:#64748b}
-.cit-ref-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
-.cit-ref-doi-btn{display:inline-flex;align-items:center;gap:3px;height:22px;padding:0 7px;border-radius:5px;background:#f4f7fe;color:#064CDB;font-size:.6rem;font-weight:700;text-decoration:none;border:1px solid rgba(6,76,219,.15);transition:background .1s;white-space:nowrap}
-.cit-ref-doi-btn:hover{background:#dce8ff}
-.cit-ref-expand{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;border:1.5px solid #e8edf5;background:none;color:#94a3b8;cursor:pointer;transition:all .12s;padding:0;flex-shrink:0}
-.cit-ref-expand:hover{background:#f1f5f9;color:#374151}
-.cit-expand-icon{transition:transform .2s cubic-bezier(.4,0,.2,1)}
-.cit-ref-card.expanded .cit-expand-icon{transform:rotate(180deg)}
-.cit-ref-title{font-size:.77rem;font-weight:600;color:#0f172a;margin:0 0 2px;line-height:1.4;word-break:break-word}
-.cit-ref-title-link{color:#064CDB;text-decoration:none}
-.cit-ref-title-link:hover{text-decoration:underline}
-.cit-ref-authors{font-size:.67rem;color:#64748b;margin:0 0 5px;line-height:1.35}
-.cit-ref-year{font-weight:700;color:#334155}
-.cit-conf-row{display:flex;align-items:center;gap:5px;margin-bottom:6px}
-.cit-conf-track{flex:1;min-width:0;height:3px;background:#f1f5f9;border-radius:2px;overflow:hidden}
-.cit-conf-fill{height:100%;border-radius:2px}
-.cit-conf-pct{font-size:.63rem;font-weight:700;flex-shrink:0;letter-spacing:-.01em}
-.cit-conf-lbl{font-size:.59rem;color:#94a3b8;flex-shrink:0}
-.cit-ref-details{display:flex;align-items:center;gap:5px;flex-wrap:wrap;max-height:0;overflow:hidden;opacity:0;transition:max-height .22s ease,opacity .18s ease}
-.cit-ref-card.expanded .cit-ref-details{max-height:80px;opacity:1}
-.cit-meta-chip{display:inline-flex;align-items:center;font-size:.6rem;color:#64748b;background:#f8fafc;border:1px solid #e8edf5;border-radius:4px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
-.cit-doi-chip{font-family:ui-monospace,monospace;font-size:.58rem}
-.cit-cites-wrap{display:flex;flex-wrap:wrap;gap:5px}
-.cit-cite-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:#f8fafc;border:1.5px solid #e8edf5;border-radius:20px;font-size:.7rem;color:#334155;transition:all .12s;white-space:nowrap;min-height:28px;cursor:default;user-select:none}
-.cit-cite-chip--linked{cursor:pointer}
-.cit-cite-chip--linked:hover{background:#f0f5ff;border-color:#bfcfef;color:#0436a3}
-.cit-cite-chip--linked:focus-visible{outline:2px solid #064CDB;outline-offset:2px}
-.cit-cite-dot{width:6px;height:6px;border-radius:50%;background:#064CDB;flex-shrink:0}
-.cit-cite-text{font-style:italic}
-.cit-cite-conf{font-size:.6rem;font-weight:700;color:#94a3b8}
-.cit-empty-state{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px;text-align:center;color:#94a3b8;background:#f8fafc;border:1px dashed #e2e8f0;border-radius:12px}
-.cit-empty-state p{font-size:.8rem;font-weight:600;color:#64748b;margin:0}
-.cit-empty-state small{font-size:.7rem}
-.cit-hint{font-size:.66rem;color:#94a3b8;margin:0 0 8px;line-height:1.4}
-@media(max-width:380px){
-  .cit-hero{flex-direction:column;align-items:stretch;gap:12px}
-  .cit-ring-wrap{align-self:center}
-  .cit-stat-grid{grid-template-columns:repeat(2,1fr)}
-}
-@media(min-width:560px){
-  .cit-metrics-grid{grid-template-columns:repeat(4,1fr)}
-  .cit-hero{padding:18px 20px;gap:20px}
-}
-@media(min-width:768px){
-  .cit-ring-wrap,.cit-ring-svg{width:88px;height:88px}
-  .cit-ring-score{font-size:1.5rem}
-  .cit-ref-main{padding:12px 14px}
-}
-@media(prefers-reduced-motion:reduce){
-  .cit-ring-prog,.cit-mbar-fill,.cit-conf-fill,.cit-expand-icon,.cit-ref-card,.cit-ref-details,.cit-cite-chip{transition:none!important}
-}
+/* ── FinderX Segment Blocks ──────────────────────────────────────── */
+.seg-reason{display:flex;align-items:flex-start;gap:5px;margin-top:7px;font-size:0.74rem;color:#64748b;line-height:1.45}
+.seg-reason svg{flex-shrink:0;margin-top:2px;color:#94a3b8}
+.seg-metrics{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;padding:7px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e8edf5}
+.seg-metric{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:52px}
+.seg-metric-val{font-size:.82rem;font-weight:800;letter-spacing:-.03em;line-height:1}
+.seg-metric-lbl{font-size:.58rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;text-align:center}
+.seg-source-box{margin-top:8px;padding:8px 10px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca}
+.seg-source-title{font-size:.63rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.seg-source-link{font-size:.8rem;font-weight:600;color:#064CDB;text-decoration:none;display:block;line-height:1.3}
+.seg-source-link:hover{text-decoration:underline}
+.seg-source-meta{font-size:.68rem;color:#94a3b8;margin-top:3px}
+.seg-pos-badge{font-size:.62rem;color:#94a3b8;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;display:inline-flex;align-items:center}
+.seg-conf-chip{display:inline-flex;align-items:center;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em}
+.seg-orig-block{opacity:.62;border-color:#e8edf5!important;box-shadow:none!important}
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
   <symbol id="i-human" viewBox="0 0 24 24"><circle cx="12" cy="7.6" r="4.3"/><path d="M3.6 21.2c0-4.2 3.9-6.9 8.4-6.9s8.4 2.7 8.4 6.9a.9.9 0 0 1-.9.9H4.5a.9.9 0 0 1-.9-.9z"/></symbol>
@@ -3286,33 +3205,28 @@ body.xp-file-preview .mode-switch-container {
                 message = `<strong>Mostly original.</strong> Only ${overall}% of the content matches external sources.`;
             }
 
-            const ca = result.citation_analysis || {};
-            const frags = Array.isArray(result.fragment_decisions) ? result.fragment_decisions : [];
+            const summary = result.segment_summary || {};
+            const segs    = Array.isArray(result.segment_matches) ? result.segment_matches : [];
             const matches = Array.isArray(result.academic_matches) ? result.academic_matches : [];
-            const coverage = Math.round(ca.citation_coverage || 0);
-            // "Coincidencias": fragmentos marcados como plagio + fuentes con copia REAL.
-            const fragFlagged = frags.filter(f => {
-                const dec = String(f.decision || '').toLowerCase();
-                return dec.includes('plag') || (Number(f.similarity_score) || 0) >= 0.5;
-            }).length;
-            const directMatches = _academic.filter(m => (m._sim || 0) >= 0.25).length;
-            const flagged = Math.max(fragFlagged, directMatches);
+            const flagged  = Number(summary.segments_flagged) || segs.filter(s => String(s.decision || '').toLowerCase() === 'plagiarism').length;
+            const analyzed = Number(summary.segments_analyzed) || segs.length;
+            const exact    = Math.round(scores.exact || 0);
 
             const card = this._buildIntegrityCard({
                 title: 'Plagiarism Checker',
                 subtitle: 'XplagiaX · FinderX',
                 centerValue: overall,
-                centerCaption: 'Similitud',
+                centerCaption: 'Similarity',
                 segments: [
                     { key: 'original', value: Math.max(0, 100 - overall) },
                     { key: 'sim', value: overall },
-                    { key: 'ref', value: coverage },
+                    { key: 'ref', value: exact },
                 ],
                 stats: [
-                    { label: 'Coincidencias', value: flagged },
-                    { label: 'Fuentes', value: matches.length },
-                    { label: 'Fragmentos', value: frags.length },
-                    { label: 'Citas', value: ca.total_inline_citations || 0 },
+                    { label: 'Flagged', value: flagged },
+                    { label: 'Sources', value: matches.length },
+                    { label: 'Segments', value: analyzed },
+                    { label: 'Exact', value: exact + '%' },
                 ],
             });
             const topicMeta = [];
@@ -3425,6 +3339,99 @@ body.xp-file-preview .mode-switch-container {
                 <div class="block-note">${explanation}</div>
                 ${sourcesHtml}
                 ${acadCompareHtml}
+            </div>`;
+        }
+
+        // ─── New segment block for /api/v1/academic-check structure ─────────────
+        _buildSegmentBlockHtml(seg) {
+            const matchScore   = Math.round(Number(seg.match_score) || 0);
+            const semanticPct  = Math.round((Number(seg.semantic_score) || 0) * 100);
+            const ngramPct     = Math.round((Number(seg.ngram_containment) || 0) * 100);
+            const contiguous   = Number(seg.contiguous_words) || 0;
+            const decision     = String(seg.decision || '').toLowerCase();
+            const confidence   = String(seg.confidence || 'none').toLowerCase();
+            const reason       = seg.reason || '';
+            const src          = seg.matched_source || null;
+            const isPlag       = decision === 'plagiarism';
+            const idx          = (seg.segment_index != null ? seg.segment_index : '') ;
+            const charRange    = (seg.char_start != null && seg.char_end != null)
+                ? `chars ${seg.char_start}–${seg.char_end}` : '';
+
+            const confColorMap = { high: '#dc2626', medium: '#d97706', low: '#f59e0b', none: '#94a3b8' };
+            const confColor    = confColorMap[confidence] || '#94a3b8';
+            let color, statusLabel;
+            if (isPlag && confidence === 'high')   { color = '#dc2626'; statusLabel = 'Plagiarism detected'; }
+            else if (isPlag)                        { color = '#d97706'; statusLabel = 'Possible plagiarism'; }
+            else                                    { color = '#059669'; statusLabel = 'Original content';   }
+
+            const preview = this._escapeHtml(seg.text_preview || '');
+
+            // Compact view for original segments
+            if (!isPlag) {
+                return `<div class="analysis-block seg-orig-block">
+                    <div class="block-header">
+                        <div class="block-info">
+                            <div class="block-icon" style="color:${color}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                            <div>
+                                <div class="block-type" style="color:${color};font-size:.78rem">Original${idx !== '' ? ` · #${Number(idx)+1}` : ''}</div>
+                                ${charRange ? `<div class="block-confidence"><span class="seg-pos-badge">${charRange}</span></div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="block-content" style="color:#94a3b8;font-style:italic;font-size:.75rem">"${preview.slice(0, 100)}${preview.length > 100 ? '…' : ''}"</div>
+                </div>`;
+            }
+
+            // Source card
+            let sourceHtml = '';
+            if (src) {
+                const title  = this._escapeHtml(src.title || 'Source');
+                const url    = src.url || (src.doi ? `https://doi.org/${src.doi}` : null);
+                const titleHtml = url
+                    ? `<a class="seg-source-link" href="${url}" target="_blank" rel="noopener noreferrer">${title}</a>`
+                    : `<strong class="seg-source-link" style="color:#0f172a">${title}</strong>`;
+                const meta = [
+                    src.provider ? this._escapeHtml(src.provider) : '',
+                    src.source_type ? this._escapeHtml(src.source_type) : '',
+                    src.doi ? `DOI: ${this._escapeHtml(src.doi)}` : '',
+                ].filter(Boolean).join(' · ');
+                sourceHtml = `<div class="seg-source-box">
+                    <div class="seg-source-title">Matched source</div>
+                    ${titleHtml}
+                    ${meta ? `<div class="seg-source-meta">${meta}</div>` : ''}
+                </div>`;
+            }
+
+            const metricsHtml = (ngramPct || semanticPct || contiguous) ? `<div class="seg-metrics">
+                ${ngramPct   ? `<div class="seg-metric"><span class="seg-metric-val" style="color:${color}">${ngramPct}%</span><span class="seg-metric-lbl">N-gram</span></div>` : ''}
+                ${semanticPct ? `<div class="seg-metric"><span class="seg-metric-val" style="color:#064CDB">${semanticPct}%</span><span class="seg-metric-lbl">Semantic</span></div>` : ''}
+                ${contiguous  ? `<div class="seg-metric"><span class="seg-metric-val" style="color:#475569">${contiguous}</span><span class="seg-metric-lbl">Consec. words</span></div>` : ''}
+            </div>` : '';
+
+            return `<div class="analysis-block">
+                <div class="block-header">
+                    <div class="block-info">
+                        <div class="block-icon" style="color:${color}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 22h16a2 2 0 0 0 1.73-4Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
+                        <div>
+                            <div class="block-type" style="color:${color}">${statusLabel}</div>
+                            <div class="block-confidence" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+                                ${idx !== '' ? `<span>#${Number(idx)+1}</span><span style="color:#cbd5e1">·</span>` : ''}
+                                <span class="seg-conf-chip" style="background:${confColor}1a;color:${confColor}">${confidence} confidence</span>
+                                ${charRange ? `<span class="seg-pos-badge">${charRange}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="confidence-meter" style="min-width:72px">
+                        <div style="text-align:right;font-size:.78rem;font-weight:700;color:${color};margin-bottom:3px">${matchScore}%</div>
+                        <div class="confidence-bar"><div class="confidence-fill" style="width:${matchScore}%;background:${color}"></div></div>
+                    </div>
+                </div>
+                <div class="block-content">"${preview}"</div>
+                ${reason ? `<div class="seg-reason">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                    ${this._escapeHtml(reason)}</div>` : ''}
+                ${metricsHtml}
+                ${sourceHtml}
             </div>`;
         }
 
@@ -3569,7 +3576,8 @@ body.xp-file-preview .mode-switch-container {
             const corpusHtml = this._buildCorpusWarning(result);
             const citationHtml = this._buildCitationAnalysisHtml(result.citation_analysis);
             const academicHtml = this._buildAcademicMatchesHtml(result.academic_matches);
-            const fragments = Array.isArray(result.fragment_decisions) ? result.fragment_decisions : [];
+            const fragments = Array.isArray(result.segment_matches) ? result.segment_matches
+                : Array.isArray(result.fragment_decisions) ? result.fragment_decisions : [];
             const wordCount = (result.metadata && result.metadata.chunks_analyzed)
                 ? `${result.metadata.chunks_analyzed} chunks`
                 : `${text.trim().split(/\s+/).length} words`;
@@ -3674,17 +3682,25 @@ body.xp-file-preview .mode-switch-container {
             });
         }
 
-        _streamFragments(fragments, academic) {
+        _streamFragments(segments, academic) {
             const container = document.getElementById('finderxFragmentsContainer');
             if (!container) return;
-            if (!fragments || !fragments.length) {
-                container.innerHTML = '<div style="font-size:0.82rem;color:#94a3b8;padding:8px 0">No flagged fragments — content appears original.</div>';
+            if (!segments || !segments.length) {
+                container.innerHTML = '<div style="font-size:0.82rem;color:#94a3b8;padding:8px 0">No segments — content appears original.</div>';
                 return;
             }
-            fragments.forEach((fr, i) => {
+            // Show plagiarism segments first, then originals (compacted)
+            const flagged  = segments.filter(s => String(s.decision || '').toLowerCase() === 'plagiarism');
+            const original = segments.filter(s => String(s.decision || '').toLowerCase() !== 'plagiarism');
+            const ordered  = [...flagged, ...original];
+            ordered.forEach((seg, i) => {
                 setTimeout(() => {
                     const wrap = document.createElement('div');
-                    wrap.innerHTML = this._buildFragmentBlockHtml(fr, academic).trim();
+                    // Detect new structure (has match_score) vs old (has similarity_score)
+                    const html = (seg.match_score !== undefined || seg.segment_index !== undefined)
+                        ? this._buildSegmentBlockHtml(seg)
+                        : this._buildFragmentBlockHtml(seg, academic);
+                    wrap.innerHTML = html.trim();
                     const el = wrap.firstChild;
                     container.appendChild(el);
                     requestAnimationFrame(() => el.classList.add('slide-up'));
@@ -3985,241 +4001,169 @@ body.xp-file-preview .mode-switch-container {
         }
 
         _buildMtPlagPanel(source) {
-            if (!source) return '<div class="empty-state"><p>Plagiarism check not run</p><small>Select “Search sources” and analyze.</small></div>';
-            const overall = Math.round((source.scores || {}).overall || 0);
-            const conf = (source.scores || {}).confidence || 'n/a';
+            if (!source) return '<div class="empty-state"><p>Plagiarism check not run</p><small>Select "FinderX" and analyze.</small></div>';
+
+            const num     = v => Number(v) || 0;
+            const scores  = source.scores || {};
+            const overall = Math.round(scores.overall || 0);
+            const exact   = Math.round(scores.exact || 0);
+            const semantic = Math.round(scores.semantic || 0);
+            const conf    = scores.confidence || 'n/a';
+
+            const summary  = source.segment_summary || {};
+            const analyzed = num(summary.segments_analyzed);
+            const flagged  = num(summary.segments_flagged);
+            const flagRatio = num(summary.flagged_ratio);
+            const byDec    = summary.by_decision || {};
+
+            const segs     = Array.isArray(source.segment_matches) ? source.segment_matches : [];
             const academic = Array.isArray(source.academic_matches) ? source.academic_matches : [];
-            const { best, bestSim, directCopy } = this._bestAcademic(academic);
-            const copyPct = Math.round((bestSim || 0) * 100);
-            const gColor = (directCopy || overall >= 50) ? '#dc2626' : overall >= 25 ? '#d97706' : '#059669';
-            const head = `<div style="display:flex;align-items:center;gap:18px;margin-bottom:18px;">
+
+            const gColor  = overall >= 50 ? '#dc2626' : overall >= 25 ? '#d97706' : '#059669';
+            const verdict = overall >= 50 ? 'High similarity detected'
+                          : overall >= 25 ? 'Moderate similarity' : 'Mostly original';
+
+            const head = `<div style="display:flex;align-items:center;gap:18px;margin-bottom:16px;">
                 <div style="width:80px;height:80px;flex-shrink:0;">${this._mtGauge(overall, gColor)}</div>
-                <div><strong style="color:${gColor};font-size:15px;">${directCopy ? 'Direct copy detected' : this._sourceLabel(overall).text}</strong>
-                <p style="margin:4px 0 0;font-size:12px;color:#64748b;">Confidence: <b style="color:#334155;">${this._escapeHtml(String(conf))}</b></p></div>
+                <div>
+                    <strong style="color:${gColor};font-size:15px;">${verdict}</strong>
+                    <p style="margin:4px 0 2px;font-size:12px;color:#64748b;">
+                        Exact: <b style="color:#334155">${exact}%</b>&ensp;·&ensp;Semantic: <b style="color:#334155">${semantic}%</b>
+                    </p>
+                    <p style="margin:0;font-size:12px;color:#64748b;">Confidence: <b style="color:#334155">${this._escapeHtml(String(conf))}</b></p>
+                </div>
             </div>`;
-            const body = academic.length
-                ? this._mtCorpusDark(academic, best, directCopy, copyPct, overall)
-                : '<div class="empty-state"><p>No academic matches found</p><small>Content appears original against the corpus.</small></div>';
-            return `<h2 style="margin-bottom:14px;">Plagiarism Checker</h2>${head}${body}`;
+
+            // Segment summary chips (only when we have real segment data)
+            const summaryRow = (analyzed > 0) ? `<div class="score-breakdown" style="margin-bottom:16px;">
+                <div class="score-item"><span>Segments</span><span>${analyzed}</span></div>
+                <div class="score-item"><span>Flagged</span><span style="color:${flagged > 0 ? '#dc2626' : '#059669'}">${flagged}</span></div>
+                <div class="score-item"><span>Original</span><span style="color:#059669">${num(byDec.original) || Math.max(0, analyzed - flagged)}</span></div>
+                <div class="score-item"><span>Flagged ratio</span><span>${(flagRatio * 100).toFixed(1)}%</span></div>
+            </div>` : '';
+
+            // Flagged segment cards
+            const flaggedSegs = segs.filter(s => String(s.decision || '').toLowerCase() === 'plagiarism');
+            let segBody;
+            if (segs.length > 0) {
+                // New segment_matches structure
+                segBody = flaggedSegs.length
+                    ? `<h4 style="margin:0 0 10px;font-size:11px;text-transform:uppercase;color:#94a3b8;letter-spacing:.08em;">
+                        Flagged Segments (${flaggedSegs.length})</h4>
+                       ${flaggedSegs.map(s => this._buildSegmentBlockHtml(s)).join('')}`
+                    : `<div class="empty-state"><p>No plagiarism detected</p><small>All ${analyzed} segments appear original.</small></div>`;
+            } else {
+                // Fallback: old academic_matches display
+                const { best, bestSim, directCopy } = this._bestAcademic(academic);
+                const copyPct = Math.round((bestSim || 0) * 100);
+                segBody = academic.length
+                    ? this._mtCorpusDark(academic, best, directCopy, copyPct, overall)
+                    : `<div class="empty-state"><p>No academic matches found</p><small>Content appears original against the corpus.</small></div>`;
+            }
+
+            // Academic sources list (only when not already shown by _mtCorpusDark fallback)
+            const acadSection = (segs.length > 0 && academic.length)
+                ? `<div style="margin-top:16px">${this._buildAcademicMatchesHtml(academic)}</div>`
+                : '';
+
+            return `<h2 style="margin-bottom:14px;">FinderX — Plagiarism Checker</h2>${head}${summaryRow}${segBody}${acadSection}`;
         }
 
         // Citations & References tab — FinderX /citation-validation result.
         _buildMtCitationsPanel(c) {
-            if (!c) return `<div class=”cit-empty-state”>
-                <svg width=”28” height=”28” viewBox=”0 0 24 24” fill=”none” stroke=”currentColor” stroke-width=”1.5” stroke-linecap=”round” stroke-linejoin=”round”><path d=”M4 19.5A2.5 2.5 0 0 1 6.5 17H20”/><path d=”M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z”/></svg>
-                <p>Citation validation not run</p><small>Select “Citations &amp; References” and analyze.</small></div>`;
-
+            if (!c) return '<div class="empty-state"><p>Citation validation not run</p><small>Select “Citations &amp; References” and analyze.</small></div>';
             const num = v => Number(v) || 0;
-            const esc = s => this._escapeHtml(s);
-            const colFor = v => v >= 80 ? '#047857' : v >= 50 ? '#b45309' : '#dc2626';
-            const bgFor  = v => v >= 80 ? '#059669' : v >= 50 ? '#d97706' : '#dc2626';
-
-            // Quality score + risk
             const qScore = Math.round(num(c.citation_quality_score));
             const riskMap = {
-                low:      { col: '#047857', bg: '#ecfdf5', label: 'Low Risk'  },
-                medium:   { col: '#b45309', bg: '#fffbeb', label: 'Moderate'  },
-                high:     { col: '#dc2626', bg: '#fef2f2', label: 'High Risk' },
-                critical: { col: '#dc2626', bg: '#fef2f2', label: 'Critical'  },
+                low: { cls: 'score-high', t: 'Low Risk' }, medium: { cls: 'score-medium', t: 'Medium Risk' },
+                high: { cls: 'score-low', t: 'High Risk' }, critical: { cls: 'score-low', t: 'Critical' },
             };
             const rk = riskMap[String(c.overall_risk_level || 'low').toLowerCase()] || riskMap.low;
-            const ringCol = qScore >= 80 ? '#059669' : qScore >= 50 ? '#d97706' : '#dc2626';
+            const fillCls = qScore >= 80 ? 'score-fill-high' : qScore >= 50 ? 'score-fill-medium' : 'score-fill-low';
 
-            // SVG ring geometry
-            const R = 34, CX = 40, CY = 40;
-            const circ    = +(2 * Math.PI * R).toFixed(2);
-            const finalOff = +((1 - qScore / 100) * circ).toFixed(2);
+            const chips = [
+                ['Citations', num(c.citations_found)], ['References', num(c.references_found)],
+                ['Valid', num(c.valid_references)], ['Partial', num(c.partial_references)],
+                ['Not found', num(c.not_found_references)], ['Orphan cites', num(c.orphan_citations)],
+                ['Orphan refs', num(c.orphan_references)],
+            ].map(([k, v]) => `<div class="score-item"><span>${k}</span><span>${v}</span></div>`).join('');
 
-            // Coverage metrics
             const cr = c.coverage_report || {}, doi = cr.doi_stats || {};
-            const ccs    = Math.round(num(cr.citation_coverage_score));
-            const cii    = Math.round(num(cr.citation_integrity_index));
-            const fnr    = Math.round(num(cr.false_negative_risk));
-            const doiR   = num(doi.resolved), doiF = num(doi.found_in_text);
-            const styleC = Math.round(num(c.style_consistency));
-            const biblC  = Math.round(num(c.bibliography_coverage));
+            const crHtml = `
+              <div class="insight-box">
+                <p style="margin:0 0 6px;font-weight:600;color:#334155;">Coverage report</p>
+                <div class="score-breakdown" style="margin-top:0">
+                  <div class="score-item"><span>Coverage (CCS)</span><span>${Math.round(num(cr.citation_coverage_score))}%</span></div>
+                  <div class="score-item"><span>Integrity (CII)</span><span>${Math.round(num(cr.citation_integrity_index))}%</span></div>
+                  <div class="score-item"><span>False-neg risk</span><span>${Math.round(num(cr.false_negative_risk))}%</span></div>
+                  <div class="score-item"><span>DOIs resolved</span><span>${num(doi.resolved)}/${num(doi.found_in_text)}</span></div>
+                </div>
+              </div>`;
 
-            // Summary counts
-            const totalCit = num(c.citations_found);
-            const totalRef = num(c.references_found);
-            const validRef = num(c.valid_references);
-            const partRef  = num(c.partial_references);
-            const nfRef    = num(c.not_found_references);
-            const orphCite = num(c.orphan_citations);
-            const orphRef  = num(c.orphan_references);
-            const issues   = partRef + nfRef;
-
-            // Status map
             const stMap = {
-                valid:   { col: '#047857', bg: 'rgba(16,185,129,0.12)', bar: '#059669', label: 'Verified' },
-                partial: { col: '#b45309', bg: 'rgba(245,158,11,0.14)',  bar: '#d97706', label: 'Partial'  },
+                valid:   { col: '#047857', bg: 'rgba(16,185,129,0.12)', label: 'Verified' },
+                partial: { col: '#b45309', bg: 'rgba(245,158,11,0.14)', label: 'Partial' },
             };
-            const refSt = s => stMap[String(s || '').toLowerCase()] ||
-                { col: '#dc2626', bg: 'rgba(239,68,68,0.12)', bar: '#ef4444',
-                  label: s ? esc(String(s).replace(/_/g, ' ')) : 'Not found' };
+            const refStatus = s => stMap[String(s || '').toLowerCase()]
+                || { col: '#dc2626', bg: 'rgba(239,68,68,0.12)', label: s ? String(s).replace(/_/g, ' ') : 'Unverified' };
+            const refs = Array.isArray(c.references) ? c.references : [];
+            const refsHtml = refs.length
+              ? `<div class="references-list"><h4>References (${refs.length})</h4>${refs.map(r => {
+                    const v = r.validation || {}, st = refStatus(v.status);
+                    const authors = Array.isArray(r.authors) ? this._escapeHtml(r.authors.slice(0, 4).join(', ')) : '';
+                    const title = this._escapeHtml(r.title || 'Untitled');
+                    const href = this._doiHref(r);
+                    const conf = (v.confidence != null) ? Math.round(v.confidence * 100) + '% confidence' : '';
+                    const titleHtml = href
+                        ? `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#064CDB;text-decoration:none;font-weight:600">${title}</a>`
+                        : `<span style="font-weight:600;color:#0f172a">${title}</span>`;
+                    const metaBits = [
+                        v.source_api ? 'via ' + this._escapeHtml(v.source_api) : '',
+                        conf,
+                        r.open_access ? '<span style="color:#047857">Open Access</span>' : '',
+                        r.pages ? 'pp. ' + this._escapeHtml(String(r.pages)) : '',
+                    ].filter(Boolean).join(' · ');
+                    return `<div class="reference-item">
+                        <span class="ref-status" style="background:${st.bg};color:${st.col}">${this._escapeHtml(st.label)}</span>
+                        <p style="color:#475569"><strong style="color:#0f172a">${authors}</strong>${r.year ? ' (' + this._escapeHtml(String(r.year)) + ')' : ''} — ${titleHtml}</p>
+                        ${metaBits ? `<div style="font-size:0.7rem;color:#94a3b8;margin-top:4px;padding-right:70px">${metaBits}</div>` : ''}
+                    </div>`;
+                }).join('')}</div>`
+              : `<div class="empty-state"><p>No references detected</p><small>No bibliography entries found in the text.</small></div>`;
 
-            const refs  = Array.isArray(c.references) ? c.references : [];
-            const cites = Array.isArray(c.citations)  ? c.citations  : [];
+            const cites = Array.isArray(c.citations) ? c.citations : [];
+            const citesHtml = cites.length
+              ? `<div class="references-list" style="margin-top:16px"><h4>In-text citations (${cites.length})</h4>${cites.map(ci => {
+                    const conf = (ci.confidence != null) ? Math.round(ci.confidence * 100) + '%' : '';
+                    const meta = [this._escapeHtml(ci.author || ''), ci.year ? this._escapeHtml(String(ci.year)) : '',
+                                  ci.style ? this._escapeHtml(ci.style) : '', conf].filter(Boolean).join(' · ');
+                    return `<div class="reference-item">
+                        <p style="color:#334155;font-style:italic;margin:0">“${this._escapeHtml(ci.raw_text || '')}”</p>
+                        ${meta ? `<div style="font-size:0.7rem;color:#94a3b8;margin-top:3px">${meta}</div>` : ''}
+                    </div>`;
+                }).join('')}</div>`
+              : '';
 
-            // Citation→reference index (surname|year key)
-            const refIdx = {};
-            refs.forEach((r, i) => {
-                const authors = Array.isArray(r.authors) ? r.authors : [];
-                const sn = authors[0] ? String(authors[0]).split(',')[0].split(' ').filter(Boolean).pop().toLowerCase() : '';
-                const yr = r.year ? String(r.year) : '';
-                if (sn) refIdx[`${sn}|${yr}`] = i;
-            });
-
-            // Citations per reference
-            const citPerRef = {};
-            cites.forEach(ci => {
-                const parts = String(ci.author || '').split(',')[0].split(' ').filter(Boolean);
-                const sn = parts.length ? parts[parts.length - 1].toLowerCase() : '';
-                const yr = String(ci.year || '');
-                const i  = refIdx[`${sn}|${yr}`];
-                if (i !== undefined) citPerRef[i] = (citPerRef[i] || 0) + 1;
-            });
-
-            // Metric card builder
-            const mCard = (label, val, col, sub) => {
-                const pct = typeof val === 'number' ? val : null;
-                return `<div class=”cit-metric-card”>
-                    <div class=”cit-mc-top”><span class=”cit-mc-label”>${label}</span>
-                    <span class=”cit-mc-val” style=”color:${col}”>${pct !== null ? pct + '%' : val}</span></div>
-                    ${pct !== null ? `<div class=”cit-mbar”><div class=”cit-mbar-fill” style=”width:${pct}%;background:${col}”></div></div>` : ''}
-                    <div class=”cit-mc-sub”>${sub}</div></div>`;
-            };
-
-            // Orphan alerts
-            const alertsHtml = (orphRef > 0 || orphCite > 0) ? `<div class=”cit-alerts”>
-                ${orphRef > 0 ? `<div class=”cit-alert-item cit-alert-warn” role=”alert”>
-                    <svg width=”13” height=”13” viewBox=”0 0 24 24” fill=”none” stroke=”currentColor” stroke-width=”2.2” stroke-linecap=”round” stroke-linejoin=”round” aria-hidden=”true”><path d=”m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 22h16a2 2 0 0 0 1.73-4Z”/><path d=”M12 9v4”/><path d=”M12 17h.01”/></svg>
-                    <span>${orphRef} orphan reference${orphRef > 1 ? 's' : ''} — no matching in-text citation</span></div>` : ''}
-                ${orphCite > 0 ? `<div class=”cit-alert-item cit-alert-warn” role=”alert”>
-                    <svg width=”13” height=”13” viewBox=”0 0 24 24” fill=”none” stroke=”currentColor” stroke-width=”2.2” stroke-linecap=”round” stroke-linejoin=”round” aria-hidden=”true”><path d=”m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 22h16a2 2 0 0 0 1.73-4Z”/><path d=”M12 9v4”/><path d=”M12 17h.01”/></svg>
-                    <span>${orphCite} orphan citation${orphCite > 1 ? 's' : ''} — no matching bibliography entry</span></div>` : ''}
-            </div>` : '';
-
-            // Reference cards
-            const refsHtml = refs.length ? refs.map((r, i) => {
-                const v      = r.validation || {};
-                const st     = refSt(v.status);
-                const authors = Array.isArray(r.authors) ? esc(r.authors.slice(0, 4).join(', ')) : '';
-                const title   = esc(r.title || 'Untitled');
-                const href    = this._doiHref(r);
-                const conf    = v.confidence != null ? Math.round(v.confidence * 100) : null;
-                const cCount  = citPerRef[i] || 0;
-                const srcApi  = v.source_api ? esc(String(v.source_api).replace(/_/g, ' ')) : '';
-                const doiStr  = r.doi ? esc(String(r.doi)) : '';
-
-                return `<div class=”cit-ref-card” data-ref-idx=”${i}” tabindex=”0” role=”button” aria-expanded=”false”>
-                    <div class=”cit-ref-accent” style=”background:${st.bar}”></div>
-                    <div class=”cit-ref-main”>
-                        <div class=”cit-ref-header”>
-                            <div class=”cit-ref-badges-row”>
-                                <span class=”cit-badge” style=”background:${st.bg};color:${st.col}”>${st.label}</span>
-                                ${r.open_access ? `<span class=”cit-badge cit-badge--oa”>Open Access</span>` : ''}
-                                ${cCount > 0 ? `<span class=”cit-badge cit-badge--cite”>${cCount}&thinsp;cite${cCount > 1 ? 's' : ''}</span>` : ''}
-                            </div>
-                            <div class=”cit-ref-actions”>
-                                ${href ? `<a class=”cit-ref-doi-btn” href=”${href}” target=”_blank” rel=”noopener noreferrer” aria-label=”Open DOI” onclick=”event.stopPropagation()”>
-                                    <svg width=”10” height=”10” viewBox=”0 0 24 24” fill=”none” stroke=”currentColor” stroke-width=”2.2” stroke-linecap=”round” stroke-linejoin=”round” aria-hidden=”true”><path d=”M15 3h6v6”/><path d=”M10 14 21 3”/><path d=”M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6”/></svg>DOI</a>` : ''}
-                                <button class=”cit-ref-expand” type=”button” aria-label=”Expand details” onclick=”event.stopPropagation();var c=this.closest('.cit-ref-card');c.classList.toggle('expanded');c.setAttribute('aria-expanded',c.classList.contains('expanded'))”>
-                                    <svg class=”cit-expand-icon” width=”12” height=”12” viewBox=”0 0 24 24” fill=”none” stroke=”currentColor” stroke-width=”2.4” stroke-linecap=”round” stroke-linejoin=”round” aria-hidden=”true”><polyline points=”6 9 12 15 18 9”/></svg>
-                                </button>
-                            </div>
-                        </div>
-                        <p class=”cit-ref-title”>${href ? `<a href=”${href}” target=”_blank” rel=”noopener noreferrer” class=”cit-ref-title-link” onclick=”event.stopPropagation()”>${title}</a>` : title}</p>
-                        <p class=”cit-ref-authors”>${authors}${r.year ? ` <span class=”cit-ref-year”>· ${esc(String(r.year))}</span>` : ''}</p>
-                        ${conf !== null ? `<div class=”cit-conf-row” title=”${conf}% match confidence”>
-                            <div class=”cit-conf-track”><div class=”cit-conf-fill” style=”width:${conf}%;background:${bgFor(conf)}”></div></div>
-                            <span class=”cit-conf-pct” style=”color:${colFor(conf)}”>${conf}%</span>
-                            <span class=”cit-conf-lbl”>confidence</span></div>` : ''}
-                        <div class=”cit-ref-details” aria-hidden=”true”>
-                            ${srcApi  ? `<span class=”cit-meta-chip”>via ${srcApi}</span>` : ''}
-                            ${r.pages ? `<span class=”cit-meta-chip”>pp.&thinsp;${esc(String(r.pages))}</span>` : ''}
-                            ${doiStr  ? `<span class=”cit-meta-chip cit-doi-chip” title=”${doiStr}”>${doiStr.length > 32 ? doiStr.slice(0, 29) + '…' : doiStr}</span>` : ''}
-                        </div>
-                    </div>
-                </div>`;
-            }).join('') : `<div class=”cit-empty-state”>
-                <svg width=”26” height=”26” viewBox=”0 0 24 24” fill=”none” stroke=”currentColor” stroke-width=”1.5” stroke-linecap=”round” stroke-linejoin=”round”><path d=”M4 19.5A2.5 2.5 0 0 1 6.5 17H20”/><path d=”M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z”/></svg>
-                <p>No references detected</p><small>No bibliography entries were found in the text.</small></div>`;
-
-            // Citation chips
-            const citesHtml = cites.length ? cites.map(ci => {
-                const parts  = String(ci.author || '').split(',')[0].split(' ').filter(Boolean);
-                const sn     = parts.length ? parts[parts.length - 1].toLowerCase() : '';
-                const yr     = String(ci.year || '');
-                const idx    = refIdx[`${sn}|${yr}`];
-                const conf   = ci.confidence != null ? Math.round(ci.confidence * 100) : null;
-                const linked = idx !== undefined;
-                return `<span class=”cit-cite-chip${linked ? ' cit-cite-chip--linked' : ''}”
-                             ${linked ? `data-ref-target=”${idx}” tabindex=”0” role=”button” aria-label=”Citation linked to reference ${idx + 1}”` : 'tabindex=”0”'}>
-                    ${linked ? '<span class=”cit-cite-dot” aria-hidden=”true”></span>' : ''}
-                    <span class=”cit-cite-text”>${esc(ci.raw_text || `${ci.author || ''}, ${ci.year || ''}`)}</span>
-                    ${conf !== null ? `<span class=”cit-cite-conf”>${conf}%</span>` : ''}
-                </span>`;
-            }).join('') : '';
-
-            return `<div class=”cit-panel”>
-
-                <div class=”cit-hero” role=”region” aria-label=”Citation quality summary”>
-                    <div class=”cit-ring-wrap” aria-hidden=”true”>
-                        <svg class=”cit-ring-svg” viewBox=”0 0 80 80” aria-hidden=”true”>
-                            <circle class=”cit-ring-track” cx=”${CX}” cy=”${CY}” r=”${R}”/>
-                            <circle class=”cit-ring-prog ar-arc” cx=”${CX}” cy=”${CY}” r=”${R}”
-                                stroke=”${ringCol}” stroke-dasharray=”${circ}” stroke-dashoffset=”${circ}” data-final=”${finalOff}”/>
-                        </svg>
-                        <div class=”cit-ring-center”>
-                            <span class=”cit-ring-score” style=”color:${ringCol}”>${qScore}</span>
-                            <span class=”cit-ring-denom”>/100</span>
-                        </div>
-                    </div>
-                    <div class=”cit-hero-right”>
-                        <div class=”cit-hero-top”>
-                            <span class=”cit-hero-title”>Citation Quality</span>
-                            <span class=”cit-risk-badge” style=”background:${rk.bg};color:${rk.col}”>${rk.label}</span>
-                        </div>
-                        <div class=”cit-stat-grid” role=”list”>
-                            <div class=”cit-stat” role=”listitem”><span class=”cit-stat-n cit-stat-n--blue” aria-label=”${totalCit} citations”>${totalCit}</span><span class=”cit-stat-l”>Citations</span></div>
-                            <div class=”cit-stat” role=”listitem”><span class=”cit-stat-n cit-stat-n--slate” aria-label=”${totalRef} references”>${totalRef}</span><span class=”cit-stat-l”>References</span></div>
-                            <div class=”cit-stat” role=”listitem”><span class=”cit-stat-n cit-stat-n--green” aria-label=”${validRef} verified”>${validRef}</span><span class=”cit-stat-l”>Verified</span></div>
-                            <div class=”cit-stat” role=”listitem”><span class=”cit-stat-n” style=”color:${issues > 0 ? '#d97706' : '#059669'}” aria-label=”${issues} issues”>${issues}</span><span class=”cit-stat-l”>Issues</span></div>
-                        </div>
-                    </div>
+            return `
+            <h2>Citations &amp; References</h2>
+            <div class="integrity-score">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <h4 style="margin:0;font-size:14px;font-weight:700;">Citation Quality</h4>
+                    <span class="score-badge ${rk.cls}">${rk.t}</span>
                 </div>
-
-                ${alertsHtml}
-
-                <div role=”region” aria-label=”Analysis metrics”>
-                    <div class=”cit-section-label”>Analysis Metrics</div>
-                    <div class=”cit-metrics-grid”>
-                        ${mCard('Coverage', ccs, bgFor(ccs), 'Citation coverage score (CCS)')}
-                        ${mCard('Integrity', cii, bgFor(cii), 'Citation integrity index (CII)')}
-                        ${mCard('Style', styleC, '#064CDB', `Format: ${esc(c.detected_style || '—')} · ${styleC}% consistent`)}
-                        ${mCard('Bibliography', biblC, bgFor(biblC), `${doiF > 0 ? doiR + '/' + doiF + ' DOIs resolved' : 'No DOIs'}${fnr > 0 ? ' · FN risk ' + fnr + '%' : ''}`)}
-                    </div>
+                <div class="score-meter"><div class="score-value">${qScore}/100</div><div class="score-fill ${fillCls}" style="width:${qScore}%;"></div></div>
+                <div class="score-breakdown">
+                    <div class="score-item"><span>Style</span><span>${this._escapeHtml(c.detected_style || '—')}</span></div>
+                    <div class="score-item"><span>Consistency</span><span>${Math.round(num(c.style_consistency))}%</span></div>
+                    <div class="score-item"><span>Citation coverage</span><span>${Math.round(num(c.citation_coverage))}%</span></div>
+                    <div class="score-item"><span>Bibliography</span><span>${Math.round(num(c.bibliography_coverage))}%</span></div>
                 </div>
-
-                <div class=”cit-section” role=”region” aria-label=”References list”>
-                    <div class=”cit-section-hdr”>
-                        <span class=”cit-section-label”>References</span>
-                        <span class=”cit-count-chip”>${refs.length}</span>
-                    </div>
-                    <div class=”cit-refs-list”>${refsHtml}</div>
-                </div>
-
-                ${citesHtml ? `<div class=”cit-section” role=”region” aria-label=”In-text citations”>
-                    <div class=”cit-section-hdr”>
-                        <span class=”cit-section-label”>In-text Citations</span>
-                        <span class=”cit-count-chip”>${cites.length}</span>
-                    </div>
-                    <p class=”cit-hint”>Chips with a <span style=”display:inline-block;width:6px;height:6px;border-radius:50%;background:#064CDB;vertical-align:middle;margin:0 2px”></span> blue dot are linked — hover to highlight the reference.</p>
-                    <div class=”cit-cites-wrap”>${citesHtml}</div>
-                </div>` : ''}
-
-            </div>`;
+            </div>
+            <h4 style="margin:18px 0 10px;">Summary</h4>
+            <div class="score-breakdown" style="margin-bottom:6px">${chips}</div>
+            ${crHtml}
+            ${refsHtml}
+            ${citesHtml}`;
         }
 
         _wireMtTabs(overlay) {
@@ -4236,35 +4180,6 @@ body.xp-file-preview .mode-switch-container {
                 const b = e.target.closest('[data-goto]');
                 if (b) { e.preventDefault(); go(b.dataset.goto); }
             });
-            // Wire citation panel: keyboard expand + chip→card hover linking
-            const citPanel = overlay.querySelector('.cit-panel');
-            if (citPanel) {
-                citPanel.querySelectorAll('.cit-ref-card').forEach(card => {
-                    card.addEventListener('click', e => {
-                        if (!e.target.closest('a') && !e.target.closest('button')) {
-                            card.classList.toggle('expanded');
-                            card.setAttribute('aria-expanded', card.classList.contains('expanded'));
-                        }
-                    });
-                    card.addEventListener('keydown', e => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            card.classList.toggle('expanded');
-                            card.setAttribute('aria-expanded', card.classList.contains('expanded'));
-                        }
-                    });
-                });
-                const clearHl = () => citPanel.querySelectorAll('.cit-ref-card--hl').forEach(c => c.classList.remove('cit-ref-card--hl'));
-                citPanel.querySelectorAll('.cit-cite-chip[data-ref-target]').forEach(chip => {
-                    const refCard = citPanel.querySelector(`.cit-ref-card[data-ref-idx="${chip.dataset.refTarget}"]`);
-                    if (!refCard) return;
-                    chip.addEventListener('mouseenter', () => { clearHl(); refCard.classList.add('cit-ref-card--hl'); });
-                    chip.addEventListener('mouseleave', clearHl);
-                    chip.addEventListener('focus',      () => { clearHl(); refCard.classList.add('cit-ref-card--hl'); });
-                    chip.addEventListener('blur',       clearHl);
-                    chip.addEventListener('click',      () => refCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-                });
-            }
         }
         _animateMtRings(overlay) {
             overlay.querySelectorAll('.ar-arc').forEach(arc => {
@@ -4440,7 +4355,8 @@ body.xp-file-preview .mode-switch-container {
             const corpusHtml = this._buildCorpusWarning(sourceResult);
             const citationHtml = this._buildCitationAnalysisHtml(sourceResult.citation_analysis);
             const academicHtml = this._buildAcademicMatchesHtml(sourceResult.academic_matches);
-            const fragments = Array.isArray(sourceResult.fragment_decisions) ? sourceResult.fragment_decisions : [];
+            const fragments = Array.isArray(sourceResult.segment_matches) ? sourceResult.segment_matches
+                : Array.isArray(sourceResult.fragment_decisions) ? sourceResult.fragment_decisions : [];
 
             const overlay = document.createElement('div');
             overlay.id = 'aiAnalysisSplitView';
