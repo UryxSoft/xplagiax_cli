@@ -3210,7 +3210,6 @@ body.xp-file-preview .mode-switch-container {
             const matches = Array.isArray(result.academic_matches) ? result.academic_matches : [];
             const flagged  = Number(summary.segments_flagged) || segs.filter(s => String(s.decision || '').toLowerCase() === 'plagiarism').length;
             const analyzed = Number(summary.segments_analyzed) || segs.length;
-            const exact    = Math.round(scores.exact || 0);
 
             const card = this._buildIntegrityCard({
                 title: 'Plagiarism Checker',
