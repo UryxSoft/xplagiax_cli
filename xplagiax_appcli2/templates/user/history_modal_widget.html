@@ -171,6 +171,21 @@
 @media(min-width:1440px){.xpa-hist-modal{width:min(1440px,96vw);height:min(960px,94vh)}}
 @media(min-width:1920px){.xpa-hist-modal{width:min(1680px,96vw);height:min(1020px,94vh)}}
 @media(min-width:2560px){.xpa-hist-modal{width:min(1800px,88vw);height:min(1080px,92vh)}}
+
+/* ━━ CONFIRM DIALOG (Clear all) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-h-confirm-overlay{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;background:rgba(10,17,34,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:20px}
+.xpa-h-confirm{background:#fff;border-radius:18px;width:min(400px,92vw);padding:26px 24px 20px;text-align:center;box-shadow:0 24px 60px rgba(6,76,219,.16),0 6px 18px rgba(0,0,0,.12);animation:xpaHistIn .2s cubic-bezier(.2,.8,.2,1)}
+.xpa-h-confirm-ico{width:48px;height:48px;border-radius:14px;background:#fef2f2;color:#dc2626;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.xpa-h-confirm-t{font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 6px;letter-spacing:-.02em}
+.xpa-h-confirm-s{font-size:.8rem;color:#64748b;line-height:1.55;margin:0 0 18px}
+.xpa-h-confirm-actions{display:flex;gap:8px}
+.xpa-h-confirm-btn{flex:1;height:40px;border-radius:10px;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .12s;border:1.5px solid transparent;font-family:inherit}
+.xpa-h-confirm-cancel{background:#fff;border-color:#e2e8f0;color:#374151}
+.xpa-h-confirm-cancel:hover{background:#f1f5f9;border-color:#d1d9e6}
+.xpa-h-confirm-del{background:#dc2626;color:#fff}
+.xpa-h-confirm-del:hover{background:#b91c1c}
+.xpa-h-confirm-btn:focus-visible{outline:2px solid #064CDB;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.xpa-h-confirm{animation:none}}
 </style>
 
 <!-- ── Modal HTML ─────────────────────────────────────────────── -->
@@ -245,6 +260,21 @@
                     <span>Delete</span><span class="xpa-h-kbd">⌘⇧D</span>
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Confirm dialog (Clear all) ─────────────────────────────── -->
+<div class="xpa-h-confirm-overlay" id="histConfirmModal" style="display:none" role="alertdialog" aria-modal="true" aria-labelledby="histConfirmTitle" aria-describedby="histConfirmDesc">
+    <div class="xpa-h-confirm">
+        <div class="xpa-h-confirm-ico">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </div>
+        <h3 class="xpa-h-confirm-t" id="histConfirmTitle">Clear all history?</h3>
+        <p class="xpa-h-confirm-s" id="histConfirmDesc">All saved analyses will be permanently deleted. This action cannot be undone.</p>
+        <div class="xpa-h-confirm-actions">
+            <button class="xpa-h-confirm-btn xpa-h-confirm-cancel" id="histConfirmCancel" type="button">Cancel</button>
+            <button class="xpa-h-confirm-btn xpa-h-confirm-del" id="histConfirmOk" type="button">Delete all</button>
         </div>
     </div>
 </div>
@@ -333,13 +363,7 @@
             });
             if (search) search.addEventListener('input', () => this._renderList(search.value));
 
-            document.getElementById('histClearAll')?.addEventListener('click', async () => {
-                if (!confirm('Clear all saved analyses? This cannot be undone.')) return;
-                try { await fetch('/x_doc/history', { method: 'DELETE' }); } catch (_) {}
-                this._items = []; this._full = {};
-                this._setCount(0);
-                this._renderList('');
-            });
+            document.getElementById('histClearAll')?.addEventListener('click', () => this._confirmClearAll());
 
             document.getElementById('histFilterBar')?.addEventListener('click', e => {
                 const chip = e.target.closest('[data-filter]');
@@ -573,6 +597,36 @@
             delete this._full[id];
             const search = document.getElementById('histSearchInput');
             this._renderList(search ? search.value : '');
+        }
+
+        // Diálogo de confirmación propio (reemplaza el confirm() nativo del navegador).
+        _confirmClearAll() {
+            const ov = document.getElementById('histConfirmModal');
+            if (!ov) return;
+            ov.style.display = 'flex';
+            const btnCancel = document.getElementById('histConfirmCancel');
+            const btnOk     = document.getElementById('histConfirmOk');
+            const close = () => {
+                ov.style.display = 'none';
+                document.removeEventListener('keydown', onKey, true);
+                ov.onclick = null;
+                if (btnCancel) btnCancel.onclick = null;
+                if (btnOk) btnOk.onclick = null;
+            };
+            // Captura TODAS las teclas mientras el diálogo está abierto para que los
+            // atajos del modal de historial (Enter/Esc/flechas) no interfieran.
+            const onKey = e => { e.stopPropagation(); if (e.key === 'Escape') close(); };
+            document.addEventListener('keydown', onKey, true);
+            ov.onclick = e => { if (e.target === ov) close(); };
+            if (btnCancel) btnCancel.onclick = close;
+            if (btnOk) btnOk.onclick = async () => {
+                close();
+                try { await fetch('/x_doc/history', { method: 'DELETE' }); } catch (_) {}
+                this._items = []; this._full = {};
+                this._setCount(0);
+                this._renderList('');
+            };
+            setTimeout(() => { if (btnCancel) btnCancel.focus(); }, 30);
         }
 
         _toggleMinimize() {
