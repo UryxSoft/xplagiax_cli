@@ -258,6 +258,11 @@ body.xp-split-active .ai-split-view {
     scrollbar-width: thin;
     scrollbar-color: rgba(6,76,219,0.18) transparent;
 }
+/* Cuando el origen es un documento subido, el panel izquierdo muestra el
+   result.html generado en el servidor (misma vista, con formato/imágenes)
+   en vez del texto plano — el iframe gestiona su propio scroll interno. */
+.ai-split-text-content.has-html-view { padding: 0; overflow: hidden; }
+.ai-split-html-view { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
 .ai-split-text-content::-webkit-scrollbar { width: 4px; }
 .ai-split-text-content::-webkit-scrollbar-thumb {
     background: rgba(6,76,219,0.18);
@@ -2614,10 +2619,28 @@ body.xp-file-preview .mode-switch-container {
                 const extractFormData = new FormData();
                 extractFormData.append('analysis_file', files[0].file);
 
-                const extractResponse = await fetch('/x_doc/extract_text', {
-                    method: 'POST',
-                    body: extractFormData
-                });
+                // Timeout defensivo: documentos grandes o con fallback a OCR pueden tardar
+                // bastante en el servidor (síncrono) — sin límite, la UI quedaría girando
+                // indefinidamente si el proceso se cuelga en vez de fallar rápido.
+                const extractTimeoutMs = 180000; // 3 min
+                const extractAbort = new AbortController();
+                const extractTimer = setTimeout(() => extractAbort.abort(), extractTimeoutMs);
+
+                let extractResponse;
+                try {
+                    extractResponse = await fetch('/x_doc/extract_text', {
+                        method: 'POST',
+                        body: extractFormData,
+                        signal: extractAbort.signal
+                    });
+                } catch (fetchErr) {
+                    if (fetchErr && fetchErr.name === 'AbortError') {
+                        throw new Error('The document is taking too long to process (timeout). Try a smaller file or fewer pages.');
+                    }
+                    throw fetchErr;
+                } finally {
+                    clearTimeout(extractTimer);
+                }
 
                 if (!extractResponse.ok) {
                     let msg = `HTTP ${extractResponse.status}`;
@@ -2628,10 +2651,11 @@ body.xp-file-preview .mode-switch-container {
                 const extractData = await extractResponse.json();
                 const text = (extractData && extractData.text) ? extractData.text : '';
                 if (!text) throw new Error('No text could be extracted from the document.');
+                const htmlViewUrl = (extractData && extractData.result_view) ? extractData.result_view : null;
 
                 // 2) Ejecutar los mismos servicios de texto y mostrar el split view.
                 //    (runAnalysesOnText gestiona loading, errores y render.)
-                await this.runAnalysesOnText(text, selectedAnalysisTypes);
+                await this.runAnalysesOnText(text, selectedAnalysisTypes, htmlViewUrl);
             } catch (error) {
                 hideCustomLoadingOnDiv('inputWrapper');
                 console.error('Error in file analysis:', error);
@@ -2848,7 +2872,7 @@ body.xp-file-preview .mode-switch-container {
         // Core orchestrator: runs the selected text services (AI detection / FinderX)
         // on `text` and shows the matching split view. Shared by text mode and the
         // document flow (which extracts text first, then calls this).
-        async runAnalysesOnText(text, types) {
+        async runAnalysesOnText(text, types, htmlViewUrl = null) {
             text = (text || '').trim();
             if (!text || text.split(/\s+/).length < 10) {
                 this.showError('Please enter at least 10 words to analyze.');
@@ -2889,7 +2913,7 @@ body.xp-file-preview .mode-switch-container {
                         this.showError('FinderX failed: ' + ((srcS.reason && srcS.reason.message) || 'unknown error'));
                     if (types.includes('validate_citations') && !wantSource && !citationResult)
                         this.showError('Citation validation failed: ' + ((citS.reason && citS.reason.message) || 'unknown error'));
-                    this._enterMarktrackView(text, aiResult, sourceResult, citationResult);
+                    this._enterMarktrackView(text, aiResult, sourceResult, citationResult, htmlViewUrl);
                 } else {
                     const reason = (aiS.reason && aiS.reason.message)
                         || (srcS.reason && srcS.reason.message)
@@ -4676,9 +4700,14 @@ body.xp-file-preview .mode-switch-container {
         }
 
 
-        _enterMarktrackView(text, ai, source, citation) {
+        _enterMarktrackView(text, ai, source, citation, htmlViewUrl = null) {
             if (document.querySelector('.ai-split-view')) return;
             const safeText = this._escapeHtml(text);
+            // Si el análisis viene de un documento subido, mostrar el result.html generado
+            // por el servidor (mismo formato/imágenes del documento) en vez del texto plano.
+            const leftPanelHtml = htmlViewUrl
+                ? `<iframe class="ai-split-html-view" id="aiSplitHtmlFrame" src="${this._escapeHtml(htmlViewUrl)}" title="Document view" loading="lazy" referrerpolicy="no-referrer"></iframe>`
+                : safeText;
             const aiPct = ai ? Math.round(ai.ai_score) : 0;
             const overall = source ? Math.round((source.scores || {}).overall || 0) : 0;
             const aiColor = aiPct >= 50 ? '#ef4444' : aiPct >= 25 ? '#f59e0b' : '#10b981';
@@ -4716,7 +4745,7 @@ body.xp-file-preview .mode-switch-container {
                             <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="currentColor" viewBox="0 0 16 16"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/></svg>
                             Input Text
                         </div>
-                        <div class="ai-split-text-content" id="aiSplitTextContent">${safeText}</div>
+                        <div class="ai-split-text-content${htmlViewUrl ? ' has-html-view' : ''}" id="aiSplitTextContent">${leftPanelHtml}</div>
                     </div>
                     <div class="ai-split-resizer" id="aiSplitResizer"><div class="ai-split-resizer-handle"></div></div>
                     <div class="ai-split-right xpa-mt" id="aiSplitRight">
@@ -4753,7 +4782,18 @@ body.xp-file-preview .mode-switch-container {
             requestAnimationFrame(() => {
                 overlay.classList.add('visible');
                 this._animateMtRings(overlay);
-                this._highlightAllFindings(ai, source, citation);
+                const htmlFrame = htmlViewUrl ? document.getElementById('aiSplitHtmlFrame') : null;
+                if (htmlFrame) {
+                    // El documento del iframe carga async (petición de red aparte) — pintar
+                    // los hallazgos recién cuando esté listo (si ya cargó, 'load' no vuelve
+                    // a disparar: comprobamos readyState como red de seguridad).
+                    const paint = () => this._paintFindingsInFrame(htmlFrame, overlay, ai, source, citation);
+                    let already = false;
+                    try { already = htmlFrame.contentDocument && htmlFrame.contentDocument.readyState === 'complete'; } catch (e) {}
+                    if (already) paint(); else htmlFrame.addEventListener('load', paint, { once: true });
+                } else {
+                    this._highlightAllFindings(ai, source, citation);
+                }
             });
 
             document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
@@ -5157,9 +5197,17 @@ body.xp-file-preview .mode-switch-container {
             });
         }
 
-        // Desplaza el panel de texto a la cita i y la resalta con un pulso azul.
+        // Desplaza el panel de texto (o el iframe de la vista HTML del documento) a
+        // la cita i y la resalta con un pulso azul.
         _focusCitation(i) {
-            const mark = document.getElementById('xpaCite' + i);
+            let mark = document.getElementById('xpaCite' + i);
+            if (!mark) {
+                const frame = document.getElementById('aiSplitHtmlFrame');
+                try {
+                    const fdoc = frame && (frame.contentDocument || (frame.contentWindow && frame.contentWindow.document));
+                    if (fdoc) mark = fdoc.getElementById('xpaCite' + i);
+                } catch (e) { /* frame no accesible -> sin marca que enfocar */ }
+            }
             if (!mark) return;
             mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
             mark.classList.remove('xpa-hl-pulse');
@@ -5168,36 +5216,107 @@ body.xp-file-preview .mode-switch-container {
             setTimeout(() => mark.classList.remove('xpa-hl-pulse'), 1300);
         }
 
-        // Resaltado UNIFICADO del texto: AI + Plagio + Citas. Un mismo tramo puede
-        // recibir VARIOS subrayados apilados (uno por análisis con hallazgo) para que el
-        // usuario vea de un vistazo qué análisis marcaron cada segmento.
-        _highlightAllFindings(ai, source, citation) {
-            const el = document.getElementById('aiSplitTextContent');
-            if (!el) return;
-            const full = el.textContent || '';
-            const len = full.length;
-            if (!len) return;
+        // ── Constantes/paleta compartidas del resaltado unificado (AI + Plagio + Citas) ──
+        _HL_KIND() {
+            return { ai: { c: '#ef4444', label: 'AI-generated' }, plag: { c: '#f59e0b', label: 'Plagiarism' }, cit: { c: '#064CDB', label: 'Citation' } };
+        }
+        _HL_ORDER() { return ['ai', 'plag', 'cit']; }
 
-            const KIND = { ai: { c: '#ef4444', label: 'AI-generated' }, plag: { c: '#f59e0b', label: 'Plagiarism' }, cit: { c: '#064CDB', label: 'Citation' } };
+        // ── Búsqueda robusta entre conversores: índice de texto NORMALIZADO ──
+        // El texto extraído y la vista HTML del documento vienen de conversores
+        // DISTINTOS y difieren en: ligaduras tipográficas (ﬁ→fi), palabras cortadas
+        // con guión a fin de línea ("transfor-\n mation"), comillas tipográficas vs
+        // rectas, soft-hyphens y fragmentación de espacios. Normalizamos AMBOS lados
+        // con la misma función (whitespace eliminado por completo) y guardamos un
+        // mapa char-normalizado → offset crudo, para traducir el match de vuelta a
+        // offsets reales del DOM. Mucho más certero (y rápido: indexOf nativo) que
+        // la regex flexible por needle usada antes.
+        _buildNormIndex(raw) {
+            const LIG = { 'ﬀ': 'ff', 'ﬁ': 'fi', 'ﬂ': 'fl', 'ﬃ': 'ffi', 'ﬄ': 'ffl',
+                          '‘': "'", '’': "'", '“': '"', '”': '"',
+                          '–': '-', '—': '-', '…': '...', ' ': ' ' };
+            let norm = '';
+            const map = [];
+            for (let i = 0; i < raw.length; i++) {
+                let ch = raw[i];
+                if (ch === '­') continue;                     // soft hyphen: siempre fuera
+                ch = LIG[ch] || ch;
+                // De-hyphenation: '-' + whitespace + minúscula = palabra cortada a fin
+                // de línea por el conversor → descartar el guión (el whitespace cae solo).
+                if (ch === '-' && /\s/.test(raw[i + 1] || '')) {
+                    let j = i + 1;
+                    while (j < raw.length && /\s/.test(raw[j])) j++;
+                    if (/[a-zà-ÿ]/.test(raw[j] || '')) continue;
+                }
+                const low = ch.toLowerCase();
+                for (let k = 0; k < low.length; k++) {
+                    const c = low[k];
+                    if (/\s/.test(c)) continue;                    // TODO whitespace fuera
+                    norm += c;
+                    map.push(i);
+                }
+            }
+            return { raw, norm, map };
+        }
+
+        // Busca `needle` (crudo) dentro del índice; devuelve {index, length} en
+        // OFFSETS CRUDOS del texto original, o null. `fromRaw` acota el inicio.
+        _normFind(idx, needle, fromRaw = 0) {
+            if (!idx || !idx.norm.length) return null;
+            const nNeedle = this._buildNormIndex(String(needle || '')).norm;
+            if (nNeedle.length < 3) return null;
+            // fromRaw (crudo) → posición en norm (búsqueda binaria sobre map)
+            let lo = 0, hi = idx.map.length;
+            while (lo < hi) { const mid = (lo + hi) >> 1; if (idx.map[mid] < fromRaw) lo = mid + 1; else hi = mid; }
+            const i = idx.norm.indexOf(nNeedle, lo);
+            if (i === -1) return null;
+            const startRaw = idx.map[i];
+            const endRaw = idx.map[i + nNeedle.length - 1] + 1;
+            return { index: startRaw, length: endRaw - startRaw };
+        }
+
+        // Como _normFind pero con degradación por prefijos: si el fragmento completo
+        // no aparece contiguo (p.ej. cruza columnas en un layout complejo), subraya
+        // al menos su arranque en vez de perder el hallazgo por completo.
+        _normFindBest(idx, needle, fromRaw = 0) {
+            let m = this._normFind(idx, needle, fromRaw);
+            if (m) return m;
+            const str = String(needle || '');
+            for (const take of [120, 60, 30]) {
+                if (str.length <= take) continue;
+                m = this._normFind(idx, str.slice(0, take), fromRaw);
+                if (m) return m;
+            }
+            return null;
+        }
+
+        // Detecta los tramos con hallazgo (AI / Plagio / Citas) dentro de `full`
+        // (el texto plano analizado). Compartido por el modo texto-plano y por el
+        // modo "vista HTML del documento" (iframe) — la MISMA lógica de detección
+        // se usa en ambos, sólo cambia cómo se pintan después.
+        _computeFindingRanges(full, ai, source, citation) {
+            const len = full.length;
             const norm = t => String(t || '').toLowerCase().replace(/\s+/g, ' ');
             const ranges = [];
+            // Índice normalizado: se construye UNA vez por texto y lo comparten las
+            // búsquedas de los tres análisis (más rápido que una regex por fragmento).
+            const IDX = this._buildNormIndex(full);
 
-            // AI: coincidencia por substring; sólo bloques marcados como IA.
+            // AI: coincidencia tolerante a espacios; sólo bloques marcados como IA.
             if (ai && Array.isArray(ai.blocks)) {
                 let cursor = 0;
                 ai.blocks.forEach(b => {
                     const frag = String(b.text || '').trim();
                     if (!frag) return;
-                    let idx = full.indexOf(frag, cursor);
-                    if (idx === -1) idx = full.indexOf(frag.slice(0, 30), cursor);
-                    if (idx === -1) return;
-                    const end = Math.min(len, idx + frag.length);
-                    if (String(b.type || '').toLowerCase() === 'ai') ranges.push({ start: idx, end, kind: 'ai' });
+                    const m = this._normFindBest(IDX, frag, cursor);
+                    if (!m) return;
+                    const end = Math.min(len, m.index + m.length);
+                    if (String(b.type || '').toLowerCase() === 'ai') ranges.push({ start: m.index, end, kind: 'ai' });
                     cursor = end;
                 });
             }
 
-            // Plagio: usar char_start/char_end si son válidos y coinciden con el preview; si no, substring.
+            // Plagio: usar char_start/char_end si son válidos y coinciden con el preview; si no, búsqueda tolerante.
             if (source && Array.isArray(source.segment_matches)) {
                 source.segment_matches.forEach(seg => {
                     if (String(seg.decision || '').toLowerCase() !== 'plagiarism') return;
@@ -5211,9 +5330,8 @@ body.xp-file-preview .mode-switch-container {
                     if (!placed) {
                         const frag = String(seg.text_preview || '').trim().replace(/[.…]+$/, '');
                         if (frag.length >= 8) {
-                            let idx = full.indexOf(frag);
-                            if (idx === -1) idx = full.indexOf(frag.slice(0, 40));
-                            if (idx !== -1) ranges.push({ start: idx, end: Math.min(len, idx + frag.length), kind: 'plag' });
+                            const m = this._normFindBest(IDX, frag);
+                            if (m) ranges.push({ start: m.index, end: Math.min(len, m.index + m.length), kind: 'plag' });
                         }
                     }
                 });
@@ -5225,7 +5343,7 @@ body.xp-file-preview .mode-switch-container {
                 // ¿El "." en p es fin de oración o abreviatura/inicial ("et al.", "M.", "e.g.")?
                 const isAbbrevDot = p => {
                     let w = p;
-                    while (w > 0 && /[A-Za-z\u00C0-\u024F]/.test(full[w - 1])) w--;
+                    while (w > 0 && /[A-Za-zÀ-ɏ]/.test(full[w - 1])) w--;
                     const word = full.slice(w, p);
                     if (word.length === 1 && /[A-Z]/.test(word)) return true;
                     return /^(al|etc|cf|vs|vol|fig|no|pp?|eds?|ej|ca|dr|mr|mrs|ms|prof|st|jr|sr|approx|ibid|art|cap|ed|núm|pág|sig)$/i.test(word);
@@ -5248,7 +5366,7 @@ body.xp-file-preview .mode-switch-container {
                         if (ch === '!' || ch === '?') break;
                         if (ch === '.') {
                             if (isAbbrevDot(en - 1)) continue;
-                            if (/[0-9a-z\u00E0-\u00FF]/.test(full[en] || '')) continue;   // decimales / "p.ej"
+                            if (/[0-9a-zà-ÿ]/.test(full[en] || '')) continue;   // decimales / "p.ej"
                             break;
                         }
                     }
@@ -5258,58 +5376,215 @@ body.xp-file-preview .mode-switch-container {
                 citation.citations.forEach((ci, i) => {
                     const frag = String(ci.raw_text || '').trim();
                     if (frag.length < 2) return;
-                    let from = 0, idx;
-                    while ((idx = full.indexOf(frag, from)) !== -1 && used.indexOf(idx) !== -1) from = idx + 1;
-                    if (idx === -1) return;
-                    used.push(idx);
-                    const { st, en } = expandToSentence(idx, Math.min(len, idx + frag.length));
+                    let from = 0, m;
+                    while ((m = this._normFind(IDX, frag, from)) && used.indexOf(m.index) !== -1) from = m.index + 1;
+                    if (!m) return;
+                    used.push(m.index);
+                    const { st, en } = expandToSentence(m.index, Math.min(len, m.index + m.length));
                     ranges.push({ start: st, end: en, kind: 'cit', citeIdx: i });
                 });
             }
 
-            if (!ranges.length) return;
+            return ranges;
+        }
 
-            // Partición en tramos que no se solapan; cada tramo conoce el conjunto de análisis que lo cubren.
+        // Particiona [0,len) en tramos que no se solapan; cada tramo conoce el
+        // conjunto de análisis (kinds) e ids que lo cubren. Reutilizado por ambos
+        // modos de pintado (innerHTML plano / DOM no-destructivo del iframe).
+        _partitionFindingRanges(len, ranges) {
             const cuts = new Set([0, len]);
             ranges.forEach(r => { cuts.add(r.start); cuts.add(r.end); });
             const pts = Array.from(cuts).filter(p => p >= 0 && p <= len).sort((a, b) => a - b);
-            const esc = str => str.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
-            const order = ['ai', 'plag', 'cit'];
-            const present = new Set();
-            const citeAssigned = {};
-            let html = '';
+            const order = this._HL_ORDER();
+            const pieces = [];
             for (let p = 0; p < pts.length - 1; p++) {
                 const a = pts[p], b = pts[p + 1];
                 if (b <= a) continue;
-                const piece = esc(full.slice(a, b));
                 const cov = ranges.filter(r => r.start <= a && r.end >= b);
-                if (!cov.length) { html += piece; continue; }
+                if (!cov.length) continue;
                 const kinds = order.filter(k => cov.some(r => r.kind === k));
-                kinds.forEach(k => present.add(k));
-                const shadow = kinds.map((k, n) => `inset 0 ${-2 * (n + 1)}px 0 ${KIND[k].c}`).join(',');
-                const pad = kinds.length * 2 + 1;
-                const bg = KIND[kinds[kinds.length - 1]].c + '14';
                 const citR = cov.find(r => r.kind === 'cit');
-                let attrs = `class="xpa-hl${citR ? ' xpa-hl-clk' : ''}" style="box-shadow:${shadow};padding-bottom:${pad}px;background:${bg}"`;
-                if (citR) {
-                    attrs += ` data-cite="${citR.citeIdx}"`;
-                    if (!citeAssigned[citR.citeIdx]) { attrs += ` id="xpaCite${citR.citeIdx}"`; citeAssigned[citR.citeIdx] = true; }
-                }
-                attrs += ` title="${kinds.map(k => KIND[k].label).join(' + ')}"`;
-                html += `<mark ${attrs}>${piece}</mark>`;
+                pieces.push({ start: a, end: b, kinds, citeIdx: citR ? citR.citeIdx : null });
             }
+            return pieces;
+        }
+
+        // Construye/actualiza la leyenda de colores en el header del panel de texto
+        // (fuera del iframe siempre, ya que es el "chrome" compartido de la app).
+        _renderHighlightLegend(overlay, present) {
+            const KIND = this._HL_KIND();
+            const left = overlay.querySelector('.ai-split-left');
+            const header = left && left.querySelector('.ai-split-panel-header');
+            if (!header) return;
+            let legend = header.querySelector('.xpa-hl-legend');
+            if (!present.size) { if (legend) legend.remove(); return; }
+            if (!legend) { legend = document.createElement('div'); legend.className = 'xpa-hl-legend'; header.appendChild(legend); }
+            legend.innerHTML = this._HL_ORDER().filter(k => present.has(k))
+                .map(k => `<span class="xpa-hl-leg"><span class="xpa-hl-leg-dot" style="background:${KIND[k].c}"></span>${KIND[k].label}</span>`)
+                .join('');
+        }
+
+        // Resaltado UNIFICADO del texto PLANO (#aiSplitTextContent): AI + Plagio + Citas.
+        // Un mismo tramo puede recibir VARIOS subrayados apilados (uno por análisis con
+        // hallazgo). Reconstruye el innerHTML del div (seguro aquí: sólo contiene texto).
+        _highlightAllFindings(ai, source, citation) {
+            const el = document.getElementById('aiSplitTextContent');
+            if (!el) return;
+            const full = el.textContent || '';
+            const len = full.length;
+            if (!len) return;
+
+            const overlay = el.closest('.ai-split-view');
+            const KIND = this._HL_KIND();
+            const ranges = this._computeFindingRanges(full, ai, source, citation);
+            const pieces = ranges.length ? this._partitionFindingRanges(len, ranges) : [];
+            if (!pieces.length) { if (overlay) this._renderHighlightLegend(overlay, new Set()); return; }
+
+            const esc = str => str.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+            const present = new Set();
+            const citeAssigned = {};
+            let html = '', cursor = 0;
+            pieces.forEach(pc => {
+                if (pc.start > cursor) html += esc(full.slice(cursor, pc.start));
+                const piece = esc(full.slice(pc.start, pc.end));
+                pc.kinds.forEach(k => present.add(k));
+                const shadow = pc.kinds.map((k, n) => `inset 0 ${-2 * (n + 1)}px 0 ${KIND[k].c}`).join(',');
+                const pad = pc.kinds.length * 2 + 1;
+                const bg = KIND[pc.kinds[pc.kinds.length - 1]].c + '14';
+                let attrs = `class="xpa-hl${pc.citeIdx != null ? ' xpa-hl-clk' : ''}" style="box-shadow:${shadow};padding-bottom:${pad}px;background:${bg}"`;
+                if (pc.citeIdx != null) {
+                    attrs += ` data-cite="${pc.citeIdx}"`;
+                    if (!citeAssigned[pc.citeIdx]) { attrs += ` id="xpaCite${pc.citeIdx}"`; citeAssigned[pc.citeIdx] = true; }
+                }
+                attrs += ` title="${pc.kinds.map(k => KIND[k].label).join(' + ')}"`;
+                html += `<mark ${attrs}>${piece}</mark>`;
+                cursor = pc.end;
+            });
+            if (cursor < len) html += esc(full.slice(cursor));
             el.innerHTML = html;
 
-            // Leyenda de colores (sólo los análisis que realmente subrayaron algo).
-            const left = el.closest('.ai-split-left');
-            const header = left && left.querySelector('.ai-split-panel-header');
-            if (header) {
-                let legend = header.querySelector('.xpa-hl-legend');
-                if (!legend) { legend = document.createElement('div'); legend.className = 'xpa-hl-legend'; header.appendChild(legend); }
-                legend.innerHTML = order.filter(k => present.has(k))
-                    .map(k => `<span class="xpa-hl-leg"><span class="xpa-hl-leg-dot" style="background:${KIND[k].c}"></span>${KIND[k].label}</span>`)
-                    .join('');
-            }
+            if (overlay) this._renderHighlightLegend(overlay, present);
+        }
+
+        // ── Resaltado sobre la VISTA HTML del documento (iframe con result.html) ──
+        // El texto plano y el HTML del documento vienen de conversores DISTINTOS
+        // (extracción de texto vs. PDF→HTML), así que no comparten offsets exactos:
+        // en vez de reconstruir el innerHTML (destruiría el layout/imágenes del
+        // documento), se localizan y envuelven SOLO los nodos de texto involucrados
+        // (no-destructivo — el resto del documento queda intacto).
+        _paintFindingsInFrame(frame, overlay, ai, source, citation) {
+            let doc;
+            try { doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document); }
+            catch (e) { return; }   // por si el navegador trata el frame como cross-origin
+            if (!doc || !doc.body) return;
+
+            const full = doc.body.textContent || '';
+            if (!full.length) return;
+
+            const ranges = this._computeFindingRanges(full, ai, source, citation);
+            const pieces = this._partitionFindingRanges(full.length, ranges);
+            if (!pieces.length) { this._renderHighlightLegend(overlay, new Set()); return; }
+
+            this._injectFrameHighlightStyles(doc);
+
+            // 1a pasada (SOLO LECTURA, doc sin modificar): para cada tramo, ubicar los
+            // nodos de texto reales que lo componen (un tramo puede cruzar varios nodos
+            // si el conversor HTML partió el párrafo en <span>/saltos de línea).
+            const walkLeaves = (start, end) => {
+                const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+                const out = []; let pos = 0, node;
+                while ((node = walker.nextNode())) {
+                    const nlen = node.nodeValue.length, nStart = pos, nEnd = pos + nlen;
+                    pos = nEnd;
+                    if (nEnd <= start) continue;
+                    if (nStart >= end) break;
+                    const localStart = Math.max(0, start - nStart);
+                    const localEnd = Math.min(nlen, end - nStart);
+                    if (localEnd > localStart) out.push({ node, start: localStart, len: localEnd - localStart });
+                }
+                return out;
+            };
+
+            const present = new Set();
+            const citeAssigned = {};
+            const flat = [];
+            pieces.forEach(pc => {
+                pc.kinds.forEach(k => present.add(k));
+                walkLeaves(pc.start, pc.end).forEach(seg => flat.push({ ...seg, kinds: pc.kinds, citeIdx: pc.citeIdx }));
+            });
+            if (!flat.length) { this._renderHighlightLegend(overlay, new Set()); return; }
+
+            // 2a pasada (MUTACIÓN): de atrás hacia adelante del documento, y dentro de
+            // un mismo nodo de texto de mayor a menor offset — así ninguna mutación
+            // invalida los offsets todavía no procesados (mismo patrón ya probado en
+            // xplagiax_marktrack/analysis_highlights.js).
+            flat.sort((A, B) => {
+                if (A.node === B.node) return B.start - A.start;
+                const pos = A.node.compareDocumentPosition(B.node);
+                return (pos & Node.DOCUMENT_POSITION_FOLLOWING) ? 1 : -1;
+            });
+
+            const KIND = this._HL_KIND();
+            flat.forEach(seg => {
+                const node = seg.node, parent = node.parentNode;
+                if (!parent) return;
+                const content = node.nodeValue;
+                const s = Math.max(0, seg.start), e = Math.min(content.length, seg.start + seg.len);
+                if (e <= s) return;
+                const before = content.slice(0, s), match = content.slice(s, e), after = content.slice(e);
+
+                const mark = doc.createElement('mark');
+                mark.className = 'xpa-hl' + (seg.citeIdx != null ? ' xpa-hl-clk' : '');
+                const shadow = seg.kinds.map((k, n) => `inset 0 ${-2 * (n + 1)}px 0 ${KIND[k].c}`).join(',');
+                mark.style.cssText = `box-shadow:${shadow};padding-bottom:${seg.kinds.length * 2 + 1}px;background:${KIND[seg.kinds[seg.kinds.length - 1]].c}14`;
+                mark.title = seg.kinds.map(k => KIND[k].label).join(' + ');
+                if (seg.citeIdx != null) {
+                    mark.dataset.cite = seg.citeIdx;
+                    if (!citeAssigned[seg.citeIdx]) { mark.id = 'xpaCite' + seg.citeIdx; citeAssigned[seg.citeIdx] = true; }
+                }
+                mark.textContent = match;
+
+                if (after) parent.insertBefore(doc.createTextNode(after), node.nextSibling);
+                parent.insertBefore(mark, node.nextSibling);
+                if (before) node.nodeValue = before; else parent.removeChild(node);
+            });
+
+            this._renderHighlightLegend(overlay, present);
+            this._wireFrameCiteClicks(doc, overlay);
+        }
+
+        // Inyecta en el <head> del iframe el CSS mínimo para que los <mark> se vean
+        // igual que en el panel de texto plano (el iframe es un documento aparte:
+        // no hereda el <style> de la página principal).
+        _injectFrameHighlightStyles(doc) {
+            if (doc.getElementById('xpaHlFrameCss')) return;
+            const style = doc.createElement('style');
+            style.id = 'xpaHlFrameCss';
+            style.textContent = '.xpa-hl{border-radius:2px;padding:0 1px;scroll-margin:70px;transition:background .15s}'
+                + '.xpa-hl-clk{cursor:pointer}.xpa-hl-clk:hover{filter:brightness(.96)}'
+                + '@keyframes xpaHlPulse{0%{outline-color:rgba(6,76,219,.65)}100%{outline-color:rgba(6,76,219,0)}}'
+                + '.xpa-hl-pulse{outline:2px solid rgba(6,76,219,.65);outline-offset:2px;border-radius:3px;'
+                + 'animation:xpaHlPulse 1.15s ease-out 1;background:rgba(6,76,219,.26)!important}';
+            (doc.head || doc.documentElement).appendChild(style);
+        }
+
+        // Click en una marca de cita DENTRO del iframe → cambia al tab de Citations
+        // y resalta la tarjeta correspondiente en el panel derecho (fuera del iframe).
+        // Los eventos del iframe no burbujean al documento padre, así que necesita
+        // su propio listener (equivalente al que _wireMtTabs pone sobre el div plano).
+        _wireFrameCiteClicks(doc, overlay) {
+            if (doc.body.dataset.xpaCiteWired) return;
+            doc.body.dataset.xpaCiteWired = '1';
+            doc.addEventListener('click', e => {
+                const m = e.target.closest('[data-cite]');
+                if (!m) return;
+                const tabs = overlay.querySelectorAll('.tabs .tab');
+                const panels = overlay.querySelectorAll('.tab-content .tab-panel');
+                tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === 'cit'));
+                panels.forEach(p => p.classList.toggle('active', p.dataset.panel === 'cit'));
+                const card = overlay.querySelector(`.xcite-item[data-cite-focus="${m.dataset.cite}"]`);
+                if (card) { card.scrollIntoView({ block: 'nearest' }); card.classList.add('xcite-flash'); setTimeout(() => card.classList.remove('xcite-flash'), 1200); }
+            });
         }
 
         _enterSplitMode(text, result) {

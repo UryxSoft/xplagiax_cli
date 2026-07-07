@@ -281,6 +281,14 @@ class DocAnalysisTask:
             else:
                 raise ValueError(f"Failed to convert {extension} to PDF")
 
+        # BUGFIX: exponer la ruta ya resuelta (post DOCX->PDF) para que la conversión
+        # a HTML (result.html) use el PDF real y no el .doc/.docx original — antes,
+        # extract_info()/extract_full_text() llamaban a convert_pdf_to_html() con la
+        # variable local `file_path` de SU PROPIO scope (nunca reasignada), así que
+        # para .doc/.docx siempre se le pasaba el archivo de Word original a un
+        # conversor que solo sabe abrir PDF -> fallaba silenciosamente (result_view=None).
+        self._resolved_pdf_path = file_path
+
         doc = None
         try:
             doc = fitz.open(file_path)
@@ -838,7 +846,7 @@ class DocAnalysisTask:
             try:
                 _lazy_import_pdf_converter()
                 converter = PDFToHTMLConverter(embed_fonts=True, preserve_layout=True)
-                converter.convert_pdf_to_html(file_path, new_path)
+                converter.convert_pdf_to_html(self._resolved_pdf_path, new_path)
             except Exception as e:
                 logger.warning(f"HTML conversion failed: {e}")
                 new_path = None
@@ -969,7 +977,7 @@ class DocAnalysisTask:
                 try:
                     _lazy_import_pdf_converter()
                     converter = PDFToHTMLConverter(embed_fonts=True, preserve_layout=True)
-                    converter.convert_pdf_to_html(file_path, new_path)
+                    converter.convert_pdf_to_html(self._resolved_pdf_path, new_path)
                 except Exception as e:
                     logger.warning(f"HTML conversion failed: {e}")
                     new_path = None

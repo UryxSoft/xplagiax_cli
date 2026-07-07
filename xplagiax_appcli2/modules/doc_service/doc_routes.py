@@ -1145,14 +1145,24 @@ def img_web_single_search(img_file) ->None:
         return str(e)
 
 @x_doc.route('/serve_analysis/<path:filepath>')
+@login_required
 def serve_analysis(filepath):
     try:
         #print(f"\n=== SERVE ANALYSIS CALLED ===")
         #print(f"Filepath: {filepath}")
-        
+
+        # BUGFIX (seguridad): esta ruta no tenia @login_required NI verificaba dueno,
+        # y `filepath` siempre empieza con el user_id (ver comentario abajo) -> antes,
+        # cualquiera (ni siquiera logueado) que adivinara/enumerara una ruta podia ver
+        # el result.html o las imagenes de OTRO usuario. Se exige login + que el primer
+        # segmento de la ruta coincida con el usuario autenticado.
+        owner_id = filepath.split('/', 1)[0]
+        if not owner_id.isdigit() or int(owner_id) != current_user.id:
+            abort(403, description="Access denied")
+
         base_path = os.path.join(
-            current_app.root_path, 
-            'modules/docanalysis_service/uploads/uploads_analysis'
+            current_app.root_path,
+            'modules/doc_service/uploads/uploads_analysis'
         )
         
         #print(f"Base path: {base_path}")
