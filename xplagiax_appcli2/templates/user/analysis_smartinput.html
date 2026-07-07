@@ -758,6 +758,11 @@ body.xp-file-preview .mode-switch-container {
 .xpa-mt .xcite-metabits{font-size:.68rem;color:#94a3b8}
 .xpa-mt .xcite-jump{flex-shrink:0;color:#cbd5e1;display:flex;align-items:center;margin-top:2px}
 .xpa-mt .xcite-item.clk:hover .xcite-jump{color:#064CDB}
+.xpa-mt .xcite-ctx{color:#475569;line-height:1.55}
+.xpa-mt .xcite-mark{background:rgba(6,76,219,.12);color:#064CDB;font-style:normal;font-weight:700;border-radius:3px;padding:0 3px;box-shadow:inset 0 -2px 0 #064CDB}
+.xpa-mt .xcite-ctx-label{display:block;font-size:.56rem;font-weight:700;font-style:normal;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:3px}
+.xpa-mt .xcite-orcid{display:inline-flex;align-items:center;gap:4px;font-size:.64rem;font-weight:600;padding:2px 7px;border-radius:20px;text-decoration:none;background:rgba(166,206,57,.14);color:#5a7302;border:1px solid rgba(166,206,57,.4)}
+.xpa-mt .xcite-warn{font-size:.68rem;color:#b45309;margin-top:7px;line-height:1.45;border-left:2px solid rgba(245,158,11,.5);padding-left:8px}
 @media(min-width:560px){.xpa-mt .xcite-q-ring{width:80px;height:80px}}
 @keyframes mtFade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .xpa-mt h2{font-size:18px;font-weight:700;color:#0f172a;margin:8px 0 16px}
@@ -2830,7 +2835,9 @@ body.xp-file-preview .mode-switch-container {
                          || !!(d.results && d.results.ai_detection)
                          || !!(d.result && d.result.results),
                     d => ['error', 'failed', 'failure'].includes(String(d.status).toLowerCase()),
-                    { interval: 3000, timeout: 240000 }
+                    // 420s — match the FinderX poll ceiling so a long AI pass on a
+                    // large document isn't cut off early (see TIMEOUT CHAIN doc).
+                    { interval: 3000, timeout: 420000 }
                 );
                 // El resultado puede venir directo o anidado bajo 'result'.
                 if (aiJson && aiJson.result && aiJson.result.results) aiJson = aiJson.result;
@@ -2978,7 +2985,11 @@ body.xp-file-preview .mode-switch-container {
                 d => (['completed', 'complete', 'done', 'ok', 'success', 'finished'].includes(String(d.status).toLowerCase()) && d.result)
                      || !!(d.result && d.result.scores),
                 d => ['failed', 'error', 'failure', 'not_found'].includes(String(d.status).toLowerCase()),
-                { interval: 3000, timeout: 240000 }
+                // 420s: a 500k thesis can take up to ~400s on FinderX (job_timeout
+                // cap 900s, search deadline 200s, 100-chunk scoring). The client
+                // MUST poll longer than the worker runs, or it reports a false
+                // timeout while FinderX is still finishing. See TIMEOUT CHAIN doc.
+                { interval: 3000, timeout: 420000 }
             );
             const result = report && report.result ? report.result : null;
             if (!result) throw new Error('Unexpected response from FinderX service.');
@@ -4315,6 +4326,38 @@ body.xp-file-preview .mode-switch-container {
 
             const refs  = Array.isArray(c.references) ? c.references : [];
             const cites = Array.isArray(c.citations)  ? c.citations  : [];
+            const docText = String(this._analyzedText || '');
+
+            // ── URL-based validation (parity with marktrack) ──
+            // A [n]-style reference that is (or contains) a URL is a valid
+            // citation even when no academic database indexes it.
+            const URL_RE = /https?:\/\/[^\s<>"')\]}]+/i;
+            const refUrl = r => {
+                if (!r) return null;
+                const dm = String(r.url || r.oa_url || '').match(URL_RE);
+                if (dm) return dm[0];
+                const vv = r.validation || {};
+                if (r.doi || vv.found_doi) { const h = this._doiHref(r); if (h) return h; }
+                for (const f of [r.source, r.title, r.key, r.raw_text]) {
+                    const m = String(f || '').match(URL_RE);
+                    if (m) return m[0];
+                }
+                return null;
+            };
+            const urlLabel = u => {
+                const s = String(u).replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+                return s.length > 64 ? s.slice(0, 61) + '…' : s;
+            };
+            let urlReclassified = 0;
+            refs.forEach(r => {
+                const vv = r.validation || (r.validation = {});
+                const stt = String(vv.status || '').toLowerCase();
+                if (stt === 'valid' || stt === 'partial' || stt === 'valid_url') return;
+                const u = refUrl(r);
+                if (u) { vv.status = 'valid_url'; vv._url = u; urlReclassified++; }
+            });
+            const nValid    = num(c.valid_references) + urlReclassified;
+            const nNotFound = Math.max(0, num(c.not_found_references) - urlReclassified);
 
             // Link references -> in-text citations by surname|year.
             const lastName = v => {
@@ -4359,9 +4402,9 @@ body.xp-file-preview .mode-switch-container {
             <div class="score-breakdown" style="margin-bottom:14px">
                 ${chip('Citations', num(c.citations_found))}
                 ${chip('References', num(c.references_found))}
-                ${chip('Valid', num(c.valid_references), '#059669')}
+                ${chip('Valid', nValid, '#059669')}
                 ${chip('Partial', num(c.partial_references), num(c.partial_references) > 0 ? '#d97706' : '')}
-                ${chip('Not found', num(c.not_found_references), num(c.not_found_references) > 0 ? '#dc2626' : '')}
+                ${chip('Not found', nNotFound, nNotFound > 0 ? '#dc2626' : '')}
                 ${chip('Orphan cites', num(c.orphan_citations), num(c.orphan_citations) > 0 ? '#d97706' : '')}
                 ${chip('Orphan refs', num(c.orphan_references), num(c.orphan_references) > 0 ? '#d97706' : '')}
             </div>`;
@@ -4375,36 +4418,51 @@ body.xp-file-preview .mode-switch-container {
             </div>` : '';
 
             const stMap = {
-                valid:   { col: '#047857', bg: 'rgba(16,185,129,0.12)', label: 'Verified' },
-                partial: { col: '#b45309', bg: 'rgba(245,158,11,0.14)', label: 'Partial' },
+                valid:     { col: '#047857', bg: 'rgba(16,185,129,0.12)', label: 'Verified' },
+                partial:   { col: '#b45309', bg: 'rgba(245,158,11,0.14)', label: 'Partial' },
+                valid_url: { col: '#047857', bg: 'rgba(16,185,129,0.12)', label: 'Valid (URL)' },
             };
             const refStatus = st => stMap[String(st || '').toLowerCase()] || { col: '#dc2626', bg: 'rgba(239,68,68,0.12)', label: st ? esc(String(st).replace(/_/g, ' ')) : 'Unverified' };
 
             const refItems = refs.map((r, i) => {
                 const v = r.validation || {}, st = refStatus(v.status);
                 const authors = Array.isArray(r.authors) ? esc(r.authors.slice(0, 4).join(', ')) : '';
-                const title = esc(r.title || 'Untitled');
-                const href = this._doiHref(r);
+                const rUrl = v._url || refUrl(r);
+                // URL-only entries have no title/authors — show the link as text.
+                const rawTitle = r.title || v.found_title;
+                const title = esc(rawTitle || (rUrl ? urlLabel(rUrl) : 'Untitled'));
+                const href = this._doiHref(r) || (rUrl ? this._escapeHtml(rUrl) : null);
                 const conf = v.confidence != null ? Math.round(v.confidence * 100) : null;
                 const cIdx = refCiteIdx(r);
+                const net = r.citation_network || null;
                 const titleHtml = href
                     ? `<a href="${href}" target="_blank" rel="noopener noreferrer" class="xcite-link" onclick="event.stopPropagation()">${title}</a>`
                     : `<span style="font-weight:600;color:#0f172a">${title}</span>`;
                 const metaBits = [
                     v.source_api ? 'via ' + esc(String(v.source_api).replace(/_/g, ' ')) : '',
-                    r.open_access ? '<span style="color:#047857;font-weight:600">Open Access</span>' : '',
+                    r.open_access ? (r.oa_url
+                        ? `<a href="${esc(r.oa_url)}" target="_blank" rel="noopener" class="xcite-link" style="color:#047857" onclick="event.stopPropagation()">Open Access</a>`
+                        : '<span style="color:#047857;font-weight:600">Open Access</span>') : '',
+                    net && net.cited_by_count != null ? 'Cited by ' + Number(net.cited_by_count).toLocaleString() : '',
                     r.pages ? 'pp. ' + esc(String(r.pages)) : '',
                 ].filter(Boolean).join(' · ');
                 const confCol = conf != null ? (conf >= 70 ? '#059669' : conf >= 40 ? '#d97706' : '#dc2626') : '#94a3b8';
+                const orcidAuthors = (r.author_validation || []).filter(a => a && a.orcid);
+                const disc = (v.discrepancies || []).filter(Boolean);
                 return `<div class="xcite-item${cIdx != null ? ' clk' : ''}"${cIdx != null ? ` data-cite-focus="${cIdx}" tabindex="0" role="button" aria-label="Highlight this citation in the text"` : ''}>
                     <span class="xcite-num">${i + 1}</span>
                     <div class="xcite-body">
-                        <div class="xcite-title-line"><strong style="color:#0f172a">${authors}</strong>${r.year ? ` <span style="color:#64748b">(${esc(String(r.year))})</span>` : ''} — ${titleHtml}</div>
+                        <div class="xcite-title-line">${authors ? `<strong style="color:#0f172a">${authors}</strong>` : ''}${r.year ? ` <span style="color:#64748b">(${esc(String(r.year))})</span>` : ''}${(authors || r.year) ? ' — ' : ''}${titleHtml}</div>
                         <div class="xcite-meta">
                             <span class="xcite-status" style="background:${st.bg};color:${st.col}">${esc(st.label)}</span>
                             ${conf != null ? `<span class="xcite-conf"><span class="xcite-conf-bar"><span style="width:${conf}%;background:${confCol}"></span></span>${conf}%</span>` : ''}
                             ${metaBits ? `<span class="xcite-metabits">${metaBits}</span>` : ''}
                         </div>
+                        ${orcidAuthors.length ? `<div class="xcite-meta" style="margin-top:7px">
+                            <span class="xcite-metabits" style="text-transform:uppercase;letter-spacing:.05em;font-size:.58rem">ORCID</span>
+                            ${orcidAuthors.map(a => `<a href="https://orcid.org/${esc(a.orcid)}" target="_blank" rel="noopener" class="xcite-orcid" title="${esc(a.institution || '')}" onclick="event.stopPropagation()">${a.verified ? '✔ ' : ''}${esc(a.name || a.orcid)}</a>`).join('')}
+                        </div>` : ''}
+                        ${disc.length ? `<div class="xcite-warn">⚠ ${esc(disc.join('; '))}</div>` : ''}
                     </div>
                     ${cIdx != null ? `<span class="xcite-jump" title="Highlight in text"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 10 4 15l5 5"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg></span>` : ''}
                 </div>`;
@@ -4413,13 +4471,102 @@ body.xp-file-preview .mode-switch-container {
                 ? `<div class="xcite-sec-h"><span>References</span><span class="xcite-count">${refs.length}</span></div><div class="xcite-list">${refItems}</div>`
                 : `<div class="empty-state"><p>No references detected</p><small>No bibliography entries found in the text.</small></div>`;
 
+            // ── In-text citation context (parity with marktrack) ──
+            // Find the exact sentence around each marker in the analyzed text so
+            // the card shows what is being cited, not the bare "[2]" marker.
+            const normChar = ch => {
+                if (ch === '’' || ch === '‘') return "'";
+                if (ch === '“' || ch === '”') return '"';
+                if (ch === '–' || ch === '—') return '-';
+                return ch;
+            };
+            const normalize = str => {
+                const chars = [], map = [];
+                let lastSpace = false;
+                for (let i = 0; i < str.length; i++) {
+                    let ch = normChar(str[i]);
+                    if (/\s/.test(ch)) { if (lastSpace) continue; ch = ' '; lastSpace = true; }
+                    else lastSpace = false;
+                    chars.push(ch); map.push(i);
+                }
+                return { text: chars.join(''), map };
+            };
+            const findAll = (nd, needle) => {
+                const n = normalize(needle).text.trim();
+                if (!n) return [];
+                const hits = []; let idx = nd.text.indexOf(n);
+                while (idx !== -1) { hits.push({ start: nd.map[idx], end: nd.map[idx + n.length - 1] + 1 }); idx = nd.text.indexOf(n, idx + 1); }
+                return hits;
+            };
+            const findAllRegex = (nd, re) => {
+                const hits = []; let m;
+                while ((m = re.exec(nd.text)) !== null) {
+                    hits.push({ start: nd.map[m.index], end: nd.map[m.index + m[0].length - 1] + 1 });
+                    if (m.index === re.lastIndex) re.lastIndex++;
+                }
+                return hits;
+            };
+            const sentenceAt = (text, bStart, bEnd) => {
+                const BOUND = /[.!?\n]/;
+                let s = bStart; while (s > 0 && !BOUND.test(text[s - 1])) s--;
+                let e = bEnd; while (e < text.length && !BOUND.test(text[e])) e++;
+                if (e < text.length && text[e] !== '\n') e++;
+                const MAX = 260;
+                let pre = text.slice(s, bStart).replace(/^\s+/, '');
+                let post = text.slice(bEnd, e).replace(/\s+$/, '');
+                const preTrunc = pre.length > MAX, postTrunc = post.length > MAX;
+                if (preTrunc) pre = pre.slice(pre.length - MAX).replace(/^\S*\s/, '');
+                if (postTrunc) post = post.slice(0, MAX).replace(/\s\S*$/, '');
+                return { pre, post, preTrunc, postTrunc, docMatch: text.slice(bStart, bEnd) };
+            };
+            const citeContext = (text, nd, rawText, posHint) => {
+                if (!text || !rawText) return null;
+                let occ = findAll(nd, rawText);
+                if (!occ.length) {
+                    const nm = String(rawText).trim().match(/^\[\s*(\d{1,4})\s*\]$/);
+                    if (nm) occ = findAllRegex(nd, new RegExp('\\[\\s*' + nm[1] + '\\s*\\]', 'g'));
+                }
+                if (!occ.length) return null;
+                if (posHint != null && occ.length > 1) {
+                    occ = occ.slice().sort((a, b) => Math.abs(a.start - Number(posHint)) - Math.abs(b.start - Number(posHint)));
+                }
+                let fallback = null;
+                for (const o of occ) { const cx = sentenceAt(text, o.start, o.end); if (cx.pre || cx.post) return cx; if (!fallback) fallback = cx; }
+                return fallback;
+            };
+            // Numeric-marker fallback: "[18]" with no sentence → show reference n.
+            const numFromRaw = raw => { const m = String(raw || '').match(/\[\s*(\d{1,4})\s*\]/); return m ? parseInt(m[1], 10) : null; };
+            const refByNumber = n => {
+                if (n == null) return null;
+                const byKey = refs.find(r => r && String(r.key || '').replace(/\D/g, '') === String(n));
+                return byKey || refs[n - 1] || null;
+            };
+            const refSummary = r => {
+                if (!r) return '';
+                const a = Array.isArray(r.authors) && r.authors.length ? r.authors.slice(0, 3).join(', ') : '';
+                return [a, r.year, r.title].filter(Boolean).join(' — ');
+            };
+            const normDoc = normalize(docText);
+
             const citeItems = cites.map((ci, i) => {
                 const conf = ci.confidence != null ? Math.round(ci.confidence * 100) : null;
                 const meta = [esc(ci.author || ''), ci.year ? esc(String(ci.year)) : '', ci.style ? esc(String(ci.style).toUpperCase()) : ''].filter(Boolean).join(' · ');
+                const ctx = citeContext(docText, normDoc, ci.raw_text || '', ci.start_pos);
+                let bodyHtml;
+                if (ctx && (ctx.pre || ctx.post)) {
+                    bodyHtml = `<div class="xcite-intext xcite-ctx"><span class="xcite-ctx-label">Cited text</span>"${ctx.preTrunc ? '…' : ''}${esc(ctx.pre)}<span class="xcite-mark">${esc(ctx.docMatch)}</span>${esc(ctx.post)}${ctx.postTrunc ? '…' : ''}"</div>`;
+                } else if (ctx) {
+                    const refText = refSummary(refByNumber(numFromRaw(ci.raw_text)));
+                    bodyHtml = refText
+                        ? `<div class="xcite-intext xcite-ctx"><span class="xcite-ctx-label">Reference</span><span class="xcite-mark">${esc(ctx.docMatch)}</span> ${esc(refText)}</div>`
+                        : `<div class="xcite-intext"><span class="xcite-mark">${esc(ctx.docMatch)}</span> <span style="color:#94a3b8;font-style:normal;">No surrounding sentence found in the text.</span></div>`;
+                } else {
+                    bodyHtml = `<div class="xcite-intext">"${esc(ci.raw_text || '')}"</div>`;
+                }
                 return `<div class="xcite-item clk" data-cite-focus="${i}" tabindex="0" role="button" aria-label="Highlight this citation in the text">
                     <span class="xcite-num xcite-num--blue">${i + 1}</span>
                     <div class="xcite-body">
-                        <div class="xcite-intext">"${esc(ci.raw_text || '')}"</div>
+                        ${bodyHtml}
                         ${(meta || conf != null) ? `<div class="xcite-meta">${meta ? `<span class="xcite-metabits">${meta}</span>` : ''}${conf != null ? `<span class="xcite-conf-chip">${conf}%</span>` : ''}</div>` : ''}
                     </div>
                     <span class="xcite-jump" title="Highlight in text"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>

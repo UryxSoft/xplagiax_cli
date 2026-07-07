@@ -3856,7 +3856,7 @@ FINDERX_SERVICE_API_KEY = (
 )
 # Polling: cada cuánto y por cuánto tiempo esperar a que el job termine.
 FINDERX_POLL_INTERVAL = float(os.environ.get('FINDERX_POLL_INTERVAL', '1.5'))
-FINDERX_POLL_TIMEOUT = float(os.environ.get('FINDERX_POLL_TIMEOUT', '90'))
+FINDERX_POLL_TIMEOUT = float(os.environ.get('FINDERX_POLL_TIMEOUT', '180'))
 
 
 @x_doc.route('/finderx_check', methods=['POST'])
@@ -3878,7 +3878,12 @@ def finderx_check():
         submit = session_pool.post(
             f'{FINDERX_SERVICE_BASE}/api/v1/analyze',
             headers=headers,
-            json={'text': text[:50000], 'priority': priority},
+            # 500k cap (was 50k): FinderX distributes an adaptive, capped chunk
+            # budget (max_chunks_cap=60) across the WHOLE document, so a thesis is
+            # sampled end-to-end instead of only its first ~20%. Embedding/corpus
+            # cost is bounded by the chunk cap, not text length; only local
+            # segmentation grows. Matches the citation-validation cap.
+            json={'text': text[:500000], 'priority': priority},
             timeout=(5, 20),
         )
     except requests.exceptions.RequestException as exc:
@@ -3966,8 +3971,22 @@ def citation_validation():
         resp = session_pool.post(
             f'{FINDERX_SERVICE_BASE}/api/v1/citation-validation',
             headers=headers,
-            json={'text': text[:50000], 'validate': True, 'enrich': False},
-            timeout=(5, 120),
+            # enrich=True → parity with marktrack: adds ORCID (authors), ROR
+            # (institutions) and OpenCitations (citation network / cited-by) per
+            # resolved reference. Does NOT change valid/partial/not_found verdicts
+            # (see finderx validator.py:290 — enrichment runs after validation).
+            #
+            # 500k char cap (NOT the 50k the plagiarism check uses): the
+            # bibliography sits at the END of long documents (theses), so a 50k
+            # cut drops the whole References section → 0 refs, all citations
+            # orphaned. FinderX accepts up to 800k and reference validation cost
+            # scales with the NUMBER of refs, not text length, so this is safe.
+            json={'text': text[:500000], 'validate': True, 'enrich': True},
+            # 180s read: citation validation is synchronous and its cost scales
+            # with the NUMBER of references (network calls to CrossRef/ORCID/etc.),
+            # not text length. A thesis with 60+ refs under enrich can exceed 120s.
+            # Keep nginx proxy_read_timeout ≥ 180s on this route (see TIMEOUT CHAIN).
+            timeout=(5, 180),
         )
     except requests.exceptions.RequestException as exc:
         logger.error('FinderX citation-validation failed: %s', exc)
