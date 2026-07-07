@@ -125,7 +125,7 @@ class DocAnalysisTask:
 
     __slots__ = ('userid', 'file_or_url', 'upload_folder',
                  'analysis_or_save', 'theme_return', 'paragraph_mode',
-                 '_config', '_temp_files')
+                 '_config', '_temp_files', '_resolved_pdf_path')
 
     def __init__(self, userid, file_or_url, upload_folder,
                  analysis_or_save, theme_return,
@@ -156,6 +156,7 @@ class DocAnalysisTask:
 
         self._config = config or TaskConfig()
         self._temp_files: List[str] = []
+        self._resolved_pdf_path: Optional[str] = None
 
     # =========================================================================
     # MÉTODOS HELPER - OPTIMIZADOS
