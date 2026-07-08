@@ -43,10 +43,26 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Nº de workers de gunicorn = WEB_CONCURRENCY (override por -e en docker run).
 
 # Runtime: libgomp1 (OpenMP de numpy) + curl (healthcheck).
+# libreoffice-writer-NOGUI: SOLO lo necesario para la conversión headless
+#   DOC/DOCX→PDF (imágenes, tablas, estilos) del html view del análisis — la
+#   variante -nogui de Debian omite los componentes gráficos (VCL/GTK/X11),
+#   ~150-200MB menos que libreoffice-writer completo. Se instala al CONSTRUIR
+#   la imagen (no en runtime); el binario queda como `soffice` en PATH y
+#   convert_docx_to_pdf() lo detecta solo. Sin él, cae al fallback texto-plano.
+# fonts-liberation / fonts-dejavu-core: métricamente compatibles con Arial/Times/
+#   Calibri → el layout del PDF convertido coincide con el del Word original.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libgomp1 \
         curl \
-    && rm -rf /var/lib/apt/lists/*
+        libreoffice-writer-nogui \
+        fonts-liberation \
+        fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/* \
+    # Recortes seguros: galerías, plantillas y autotexto no se usan en conversión headless.
+    && rm -rf /usr/lib/libreoffice/share/gallery \
+              /usr/lib/libreoffice/share/template \
+              /usr/lib/libreoffice/share/autotext \
+              /usr/lib/libreoffice/share/wizards
 
 # Copia el virtualenv ya construido desde el builder.
 COPY --from=builder /opt/venv /opt/venv

@@ -312,6 +312,10 @@ class DocAnalysisTask:
                         doc = fitz.open(ocr_path)
                         if not self._is_document_searchable(doc):
                             raise ValueError("NO SEARCHABLE")
+                        # El HTML view (result.html) debe generarse del PDF OCR'd (con capa
+                        # de texto) y no del escaneado original: si no, el iframe no tiene
+                        # texto que subrayar aunque el análisis sí lo tenga.
+                        self._resolved_pdf_path = ocr_path
                         logger.info("OCR restored text searchability")
                     else:
                         raise ValueError("NO SEARCHABLE")
@@ -348,17 +352,84 @@ class DocAnalysisTask:
         logger.warning(f"Document appears to be scanned (no searchable text found)")
         return False
 
-    def convert_docx_to_pdf(self, file_path: str) -> Optional[str]:
-        """Convert DOCX/DOC files to PDF with better error handling."""
+    @staticmethod
+    def _find_soffice() -> Optional[str]:
+        """Localiza el binario de LibreOffice: env SOFFICE_BIN, PATH o bundle macOS."""
+        import shutil as _shutil
+        cand = os.environ.get('SOFFICE_BIN')
+        if cand and os.path.exists(cand):
+            return cand
+        for name in ('soffice', 'libreoffice'):
+            p = _shutil.which(name)
+            if p:
+                return p
+        mac = '/Applications/LibreOffice.app/Contents/MacOS/soffice'
+        return mac if os.path.exists(mac) else None
+
+    def _convert_docx_via_libreoffice(self, file_path: str) -> Optional[str]:
+        """DOC/DOCX→PDF con LibreOffice headless: fidelidad ~completa (imágenes,
+        tablas, estilos, encabezados/pies, columnas) y soporta el .doc binario
+        antiguo. Devuelve la ruta del PDF generado o None si no hay LibreOffice
+        o la conversión falla (el caller cae al fallback de texto plano)."""
+        soffice = self._find_soffice()
+        if not soffice:
+            return None
+        import subprocess
+        import shutil as _shutil
+        outdir = os.path.dirname(file_path) or '.'
+        # Perfil de usuario ÚNICO por invocación: LibreOffice bloquea su perfil por
+        # proceso; sin esto, conversiones concurrentes (varios workers de gunicorn)
+        # fallan con "another instance of LibreOffice is running".
+        profile = tempfile.mkdtemp(prefix='lo_profile_')
         try:
-            if not file_path.endswith(('.docx', '.doc')):
+            subprocess.run(
+                [soffice, '--headless', '--norestore', '--invisible',
+                 f'-env:UserInstallation=file://{profile}',
+                 '--convert-to', 'pdf', '--outdir', outdir, file_path],
+                check=True, timeout=180,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+        except Exception as e:
+            logger.warning(f"LibreOffice conversion failed: {e}")
+            return None
+        finally:
+            _shutil.rmtree(profile, ignore_errors=True)
+        pdf_path = os.path.splitext(file_path)[0] + '.pdf'
+        if not os.path.exists(pdf_path):
+            logger.warning("LibreOffice reported success but no PDF was produced")
+            return None
+        try:
+            with fitz.open(pdf_path) as test_doc:
+                if len(test_doc) == 0:
+                    return None
+        except Exception:
+            return None
+        logger.info(f"DOCX converted to PDF via LibreOffice: {pdf_path}")
+        return pdf_path
+
+    def convert_docx_to_pdf(self, file_path: str) -> Optional[str]:
+        """Convert DOC/DOCX files to PDF.
+
+        1º LibreOffice headless — conversión FIEL (imágenes, tablas, estilos,
+           encabezados, columnas; también .doc binario antiguo).
+        2º Fallback texto-plano (python-docx + reportlab): solo párrafos — se
+           conserva para entornos sin LibreOffice (p.ej. dev local); .doc NO
+           es soportado por python-docx, solo .docx.
+        """
+        try:
+            if not file_path.lower().endswith(('.docx', '.doc')):
                 return None
+
+            pdf_path = self._convert_docx_via_libreoffice(file_path)
+            if pdf_path:
+                return pdf_path
+            logger.warning("LibreOffice unavailable/failed — falling back to text-only DOCX conversion")
 
             _lazy_import_docx()
             _lazy_import_reportlab()
 
             doc = Document(file_path)
-            pdf_path = file_path.replace('.docx', '.pdf').replace('.doc', '.pdf')
+            pdf_path = os.path.splitext(file_path)[0] + '.pdf'
 
             pdf = SimpleDocTemplate(pdf_path, pagesize=letter)
             styles = getSampleStyleSheet()
@@ -382,7 +453,7 @@ class DocAnalysisTask:
                 if len(test_doc) == 0:
                     return None
 
-            logger.info(f"DOCX converted to PDF: {pdf_path}")
+            logger.info(f"DOCX converted to PDF (text-only fallback): {pdf_path}")
             return pdf_path
 
         except Exception as e:
