@@ -1325,7 +1325,7 @@ body.xp-file-preview .mode-switch-container {
                         </li>
                     </ul>
                 </div>
-                <span class="page-flip-loader-text">Loading...</span>
+                <span class="page-flip-loader-text" id="pftText">Loading...</span>
             </div>
         </div>
     </div>
@@ -1742,6 +1742,155 @@ body.xp-file-preview .mode-switch-container {
         }
     }
 
+    /* ========================================================================
+       PROVIDER TICKER - "Loading..." -> "Searching [logo] Provider"
+       Only touches the text inside #pftText (.page-flip-loader-text).
+       No color/design changes: reuses the existing loader as-is and starts
+       and stops automatically via a MutationObserver on the overlay's
+       is-active-loading class, so no call sites needed changes.
+       ======================================================================== */
+    const ProviderTicker = (() => {
+        const PROVIDERS = [
+            ['OpenAlex', 'openalex'], ['Semantic Scholar', 'semanticscholar'], ['arXiv', 'arxiv'],
+            ['CORE', 'core'], ['PubMed', 'pubmed'], ['Crossref', 'crossref'], ['Wikipedia', 'wikipedia'],
+            ['Wikisource', 'wikisource'], ['Wikiversity', 'wikiversity'], ['Wikibooks', 'wikibooks'],
+            ['Wikinews', 'wikinews'], ['Wikiquote', 'wikiquote'], ['Wikivoyage', 'wikivoyage'],
+            ['PubMed Central (PMC OA)', 'pmc'], ['PLOS', 'plos'], ['Project Gutenberg', 'gutenberg'],
+            ['OpenAIRE', 'openaire'], ['HAL', 'hal'], ['OSTI', 'osti'], ['ERIC', 'eric'], ['DOAJ', 'doaj'],
+            ['Internet Archive', 'internetarchive'], ['SciELO', 'scielo'], ['Europe PMC', 'europepmc'],
+            ['DataCite', 'datacite'], ['Open Library', 'openlibrary'], ['Google Books', 'googlebooks'],
+            ['Chronicling America', 'chroniclingamerica'], ['The Guardian', 'guardian'], ['NYTimes', 'nytimes'],
+            ['NewsAPI.org', 'newsapi'], ['NewsData.io', 'newsdata'], ['Currents', 'currentsapi'],
+            ['Springer Nature', 'springer'], ['BASE', 'base']
+        ];
+
+        const ANALYZE_DURATION = 1500; // ms showing "Loading..." before the ticker starts
+        const TICK_MIN = 250;          // ms, min time between provider changes
+        const TICK_MAX = 400;          // ms, max time between provider changes
+        const FADE_DURATION = 140;     // ms, fade-out before swapping logo+name
+
+        const GENERIC_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.2" stroke="currentColor" stroke-width="1.8"/><line x1="15.1" y1="15.1" x2="20.5" y2="20.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
+        let textEl = null, tickEl = null, logoEl = null, nameEl = null;
+        let queue = [];
+        let queueIndex = 0;
+        let analyzeTimer = null;
+        let tickTimer = null;
+        let running = false;
+
+        function shuffledQueue() {
+            const arr = PROVIDERS.slice();
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function nextProvider() {
+            if (queueIndex >= queue.length) {
+                queue = shuffledQueue();
+                queueIndex = 0;
+            }
+            return queue[queueIndex++];
+        }
+
+        function hashColor(slug) {
+            let hash = 0;
+            for (let i = 0; i < slug.length; i++) hash = (hash * 31 + slug.charCodeAt(i)) >>> 0;
+            return `hsl(${hash % 360}, 62%, 42%)`;
+        }
+
+        // Construye una única vez "Searching [logo] Provider" dentro de #pftText,
+        // reemplazando el "Loading..." original.
+        function buildTickerDom() {
+            textEl.innerHTML = '';
+
+            const verb = document.createElement('span');
+            verb.className = 'pft-verb';
+            verb.textContent = 'Searching';
+
+            tickEl = document.createElement('span');
+            tickEl.className = 'pft-tick';
+
+            logoEl = document.createElement('span');
+            logoEl.className = 'pft-logo';
+
+            nameEl = document.createElement('span');
+            nameEl.className = 'pft-name';
+
+            tickEl.appendChild(logoEl);
+            tickEl.appendChild(nameEl);
+            textEl.appendChild(verb);
+            textEl.appendChild(tickEl);
+        }
+
+        function renderProvider([name, slug]) {
+            logoEl.style.setProperty('--pft-logo-color', hashColor(slug));
+            logoEl.innerHTML = '';
+            const img = document.createElement('img');
+            img.loading = 'lazy';
+            img.alt = '';
+            img.src = `/static/img/imgsource/${slug}.png`;
+            img.onerror = () => { logoEl.innerHTML = GENERIC_ICON_SVG; };
+            logoEl.appendChild(img);
+            nameEl.textContent = name;
+        }
+
+        function tick() {
+            if (!running) return;
+            tickEl.classList.add('is-fading');
+            tickTimer = setTimeout(() => {
+                if (!running) return;
+                renderProvider(nextProvider());
+                tickEl.classList.remove('is-fading');
+                tickTimer = setTimeout(tick, TICK_MIN + Math.random() * (TICK_MAX - TICK_MIN));
+            }, FADE_DURATION);
+        }
+
+        function init() {
+            textEl = document.getElementById('pftText');
+        }
+
+        function start() {
+            if (!textEl) init();
+            if (!textEl || running) return;
+            running = true;
+            textEl.textContent = 'Loading...';
+
+            analyzeTimer = setTimeout(() => {
+                if (!running) return;
+                queue = shuffledQueue();
+                queueIndex = 0;
+                buildTickerDom();
+                renderProvider(nextProvider());
+                tickTimer = setTimeout(tick, TICK_MIN + Math.random() * (TICK_MAX - TICK_MIN));
+            }, ANALYZE_DURATION);
+        }
+
+        function stop() {
+            running = false;
+            clearTimeout(analyzeTimer);
+            clearTimeout(tickTimer);
+            analyzeTimer = null;
+            tickTimer = null;
+            tickEl = null;
+            if (textEl) textEl.textContent = 'Loading...';
+        }
+
+        return { start, stop };
+    })();
+
+    (function observeProviderTickerOverlay() {
+        const overlay = document.getElementById('customLoadingOverlay');
+        if (!overlay) return;
+        const syncState = () => {
+            if (overlay.classList.contains('is-active-loading')) ProviderTicker.start();
+            else ProviderTicker.stop();
+        };
+        new MutationObserver(syncState).observe(overlay, { attributes: true, attributeFilter: ['class'] });
+        syncState();
+    })();
 
     class AdvancedInputComponent {
         constructor() {
