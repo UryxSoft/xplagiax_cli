@@ -4495,6 +4495,33 @@ body.xp-file-preview .mode-switch-container {
                 ? `<div class="xcite-sec-h"><span>References</span><span class="xcite-count">${refs.length}</span></div><div class="xcite-list">${refItems}</div>`
                 : `<div class="empty-state"><p>No references detected</p><small>No bibliography entries found in the text.</small></div>`;
 
+            // ── Bibliografía validada: lista clásica de obras citadas, debajo de
+            //    References — solo entradas confirmadas contra bases académicas. ──
+            const validatedBib = refs.filter(r => ['valid', 'partial'].indexOf(String((r.validation || {}).status || '').toLowerCase()) !== -1);
+            const biblioHtml = validatedBib.length ? `
+                <div class="xcite-sec-h" style="margin-top:18px"><span>Bibliography</span><span class="xcite-count">${validatedBib.length}</span></div>
+                <p class="xcite-hint">Validated bibliography — entries confirmed against academic databases.</p>
+                <div class="xcite-list">${validatedBib.map((r, bi) => {
+                    const v = r.validation || {};
+                    const st = refStatus(v.status);
+                    const line = r.raw_text
+                        ? esc(r.raw_text)
+                        : [esc((r.authors || []).join(', ')), r.year ? '(' + esc(String(r.year)) + ')' : '', esc(r.title || '')].filter(Boolean).join(' ');
+                    const bHref = this._doiHref(r);
+                    return `<div class="xcite-item">
+                        <span class="xcite-num">${bi + 1}</span>
+                        <div class="xcite-body">
+                            <div class="xcite-title-line">${line}</div>
+                            <div class="xcite-meta">
+                                <span class="xcite-status" style="background:${st.bg};color:${st.col}">${esc(st.label)}</span>
+                                ${v.source_api ? `<span class="xcite-metabits">via ${esc(String(v.source_api).replace(/_/g, ' '))}</span>` : ''}
+                                ${r.isbn ? `<span class="xcite-metabits">ISBN ${esc(String(r.isbn))}</span>` : ''}
+                                ${bHref ? `<a class="xcite-link" href="${bHref}" target="_blank" rel="noopener noreferrer" style="font-size:.68rem" onclick="event.stopPropagation()">Open</a>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('')}</div>` : '';
+
             // ── In-text citation context (parity with marktrack) ──
             // Find the exact sentence around each marker in the analyzed text so
             // the card shows what is being cited, not the bare "[2]" marker.
@@ -4643,7 +4670,7 @@ body.xp-file-preview .mode-switch-container {
                    <div class="xcite-list">${citeItems}</div>`
                 : '';
 
-            return `<h2 style="margin-bottom:14px;">Citations, References &amp; Bibliography</h2>${qHero}${summary}${coverage}${refsHtml}${citesHtml}`;
+            return `<h2 style="margin-bottom:14px;">Citations, References &amp; Bibliography</h2>${qHero}${summary}${coverage}${refsHtml}${biblioHtml}${citesHtml}`;
         }
 
         _wireMtTabs(overlay) {
