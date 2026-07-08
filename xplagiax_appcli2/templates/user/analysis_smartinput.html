@@ -675,13 +675,13 @@ body.xp-file-preview .mode-switch-container {
 
 /* ════════════ Sidebar estilo xplagiax_marktrack (light · paleta de la app) ════════════ */
 .ai-split-right.xpa-mt{background:#f7f9fc;padding:0;display:flex;flex-direction:column;overflow:hidden;--glass-bdr:#e6ebf2}
-.xpa-mt .analysis-panels{width:100%;height:100%;display:flex;flex-direction:column;background:transparent;overflow:hidden}
+.xpa-mt .analysis-panels{width:100%;height:100%;display:flex;flex-direction:column;background:transparent;overflow:hidden;min-height:0}
 .xpa-mt .tabs{display:flex;border-bottom:1px solid #e6ebf2;background:#fff;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
 .xpa-mt .tabs::-webkit-scrollbar{display:none}
 .xpa-mt .tab{flex:1;padding:14px 10px;border:none;background:transparent;font-size:15px;color:#94a3b8;cursor:pointer;white-space:nowrap;transition:all .2s ease;border-bottom:2px solid transparent}
 .xpa-mt .tab:hover{color:#0f172a;background:#f1f5f9}
 .xpa-mt .tab.active{color:#064CDB;background:rgba(6,76,219,0.07);border-bottom-color:#064CDB}
-.xpa-mt .tab-content{flex:1;overflow-y:auto;padding:16px 18px;scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
+.xpa-mt .tab-content{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 18px;scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
 .xpa-mt .tab-content::-webkit-scrollbar{width:5px}
 .xpa-mt .tab-content::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
 .xpa-mt .tab-panel{display:none;animation:mtFade .3s ease}

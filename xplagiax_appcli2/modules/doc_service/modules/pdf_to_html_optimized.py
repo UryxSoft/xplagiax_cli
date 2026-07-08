@@ -194,6 +194,29 @@ class PDFToHTMLConverter:
         }
     """
 
+    # Fit-to-width: the PDF pages have a fixed size in points (e.g. ~816px wide
+    # for Letter). Inside a narrow panel/iframe that overflows horizontally and
+    # makes the document look like it only shows one page. This scales the whole
+    # container down (never up) so every page fits the available width and the
+    # pages stack for clean vertical scrolling. Recomputes on resize.
+    _FIT_SCRIPT: Final[str] = (
+        "<script>(function(){"
+        "var c=document.querySelector('.pdf-container');if(!c)return;"
+        "function fit(){"
+        "c.style.zoom='';"
+        "var p=c.getElementsByClassName('pdf-page'),m=0,i;"
+        "for(i=0;i<p.length;i++){if(p[i].offsetWidth>m)m=p[i].offsetWidth;}"
+        "var a=(document.documentElement.clientWidth||window.innerWidth||0)-8;"
+        "if(!m||a<=0)return;"
+        "var f=a/m;c.style.zoom=(f<1?f:'');"
+        "}"
+        "if(document.readyState!=='loading')fit();"
+        "else document.addEventListener('DOMContentLoaded',fit);"
+        "window.addEventListener('load',fit);"
+        "window.addEventListener('resize',fit);"
+        "})();</script>\n"
+    )
+
     def __init__(
         self,
         config: Optional[ConverterConfig] = None,
@@ -365,7 +388,9 @@ class PDFToHTMLConverter:
                     '        </div>\n'
                 )
 
-        html_buffer.write('    </div>\n</body>\n</html>')
+        html_buffer.write('    </div>\n')
+        html_buffer.write(self._FIT_SCRIPT)
+        html_buffer.write('</body>\n</html>')
         result = html_buffer.getvalue()
         html_buffer.close()
         return result
