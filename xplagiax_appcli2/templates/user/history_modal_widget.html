@@ -505,7 +505,22 @@
             listEl.querySelectorAll('.xpa-h-item').forEach(el => {
                 el.addEventListener('click', ev => {
                     const btn = ev.target.closest('[data-action]');
-                    if (btn) { ev.stopPropagation(); btn.dataset.action === 'open' ? this._openEntry(el.dataset.id) : this._deleteEntry(el.dataset.id); return; }
+                    if (btn) {
+                        ev.stopPropagation();
+                        // Capture the item that owns this button at click-time (not closure)
+                        const itemEl = btn.closest('.xpa-h-item');
+                        const itemId = itemEl ? itemEl.dataset.id : el.dataset.id;
+                        if (btn.dataset.action === 'open') {
+                            // Activate item first so the user sees the selection before close
+                            listEl.querySelectorAll('.xpa-h-item').forEach(x => x.classList.remove('active'));
+                            if (itemEl) itemEl.classList.add('active');
+                            this._syncFooter(true);
+                            this._openEntry(itemId);
+                        } else {
+                            this._deleteEntry(itemId);
+                        }
+                        return;
+                    }
                     listEl.querySelectorAll('.xpa-h-item').forEach(x => x.classList.remove('active'));
                     el.classList.add('active');
                     this._preview(el.dataset.id);
@@ -576,15 +591,27 @@
 
         async _openEntry(id) {
             const e = await this._fetchFull(id);
-            if (!e) return;
+            if (!e) {
+                // Retry once in case of transient network error
+                const retry = await this._fetchFull(id);
+                if (!retry) return;
+            }
+            const entry = this._full[id];
+            if (!entry) return;
             this.close();
-            // If the AdvancedInputComponent (analysiss page) is loaded, use it directly
+            // Re-read _advComp at execution time (not from a stale closure)
             const adv = window._advComp;
             if (adv && typeof adv._enterMarktrackView === 'function') {
                 adv._skipHistorySave = true;
-                adv._analyzedText = e.text || '';
-                if (typeof adv._exitSplitMode === 'function') adv._exitSplitMode();
-                setTimeout(() => adv._enterMarktrackView(e.text || '', e.ai || null, e.source || null, e.citation || null), 60);
+                adv._analyzedText = entry.text || '';
+                const doOpen = () => adv._enterMarktrackView(entry.text || '', entry.ai || null, entry.source || null, entry.citation || null);
+                if (typeof adv._exitSplitMode === 'function') {
+                    adv._exitSplitMode();
+                    // Wait for exit animation to complete before opening new view
+                    setTimeout(doOpen, 220);
+                } else {
+                    setTimeout(doOpen, 60);
+                }
             } else {
                 // Navigate to analysiss and open the entry there
                 window.location.href = '/analysiss?open_history=' + encodeURIComponent(id);

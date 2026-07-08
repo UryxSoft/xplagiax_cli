@@ -766,6 +766,7 @@ body.xp-file-preview .mode-switch-container {
 .xpa-mt .xcite-ctx{color:#475569;line-height:1.55}
 .xpa-mt .xcite-mark{background:rgba(6,76,219,.12);color:#064CDB;font-style:normal;font-weight:700;border-radius:3px;padding:0 3px;box-shadow:inset 0 -2px 0 #064CDB}
 .xpa-mt .xcite-ctx-label{display:block;font-size:.56rem;font-weight:700;font-style:normal;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:3px}
+.xpa-mt .xcite-doc-marker{display:inline-block;font-size:.6rem;font-weight:700;font-style:normal;color:#64748b;background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.25);border-radius:4px;padding:0 4px;margin-right:4px;vertical-align:middle}
 .xpa-mt .xcite-orcid{display:inline-flex;align-items:center;gap:4px;font-size:.64rem;font-weight:600;padding:2px 7px;border-radius:20px;text-decoration:none;background:rgba(166,206,57,.14);color:#5a7302;border:1px solid rgba(166,206,57,.4)}
 .xpa-mt .xcite-warn{font-size:.68rem;color:#b45309;margin-top:7px;line-height:1.45;border-left:2px solid rgba(245,158,11,.5);padding-left:8px}
 @media(min-width:560px){.xpa-mt .xcite-q-ring{width:80px;height:80px}}
@@ -4646,17 +4647,19 @@ body.xp-file-preview .mode-switch-container {
                 const meta = [esc(ci.author || ''), ci.year ? esc(String(ci.year)) : '', ci.style ? esc(String(ci.style).toUpperCase()) : ''].filter(Boolean).join(' · ');
                 const ctx = citeContext(docText, normDoc, ci.raw_text || '', ci.start_pos);
                 let bodyHtml;
+                const rawMarker = esc(ci.raw_text || '');
+                const docMarkerBadge = rawMarker ? `<span class="xcite-doc-marker" title="Marker in document">${rawMarker}</span>` : '';
                 if (ctx && ctx.bracket && ctx.claim) {
-                    bodyHtml = `<div class="xcite-intext xcite-ctx"><span class="xcite-ctx-label">Cited text</span><span class="xcite-mark">${esc(ctx.docMatch)}</span> "${ctx.claimTrunc ? '…' : ''}${esc(ctx.claim)}"</div>`;
+                    bodyHtml = `<div class="xcite-intext xcite-ctx"><span class="xcite-ctx-label">Cited text</span>${docMarkerBadge} "${ctx.claimTrunc ? '…' : ''}${esc(ctx.claim)}"</div>`;
                 } else if (ctx && (ctx.pre || ctx.post)) {
-                    bodyHtml = `<div class="xcite-intext xcite-ctx"><span class="xcite-ctx-label">Cited text</span>"${ctx.preTrunc ? '…' : ''}${esc(ctx.pre)}<span class="xcite-mark">${esc(ctx.docMatch)}</span>${esc(ctx.post)}${ctx.postTrunc ? '…' : ''}"</div>`;
+                    bodyHtml = `<div class="xcite-intext xcite-ctx"><span class="xcite-ctx-label">Cited text</span>${docMarkerBadge} "${ctx.preTrunc ? '…' : ''}${esc(ctx.pre)}${esc(ctx.post)}${ctx.postTrunc ? '…' : ''}"</div>`;
                 } else if (ctx) {
                     const refText = refSummary(refByNumber(numFromRaw(ci.raw_text)));
                     bodyHtml = refText
-                        ? `<div class="xcite-intext xcite-ctx"><span class="xcite-ctx-label">Reference</span><span class="xcite-mark">${esc(ctx.docMatch)}</span> ${esc(refText)}</div>`
-                        : `<div class="xcite-intext"><span class="xcite-mark">${esc(ctx.docMatch)}</span> <span style="color:#94a3b8;font-style:normal;">No surrounding sentence found in the text.</span></div>`;
+                        ? `<div class="xcite-intext xcite-ctx"><span class="xcite-ctx-label">Reference</span>${docMarkerBadge} ${esc(refText)}</div>`
+                        : `<div class="xcite-intext">${docMarkerBadge} <span style="color:#94a3b8;font-style:normal;">No surrounding sentence found in the text.</span></div>`;
                 } else {
-                    bodyHtml = `<div class="xcite-intext">"${esc(ci.raw_text || '')}"</div>`;
+                    bodyHtml = `<div class="xcite-intext">${docMarkerBadge} "${esc(ci.raw_text || '')}"</div>`;
                 }
                 return `<div class="xcite-item clk" data-cite-focus="${i}" tabindex="0" role="button" aria-label="Highlight this citation in the text">
                     <span class="xcite-num xcite-num--blue">${i + 1}</span>
