@@ -604,7 +604,7 @@
             if (adv && typeof adv._enterMarktrackView === 'function') {
                 adv._skipHistorySave = true;
                 adv._analyzedText = entry.text || '';
-                const doOpen = () => adv._enterMarktrackView(entry.text || '', entry.ai || null, entry.source || null, entry.citation || null);
+                const doOpen = () => adv._enterMarktrackView(entry.text || '', entry.ai || null, entry.source || null, entry.citation || null, entry.result_view || null);
                 if (typeof adv._exitSplitMode === 'function') {
                     adv._exitSplitMode();
                     // Wait for exit animation to complete before opening new view

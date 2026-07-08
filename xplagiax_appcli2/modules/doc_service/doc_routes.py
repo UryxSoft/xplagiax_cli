@@ -4029,6 +4029,43 @@ def _history_allowed():
     return getattr(current_user, 'user_type', None) in HISTORY_PLANS
 
 
+_RESULT_VIEW_COL_READY = False
+
+
+def _ensure_result_view_column():
+    """Auto-migración idempotente: añade la columna `result_view` a analysis_history
+    si falta. Necesario porque el proyecto crea tablas con db.create_all() (que NO
+    altera tablas existentes); así el guardado de historial no se rompe en despliegues
+    que aún no tienen la columna, sin exigir una migración manual."""
+    global _RESULT_VIEW_COL_READY
+    if _RESULT_VIEW_COL_READY:
+        return
+    try:
+        from sqlalchemy import inspect as _sa_inspect, text as _sa_text
+        cols = [c['name'] for c in _sa_inspect(db.engine).get_columns('analysis_history')]
+        if 'result_view' not in cols:
+            db.session.execute(_sa_text(
+                "ALTER TABLE analysis_history ADD COLUMN result_view VARCHAR(512) NULL"))
+            db.session.commit()
+        _RESULT_VIEW_COL_READY = True
+    except Exception:
+        db.session.rollback()
+        # No marcar READY: se reintentará en el próximo guardado.
+        logger.warning('Could not ensure analysis_history.result_view column', exc_info=True)
+
+
+def _sanitize_result_view(value):
+    """Solo se persiste una URL relativa de nuestra propia ruta de servido
+    (/x_doc/serve_analysis/...). Evita almacenar rutas absolutas del servidor,
+    URLs externas o valores arbitrarios."""
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    if not value or len(value) > 512:
+        return None
+    return value if value.startswith('/x_doc/serve_analysis/') else None
+
+
 def _trim_history_result(r):
     """Quita campos pesados (abstract/full_text) — los paneles usan snippet/blocks."""
     if not isinstance(r, dict):
@@ -4058,6 +4095,9 @@ def history_save():
     if not text:
         return jsonify({'error': 'Empty analysis.'}), 400
 
+    # Garantizar la columna result_view (auto-migración idempotente) antes de insertar.
+    _ensure_result_view_column()
+
     def _int(v):
         try:
             return int(round(float(v))) if v is not None else None
@@ -4074,6 +4114,7 @@ def history_save():
         ai_pct=_int(data.get('aiPct')),
         overall=_int(data.get('overall')),
         cit_score=_int(data.get('cit')),
+        result_view=_sanitize_result_view(data.get('resultView')),
     )
     try:
         db.session.add(entry)

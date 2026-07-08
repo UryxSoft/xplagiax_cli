@@ -1269,6 +1269,7 @@ class AnalysisHistory(db.Model):
     ai_pct      = db.Column(db.Integer)       # % IA
     overall     = db.Column(db.Integer)       # % similitud
     cit_score   = db.Column(db.Integer)       # calidad de citas /100
+    result_view = db.Column(db.String(512))   # URL del result.html (vista documento) para reabrir
     created_at  = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
 
     def _ts_ms(self):
@@ -1286,5 +1287,6 @@ class AnalysisHistory(db.Model):
 
     def to_full(self):
         d = self.to_summary()
-        d.update({'text': self.text or '', 'ai': self.ai, 'source': self.source, 'citation': self.citation})
+        d.update({'text': self.text or '', 'ai': self.ai, 'source': self.source,
+                  'citation': self.citation, 'result_view': self.result_view})
         return d

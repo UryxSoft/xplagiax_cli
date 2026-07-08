@@ -1838,7 +1838,7 @@ body.xp-file-preview .mode-switch-container {
                     if (typeof this._exitSplitMode === 'function') this._exitSplitMode();
                     this._analyzedText = e.text || '';
                     this._skipHistorySave = true;
-                    this._enterMarktrackView(e.text || '', e.ai || null, e.source || null, e.citation || null);
+                    this._enterMarktrackView(e.text || '', e.ai || null, e.source || null, e.citation || null, e.result_view || null);
                 }, 350);
             }
         }
@@ -4732,7 +4732,7 @@ body.xp-file-preview .mode-switch-container {
             if (Array.isArray(c.internet_matches)) c.internet_matches = c.internet_matches.slice(0, 8).map(slim);
             return c;
         }
-        _saveHistoryEntry(text, ai, source, citation) {
+        _saveHistoryEntry(text, ai, source, citation, htmlViewUrl = null) {
             try {
                 const payload = {
                     text: String(text || '').slice(0, 15000),
@@ -4743,6 +4743,9 @@ body.xp-file-preview .mode-switch-container {
                     ai: ai ? this._trimResult(ai) : null,
                     source: source ? this._trimResult(source) : null,
                     citation: citation ? this._trimResult(citation) : null,
+                    // Vista de documento (result.html) para reabrir el análisis con el mismo
+                    // formato en vez de texto plano.
+                    resultView: htmlViewUrl || null,
                 };
                 // CSRF lo inyecta el wrapper global de fetch (user_base.html).
                 fetch('/x_doc/history', {
@@ -4860,13 +4863,26 @@ body.xp-file-preview .mode-switch-container {
                 this._animateMtRings(overlay);
                 const htmlFrame = htmlViewUrl ? document.getElementById('aiSplitHtmlFrame') : null;
                 if (htmlFrame) {
-                    // El documento del iframe carga async (petición de red aparte) — pintar
-                    // los hallazgos recién cuando esté listo (si ya cargó, 'load' no vuelve
-                    // a disparar: comprobamos readyState como red de seguridad).
-                    const paint = () => this._paintFindingsInFrame(htmlFrame, overlay, ai, source, citation);
-                    let already = false;
-                    try { already = htmlFrame.contentDocument && htmlFrame.contentDocument.readyState === 'complete'; } catch (e) {}
-                    if (already) paint(); else htmlFrame.addEventListener('load', paint, { once: true });
+                    // El iframe reporta primero su documento inicial `about:blank`
+                    // (readyState 'complete' pero con body VACÍO); pintar en ese momento
+                    // no marcaba nada y — al haber usado la rama "ya cargó" — nunca se
+                    // enganchaba 'load', así que los resaltados no aparecían jamás sobre la
+                    // vista de documento. Ahora: pintado IDEMPOTENTE que solo actúa cuando
+                    // el documento REAL ya tiene texto, disparado por 'load' + un sondeo
+                    // corto de respaldo (por si 'load' ya ocurrió).
+                    let painted = false;
+                    const paint = () => {
+                        if (painted) return;
+                        let fdoc = null;
+                        try { fdoc = htmlFrame.contentDocument; } catch (e) { return; }
+                        if (!fdoc || !fdoc.body || !(fdoc.body.textContent || '').trim().length) return;
+                        painted = true;
+                        this._paintFindingsInFrame(htmlFrame, overlay, ai, source, citation);
+                    };
+                    htmlFrame.addEventListener('load', paint);
+                    let tries = 0;
+                    const poll = () => { if (painted) return; paint(); if (!painted && tries++ < 40) setTimeout(poll, 100); };
+                    poll();
                 } else {
                     this._highlightAllFindings(ai, source, citation);
                 }
@@ -4878,7 +4894,7 @@ body.xp-file-preview .mode-switch-container {
             // Guardar en el historial (texto + resultados) — salvo si venimos de reabrir
             // una entrada del propio historial (evita duplicados).
             if (this._skipHistorySave) { this._skipHistorySave = false; }
-            else { this._saveHistoryEntry(text, ai, source, citation); }
+            else { this._saveHistoryEntry(text, ai, source, citation, htmlViewUrl); }
         }
 
         // ─── Combined view (AI detection + FinderX, tabbed) ────────────────────────
@@ -5857,6 +5873,7 @@ body.xp-file-preview .mode-switch-container {
                 || document.getElementById('finderxSplitView')
                 || document.querySelector('.ai-split-view');
             if (!overlay) return;
+            if (typeof this._splitResizerCleanup === 'function') this._splitResizerCleanup();
             document.body.classList.remove('xp-split-active');
             overlay.classList.remove('visible');
             setTimeout(() => {
@@ -5878,6 +5895,10 @@ body.xp-file-preview .mode-switch-container {
         }
 
         _initSplitResizer() {
+            // Limpiar cualquier resizer previo (evita acumular listeners de document
+            // entre análisis sucesivos).
+            if (typeof this._splitResizerCleanup === 'function') this._splitResizerCleanup();
+
             const resizer = document.getElementById('aiSplitResizer');
             const leftPanel = document.getElementById('aiSplitLeft');
             const rightPanel = document.getElementById('aiSplitRight');
@@ -5888,8 +5909,19 @@ body.xp-file-preview .mode-switch-container {
             let startX = 0;
             let startLeftPct = 50;
 
+            // Cuando el panel izquierdo es la vista de documento (un <iframe>), al
+            // arrastrar por encima de él el iframe SE TRAGA mousemove/mouseup: stopResize
+            // no se disparaba, isResizing quedaba en true y toda la vista quedaba
+            // "congelada"/sin responder. Se neutraliza el iframe (pointer-events:none)
+            // mientras dura el arrastre para que los eventos lleguen siempre al document.
+            const setFramesInert = (inert) => {
+                body.querySelectorAll('iframe').forEach(fr => {
+                    fr.style.pointerEvents = inert ? 'none' : '';
+                });
+            };
+
             const onMove = (clientX) => {
-                if (!isResizing) return;
+                if (!isResizing || clientX == null) return;
                 const rect = body.getBoundingClientRect();
                 const dx = clientX - startX;
                 const newPct = Math.min(80, Math.max(20, startLeftPct + (dx / rect.width) * 100));
@@ -5897,26 +5929,43 @@ body.xp-file-preview .mode-switch-container {
                 rightPanel.style.flex = `0 0 calc(${100 - newPct}% - 1px)`;
             };
 
-            resizer.addEventListener('mousedown', (e) => {
+            const onMouseDown = (e) => {
                 isResizing = true;
                 startX = e.clientX;
                 startLeftPct = (leftPanel.offsetWidth / body.offsetWidth) * 100;
                 resizer.classList.add('dragging');
+                setFramesInert(true);
                 document.body.style.cssText += ';cursor:col-resize!important;user-select:none!important';
-            });
-
-            document.addEventListener('mousemove', (e) => onMove(e.clientX));
-            document.addEventListener('touchmove', (e) => onMove(e.touches[0].clientX), { passive: true });
-
+            };
+            const onMouseMove = (e) => onMove(e.clientX);
+            const onTouchMove = (e) => { if (e.touches && e.touches[0]) onMove(e.touches[0].clientX); };
             const stopResize = () => {
                 if (!isResizing) return;
                 isResizing = false;
                 resizer.classList.remove('dragging');
+                setFramesInert(false);
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
             };
+
+            resizer.addEventListener('mousedown', onMouseDown);
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('touchmove', onTouchMove, { passive: true });
             document.addEventListener('mouseup', stopResize);
             document.addEventListener('touchend', stopResize);
+            // Red de seguridad: si el puntero sale de la ventana o pierde el foco durante
+            // el arrastre, liberar igualmente el estado de resize.
+            window.addEventListener('blur', stopResize);
+
+            this._splitResizerCleanup = () => {
+                stopResize();
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('mouseup', stopResize);
+                document.removeEventListener('touchend', stopResize);
+                window.removeEventListener('blur', stopResize);
+                this._splitResizerCleanup = null;
+            };
         }
 
         _escapeHtml(str) {
