@@ -3578,7 +3578,10 @@ body.xp-file-preview .mode-switch-container {
                 ${metric(matchScore + '%', 'Match', color)}
             </div>`;
 
-            return `<div class="analysis-block seg-flag-block" style="border-left:3px solid ${color}">
+            const focusAttr = (opts.origIndex != null)
+                ? ` data-plag-focus="${opts.origIndex}" tabindex="0" role="button" aria-label="Locate this segment in the text"`
+                : '';
+            return `<div class="analysis-block seg-flag-block"${focusAttr} style="border-left:3px solid ${color}">
                 <div class="block-header">
                     <div class="block-info">
                         <div class="block-icon" style="color:${color}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 22h16a2 2 0 0 0 1.73-4Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
@@ -4070,7 +4073,7 @@ body.xp-file-preview .mode-switch-container {
                 const col = aiProb >= 50 ? '#f87171' : aiProb >= 25 ? '#fbbf24' : '#34d399';
                 const words = (b.text || '').trim().split(/\s+/).filter(Boolean).length;
                 const preview = this._escapeHtml((b.text || '').slice(0, 56));
-                return `<tr class="${cls}">
+                return `<tr class="${cls}" data-ai-focus="${i}" tabindex="0" role="button" aria-label="Locate this section in the text">
                     <td>Section ${i + 1}<div style="font-size:10px;color:#94a3b8;margin-top:2px;">${preview}…</div></td>
                     <td style="text-align:right;">${words}</td>
                     <td style="text-align:right;color:${col};font-weight:700;">${aiProb}%</td>
@@ -4309,7 +4312,7 @@ body.xp-file-preview .mode-switch-container {
             let segBody = '';
             if (flaggedSegs.length) {
                 segBody += `<div class="plag-sec-title">Flagged passages<span class="plag-sec-count">${flaggedSegs.length}</span></div>`;
-                segBody += flaggedSegs.map(x => this._buildSegmentBlockHtml(x, { sourceSnippet: resolveSnippet(x.matched_source) })).join('');
+                segBody += flaggedSegs.map(x => this._buildSegmentBlockHtml(x, { sourceSnippet: resolveSnippet(x.matched_source), origIndex: segs.indexOf(x) })).join('');
             }
             if (cleanSegs.length) {
                 segBody += `<div class="plag-sec-title">Analyzed segments — cleared<span class="plag-sec-count">${cleanSegs.length}</span></div>`;
@@ -4687,19 +4690,21 @@ body.xp-file-preview .mode-switch-container {
                 const b = e.target.closest('[data-goto]');
                 if (b) { e.preventDefault(); go(b.dataset.goto); }
             });
-            // Citations: card -> highlight the matching citation in the text (and back).
-            overlay.querySelectorAll('[data-cite-focus]').forEach(elc => {
-                const jump = () => this._focusCitation(elc.dataset.citeFocus);
-                elc.addEventListener('click', jump);
-                elc.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); jump(); } });
+            // Card -> locate the matching finding in the text panel (and back, below).
+            // Same wiring for the three kinds: citations, AI-flagged sections, plagiarism segments.
+            [['data-cite-focus', 'cite', 'citeFocus'], ['data-ai-focus', 'ai', 'aiFocus'], ['data-plag-focus', 'plag', 'plagFocus']].forEach(([attr, kind, dsKey]) => {
+                overlay.querySelectorAll(`[${attr}]`).forEach(elc => {
+                    const jump = () => this._focusFinding(kind, elc.dataset[dsKey]);
+                    elc.addEventListener('click', jump);
+                    elc.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); jump(); } });
+                });
             });
             const textEl = overlay.querySelector('#aiSplitTextContent');
             if (textEl) textEl.addEventListener('click', e => {
-                const m = e.target.closest('[data-cite]');
+                const m = e.target.closest('[data-cite],[data-ai],[data-plag]');
                 if (!m) return;
-                go('cit');
-                const card = overlay.querySelector(`.xcite-item[data-cite-focus="${m.dataset.cite}"]`);
-                if (card) { card.scrollIntoView({ block: 'nearest' }); card.classList.add('xcite-flash'); setTimeout(() => card.classList.remove('xcite-flash'), 1200); }
+                const kind = m.dataset.cite != null ? 'cite' : (m.dataset.ai != null ? 'ai' : 'plag');
+                this._flashFindingCard(overlay, kind, m.dataset[kind]);
             });
         }
         _animateMtRings(overlay) {
@@ -5265,15 +5270,19 @@ body.xp-file-preview .mode-switch-container {
             });
         }
 
-        // Desplaza el panel de texto (o el iframe de la vista HTML del documento) a
-        // la cita i y la resalta con un pulso azul.
-        _focusCitation(i) {
-            let mark = document.getElementById('xpaCite' + i);
+        // Desplaza el panel de texto (o el iframe de la vista HTML del documento) al
+        // hallazgo `kind` (cite/ai/plag) #i y lo resalta con un pulso azul — es el
+        // camino tarjeta → texto, complementario a _flashFindingCard (texto → tarjeta).
+        _focusFinding(kind, i) {
+            const idPrefix = { cite: 'xpaCite', ai: 'xpaAi', plag: 'xpaPlag' };
+            const prefix = idPrefix[kind];
+            if (!prefix) return;
+            let mark = document.getElementById(prefix + i);
             if (!mark) {
                 const frame = document.getElementById('aiSplitHtmlFrame');
                 try {
                     const fdoc = frame && (frame.contentDocument || (frame.contentWindow && frame.contentWindow.document));
-                    if (fdoc) mark = fdoc.getElementById('xpaCite' + i);
+                    if (fdoc) mark = fdoc.getElementById(prefix + i);
                 } catch (e) { /* frame no accesible -> sin marca que enfocar */ }
             }
             if (!mark) return;
@@ -5283,6 +5292,9 @@ body.xp-file-preview .mode-switch-container {
             mark.classList.add('xpa-hl-pulse');
             setTimeout(() => mark.classList.remove('xpa-hl-pulse'), 1300);
         }
+
+        // Compat: los llamadores existentes de citas siguen usando este nombre.
+        _focusCitation(i) { this._focusFinding('cite', i); }
 
         // ── Constantes/paleta compartidas del resaltado unificado (AI + Plagio + Citas) ──
         _HL_KIND() {
@@ -5373,33 +5385,33 @@ body.xp-file-preview .mode-switch-container {
             // AI: coincidencia tolerante a espacios; sólo bloques marcados como IA.
             if (ai && Array.isArray(ai.blocks)) {
                 let cursor = 0;
-                ai.blocks.forEach(b => {
+                ai.blocks.forEach((b, aiIdx) => {
                     const frag = String(b.text || '').trim();
                     if (!frag) return;
                     const m = this._normFindBest(IDX, frag, cursor);
                     if (!m) return;
                     const end = Math.min(len, m.index + m.length);
-                    if (String(b.type || '').toLowerCase() === 'ai') ranges.push({ start: m.index, end, kind: 'ai' });
+                    if (String(b.type || '').toLowerCase() === 'ai') ranges.push({ start: m.index, end, kind: 'ai', aiIdx });
                     cursor = end;
                 });
             }
 
             // Plagio: usar char_start/char_end si son válidos y coinciden con el preview; si no, búsqueda tolerante.
             if (source && Array.isArray(source.segment_matches)) {
-                source.segment_matches.forEach(seg => {
+                source.segment_matches.forEach((seg, plagIdx) => {
                     if (String(seg.decision || '').toLowerCase() !== 'plagiarism') return;
                     const cs = seg.char_start, ce = seg.char_end;
                     const head = norm(seg.text_preview).slice(0, 14);
                     let placed = false;
                     if (Number.isFinite(cs) && Number.isFinite(ce) && cs >= 0 && ce <= len && ce > cs) {
                         const ok = head.length < 6 || norm(full.slice(cs, cs + 60)).indexOf(head) !== -1;
-                        if (ok) { ranges.push({ start: cs, end: ce, kind: 'plag' }); placed = true; }
+                        if (ok) { ranges.push({ start: cs, end: ce, kind: 'plag', plagIdx }); placed = true; }
                     }
                     if (!placed) {
                         const frag = String(seg.text_preview || '').trim().replace(/[.…]+$/, '');
                         if (frag.length >= 8) {
                             const m = this._normFindBest(IDX, frag);
-                            if (m) ranges.push({ start: m.index, end: Math.min(len, m.index + m.length), kind: 'plag' });
+                            if (m) ranges.push({ start: m.index, end: Math.min(len, m.index + m.length), kind: 'plag', plagIdx });
                         }
                     }
                 });
@@ -5489,7 +5501,14 @@ body.xp-file-preview .mode-switch-container {
                 if (!cov.length) continue;
                 const kinds = order.filter(k => cov.some(r => r.kind === k));
                 const citR = cov.find(r => r.kind === 'cit');
-                pieces.push({ start: a, end: b, kinds, citeIdx: citR ? citR.citeIdx : null });
+                const aiR = cov.find(r => r.kind === 'ai');
+                const plagR = cov.find(r => r.kind === 'plag');
+                pieces.push({
+                    start: a, end: b, kinds,
+                    citeIdx: citR ? citR.citeIdx : null,
+                    aiIdx: aiR ? aiR.aiIdx : null,
+                    plagIdx: plagR ? plagR.plagIdx : null,
+                });
             }
             return pieces;
         }
@@ -5527,7 +5546,9 @@ body.xp-file-preview .mode-switch-container {
 
             const esc = str => str.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
             const present = new Set();
-            const citeAssigned = {};
+            // ID prefix por tipo de hallazgo — clickeable en ambos sentidos (tarjeta ↔ texto).
+            const idPrefix = { cit: 'xpaCite', ai: 'xpaAi', plag: 'xpaPlag' };
+            const assignedIds = {};
             let html = '', cursor = 0;
             pieces.forEach(pc => {
                 if (pc.start > cursor) html += esc(full.slice(cursor, pc.start));
@@ -5536,11 +5557,17 @@ body.xp-file-preview .mode-switch-container {
                 const shadow = pc.kinds.map((k, n) => `inset 0 ${-2 * (n + 1)}px 0 ${KIND[k].c}`).join(',');
                 const pad = pc.kinds.length * 2 + 1;
                 const bg = KIND[pc.kinds[pc.kinds.length - 1]].c + '14';
-                let attrs = `class="xpa-hl${pc.citeIdx != null ? ' xpa-hl-clk' : ''}" style="box-shadow:${shadow};padding-bottom:${pad}px;background:${bg}"`;
-                if (pc.citeIdx != null) {
-                    attrs += ` data-cite="${pc.citeIdx}"`;
-                    if (!citeAssigned[pc.citeIdx]) { attrs += ` id="xpaCite${pc.citeIdx}"`; citeAssigned[pc.citeIdx] = true; }
-                }
+                const idxByKind = { cit: pc.citeIdx, ai: pc.aiIdx, plag: pc.plagIdx };
+                const clickable = pc.citeIdx != null || pc.aiIdx != null || pc.plagIdx != null;
+                let attrs = `class="xpa-hl${clickable ? ' xpa-hl-clk' : ''}" style="box-shadow:${shadow};padding-bottom:${pad}px;background:${bg}"`;
+                const attrName = { cit: 'cite', ai: 'ai', plag: 'plag' };
+                ['cit', 'ai', 'plag'].forEach(k => {
+                    const kIdx = idxByKind[k];
+                    if (kIdx == null) return;
+                    attrs += ` data-${attrName[k]}="${kIdx}"`;
+                    const key = k + kIdx;
+                    if (!assignedIds[key]) { attrs += ` id="${idPrefix[k]}${kIdx}"`; assignedIds[key] = true; }
+                });
                 attrs += ` title="${pc.kinds.map(k => KIND[k].label).join(' + ')}"`;
                 html += `<mark ${attrs}>${piece}</mark>`;
                 cursor = pc.end;
@@ -5591,11 +5618,13 @@ body.xp-file-preview .mode-switch-container {
             };
 
             const present = new Set();
-            const citeAssigned = {};
+            const assignedIds = {};
             const flat = [];
             pieces.forEach(pc => {
                 pc.kinds.forEach(k => present.add(k));
-                walkLeaves(pc.start, pc.end).forEach(seg => flat.push({ ...seg, kinds: pc.kinds, citeIdx: pc.citeIdx }));
+                walkLeaves(pc.start, pc.end).forEach(seg => flat.push({
+                    ...seg, kinds: pc.kinds, citeIdx: pc.citeIdx, aiIdx: pc.aiIdx, plagIdx: pc.plagIdx,
+                }));
             });
             if (!flat.length) { this._renderHighlightLegend(overlay, new Set()); return; }
 
@@ -5619,14 +5648,19 @@ body.xp-file-preview .mode-switch-container {
                 const before = content.slice(0, s), match = content.slice(s, e), after = content.slice(e);
 
                 const mark = doc.createElement('mark');
-                mark.className = 'xpa-hl' + (seg.citeIdx != null ? ' xpa-hl-clk' : '');
+                const clickable = seg.citeIdx != null || seg.aiIdx != null || seg.plagIdx != null;
+                mark.className = 'xpa-hl' + (clickable ? ' xpa-hl-clk' : '');
                 const shadow = seg.kinds.map((k, n) => `inset 0 ${-2 * (n + 1)}px 0 ${KIND[k].c}`).join(',');
                 mark.style.cssText = `box-shadow:${shadow};padding-bottom:${seg.kinds.length * 2 + 1}px;background:${KIND[seg.kinds[seg.kinds.length - 1]].c}14`;
                 mark.title = seg.kinds.map(k => KIND[k].label).join(' + ');
-                if (seg.citeIdx != null) {
-                    mark.dataset.cite = seg.citeIdx;
-                    if (!citeAssigned[seg.citeIdx]) { mark.id = 'xpaCite' + seg.citeIdx; citeAssigned[seg.citeIdx] = true; }
-                }
+                const idPrefix = { cit: 'xpaCite', ai: 'xpaAi', plag: 'xpaPlag' };
+                const attrName = { cit: 'cite', ai: 'ai', plag: 'plag' };
+                [['cit', seg.citeIdx], ['ai', seg.aiIdx], ['plag', seg.plagIdx]].forEach(([k, kIdx]) => {
+                    if (kIdx == null) return;
+                    mark.dataset[attrName[k]] = kIdx;
+                    const key = k + kIdx;
+                    if (!assignedIds[key]) { mark.id = idPrefix[k] + kIdx; assignedIds[key] = true; }
+                });
                 mark.textContent = match;
 
                 if (after) parent.insertBefore(doc.createTextNode(after), node.nextSibling);
@@ -5657,18 +5691,32 @@ body.xp-file-preview .mode-switch-container {
         // y resalta la tarjeta correspondiente en el panel derecho (fuera del iframe).
         // Los eventos del iframe no burbujean al documento padre, así que necesita
         // su propio listener (equivalente al que _wireMtTabs pone sobre el div plano).
+        // Cambia al tab del hallazgo (kind: 'cite'|'ai'|'plag') y resalta su tarjeta —
+        // usado tanto por el click en el panel de texto plano como dentro del iframe.
+        _flashFindingCard(overlay, kind, idx) {
+            const tabByKind = { cite: 'cit', ai: 'ai', plag: 'plag' };
+            const tab = tabByKind[kind];
+            if (!tab) return;
+            overlay.querySelectorAll('.tabs .tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+            overlay.querySelectorAll('.tab-content .tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
+            let card = null, flashCls = 'xcite-flash';
+            if (kind === 'cite') { card = overlay.querySelector(`.xcite-item[data-cite-focus="${idx}"]`); flashCls = 'xcite-flash'; }
+            else if (kind === 'ai') { card = overlay.querySelector(`tr[data-ai-focus="${idx}"]`); flashCls = 'row-flash'; }
+            else if (kind === 'plag') { card = overlay.querySelector(`.analysis-block[data-plag-focus="${idx}"]`); flashCls = 'plag-flash'; }
+            if (!card) return;
+            card.scrollIntoView({ block: 'nearest' });
+            card.classList.add(flashCls);
+            setTimeout(() => card.classList.remove(flashCls), 1200);
+        }
+
         _wireFrameCiteClicks(doc, overlay) {
             if (doc.body.dataset.xpaCiteWired) return;
             doc.body.dataset.xpaCiteWired = '1';
             doc.addEventListener('click', e => {
-                const m = e.target.closest('[data-cite]');
+                const m = e.target.closest('[data-cite],[data-ai],[data-plag]');
                 if (!m) return;
-                const tabs = overlay.querySelectorAll('.tabs .tab');
-                const panels = overlay.querySelectorAll('.tab-content .tab-panel');
-                tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === 'cit'));
-                panels.forEach(p => p.classList.toggle('active', p.dataset.panel === 'cit'));
-                const card = overlay.querySelector(`.xcite-item[data-cite-focus="${m.dataset.cite}"]`);
-                if (card) { card.scrollIntoView({ block: 'nearest' }); card.classList.add('xcite-flash'); setTimeout(() => card.classList.remove('xcite-flash'), 1200); }
+                const kind = m.dataset.cite != null ? 'cite' : (m.dataset.ai != null ? 'ai' : 'plag');
+                this._flashFindingCard(overlay, kind, m.dataset[kind]);
             });
         }
 
