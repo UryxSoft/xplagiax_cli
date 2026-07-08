@@ -115,6 +115,8 @@
 .xpa-h-excerpt::-webkit-scrollbar{width:4px}
 .xpa-h-excerpt::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px;transition:background .15s}
 .xpa-h-excerpt:hover::-webkit-scrollbar-thumb{background:#94a3b8}
+.xpa-h-excerpt.has-html-view{height:clamp(220px,44vh,520px);padding:0;overflow:hidden}
+.xpa-h-excerpt-frame{display:block;width:100%;height:100%;border:0;background:#fff}
 
 /* ━━ EMPTY STATES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .xpa-h-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:100%;min-height:180px;padding:clamp(24px,5vw,40px);text-align:center}
@@ -583,10 +585,34 @@
                 </div>
                 ${cards ? `<div class="xpa-h-scores">${cards}</div>` : ''}
                 <div style="display:flex;flex-direction:column;gap:8px">
-                    <div class="xpa-h-excerpt-lbl">Document excerpt</div>
-                    <div class="xpa-h-excerpt">${_esc(String(e.text||''))}</div>
+                    <div class="xpa-h-excerpt-lbl">${e.result_view ? 'Document preview' : 'Document excerpt'}</div>
+                    ${e.result_view
+                        ? `<div class="xpa-h-excerpt has-html-view"><iframe class="xpa-h-excerpt-frame" id="histPreviewFrame" src="${_esc(e.result_view)}" title="Document preview" loading="lazy" referrerpolicy="no-referrer"></iframe></div>`
+                        : `<div class="xpa-h-excerpt">${_esc(String(e.text||''))}</div>`}
                 </div>
             </div>`;
+            if (e.result_view) this._limitPreviewToFirstPage(document.getElementById('histPreviewFrame'));
+        }
+
+        // Recorta la vista previa del documento (result.html, paginado en .pdf-page)
+        // a solo su primera página, igual que el patrón usado para aiSplitHtmlFrame:
+        // el iframe primero reporta about:blank, así que se espera contenido real
+        // vía 'load' + sondeo corto de respaldo antes de ocultar el resto de páginas.
+        _limitPreviewToFirstPage(frame) {
+            if (!frame) return;
+            let done = false;
+            const apply = () => {
+                if (done) return;
+                let fdoc = null;
+                try { fdoc = frame.contentDocument; } catch (_) { return; }
+                if (!fdoc || !fdoc.body || !(fdoc.body.textContent || '').trim().length) return;
+                done = true;
+                fdoc.querySelectorAll('.pdf-page').forEach((p, i) => { if (i > 0) p.style.display = 'none'; });
+            };
+            frame.addEventListener('load', apply);
+            let tries = 0;
+            const poll = () => { if (done) return; apply(); if (!done && tries++ < 40) setTimeout(poll, 100); };
+            poll();
         }
 
         async _openEntry(id) {
