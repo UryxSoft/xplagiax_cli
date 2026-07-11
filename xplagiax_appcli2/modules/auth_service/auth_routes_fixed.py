@@ -137,7 +137,7 @@ def find_or_create_user(user_data):
 
 @auth_bp.route("/google/login")
 def google_login():
-    next_url = request.args.get('next', url_for('x_users.home'))
+    next_url = request.args.get('next', url_for('x_users.analysis'))
     session['oauth_next'] = next_url
     auth_url = google_oauth.get_authorization_url()  # tu cliente OAuth
     current_app.logger.info("Logging in with Google")
@@ -294,11 +294,11 @@ def google_callbackx():
         #print(f"📊 Estado final de sesión: {dict(flask_session)}")
 
         # 10.  REDIRECT ROBUSTO
-        next_url = flask_session.pop('oauth_next', None) or url_for('x_users.home')
+        next_url = flask_session.pop('oauth_next', None) or url_for('x_users.analysis')
         
         #  ASEGURAR QUE EL REDIRECT SEA ABSOLUTO
         if not next_url.startswith(('http://', 'https://', '/')):
-            next_url = url_for('x_users.home')
+            next_url = url_for('x_users.analysis')
             
         #print(f"🔄 Redirigiendo a: {next_url}")
         
@@ -324,7 +324,7 @@ def google_callbackx():
 @auth_bp.route("/microsoft/login")
 def microsoft_login():
     """Iniciar login con Microsoft"""
-    next_url = request.args.get('next', url_for('x_users.home'))
+    next_url = request.args.get('next', url_for('x_users.analysis'))
     session['oauth_next'] = next_url
     auth_url = microsoft_oauth.get_authorization_url()
     current_app.logger.info("Iniciando login con Microsoft")
@@ -500,10 +500,10 @@ def microsoft_callback():
         print(f"🎉 Microsoft OAuth login COMPLETADO exitosamente para {email}")
 
         # 10. REDIRECT ROBUSTO
-        next_url = flask_session.pop('oauth_next', None) or url_for('x_users.home')
+        next_url = flask_session.pop('oauth_next', None) or url_for('x_users.analysis')
         
         if not next_url.startswith(('http://', 'https://', '/')):
-            next_url = url_for('x_users.home')
+            next_url = url_for('x_users.analysis')
             
         print(f"🔄 Redirigiendo a: {next_url}")
         
@@ -936,7 +936,7 @@ def start_trial():
             return jsonify({
                 'message': f'Trial of {plan.trial_days} days started for {plan_name}',
                 'trial_ends': current_user.trial_ends_at.isoformat(),
-                'redirect': url_for('x_users.home')
+                'redirect': url_for('x_users.analysis')
             }), 200
         else:
             return jsonify({'error': 'The trial could not be started'}), 500
@@ -1001,7 +1001,7 @@ def start_trial_NO():  # SIN decorador login_required
                 'success': True,
                 'message': f'{plan.trial_days}-day trial started for {plan_name}',
                 'trial_ends': current_user.trial_ends_at.isoformat(),
-                'redirect': url_for('x_users.home')
+                'redirect': url_for('x_users.analysis')
             }), 200
         else:
             db.session.rollback()

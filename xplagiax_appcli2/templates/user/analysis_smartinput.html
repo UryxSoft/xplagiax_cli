@@ -769,6 +769,17 @@ body.xp-file-preview .mode-switch-container {
 .xpa-mt .xcite-doc-marker{display:inline-block;font-size:.6rem;font-weight:700;font-style:normal;color:#64748b;background:rgba(100,116,139,.1);border:1px solid rgba(100,116,139,.25);border-radius:4px;padding:0 4px;margin-right:4px;vertical-align:middle}
 .xpa-mt .xcite-orcid{display:inline-flex;align-items:center;gap:4px;font-size:.64rem;font-weight:600;padding:2px 7px;border-radius:20px;text-decoration:none;background:rgba(166,206,57,.14);color:#5a7302;border:1px solid rgba(166,206,57,.4)}
 .xpa-mt .xcite-warn{font-size:.68rem;color:#b45309;margin-top:7px;line-height:1.45;border-left:2px solid rgba(245,158,11,.5);padding-left:8px}
+.xpa-mt .xcite-occs{display:flex;flex-direction:column;gap:0}
+.xpa-mt .xcite-occ{padding:5px 0;border-bottom:1px dashed #f0f3f8;display:flex;align-items:flex-start;gap:6px}
+.xpa-mt .xcite-occ:last-child{border-bottom:none;padding-bottom:0}
+.xpa-mt .xcite-occ:first-child{padding-top:0}
+.xpa-mt .xcite-occ-idx{flex-shrink:0;font-size:.58rem;font-weight:800;color:#94a3b8;width:14px;margin-top:3px;text-align:right}
+.xpa-mt .xcite-occ-text{flex:1;min-width:0;font-size:.81rem;font-style:italic;color:#334155;line-height:1.55;word-break:break-word}
+.xpa-mt .xcite-occ-empty{color:#94a3b8;font-style:normal!important}
+.xpa-mt .xcite-occ-btn{cursor:pointer}
+.xpa-mt .xcite-occ-btn:hover .xcite-occ-text{text-decoration:underline;text-decoration-style:dotted;color:#064CDB}
+.xpa-mt .xcite-occ-count{display:inline-block;font-size:.58rem;font-weight:700;color:#64748b;background:#f1f5f9;border-radius:20px;padding:1px 7px;margin-left:5px;text-transform:none;letter-spacing:0;vertical-align:middle}
+.xpa-mt .xcite-num--marker{font-size:.7rem;padding:0 4px;min-width:28px;width:auto;border-radius:6px}
 @media(min-width:560px){.xpa-mt .xcite-q-ring{width:80px;height:80px}}
 @keyframes mtFade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .xpa-mt h2{font-size:18px;font-weight:700;color:#0f172a;margin:8px 0 16px}
@@ -796,6 +807,11 @@ body.xp-file-preview .mode-switch-container {
 .xpa-mt .score-fill-high{background:linear-gradient(90deg,#10b981,#34d399)}
 .xpa-mt .score-value{position:absolute;right:0;top:-24px;font-size:13px;font-weight:700;color:#0f172a}
 .xpa-mt .score-breakdown{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:12px}
+/* Standard hover tooltip: any element with data-tip="..." gets a dark popover on hover/focus. */
+.xpa-mt [data-tip]{position:relative;cursor:help}
+.xpa-mt [data-tip]::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 9px);transform:translateX(-50%) translateY(4px);background:#0f172a;color:#f8fafc;font-size:.68rem;font-weight:500;line-height:1.45;padding:7px 10px;border-radius:8px;white-space:normal;width:max-content;max-width:220px;box-shadow:0 10px 24px -8px rgba(15,23,42,.45);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease,transform .15s ease;z-index:80;text-align:left}
+.xpa-mt [data-tip]::before{content:'';position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%) translateY(4px);border:5px solid transparent;border-top-color:#0f172a;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease,transform .15s ease;z-index:80}
+.xpa-mt [data-tip]:hover::after,.xpa-mt [data-tip]:hover::before,.xpa-mt [data-tip]:focus-visible::after,.xpa-mt [data-tip]:focus-visible::before{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
 .xpa-mt .score-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:12px;color:#64748b;background:#f8fafc;border:1px solid #e6ebf2;border-radius:8px;padding:6px 10px;flex:1 1 auto;min-width:90px}
 .xpa-mt .score-item span:last-child{font-size:11px;font-weight:700;color:#0f172a}
 .xpa-mt .score-badge{font-weight:700;padding:4px 10px;border-radius:8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
@@ -1002,13 +1018,7 @@ body.xp-file-preview .mode-switch-container {
                             <path d="M12 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h2 style="color: #222dff; margin: 0; display: flex; align-items: center; gap: 8px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
-                            class="bi bi-file-earmark-break-fill" viewBox="0 0 16 16">
-                            <path
-                                d="M4 0h5.293A1 1 0 0 1 10 .293L13.707 4a1 1 0 0 1 .293.707V9H2V2a2 2 0 0 1 2-2m5.5 1.5v2a1 1 0 0 0 1 1h2zM2 12h12v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM.5 10a.5.5 0 0 0 0 1h15a.5.5 0 0 0 0-1z" />
-                        </svg>AI TestPro
-                    </h2>
+
                 </div>
 
                 <div class="row">
@@ -2802,10 +2812,17 @@ body.xp-file-preview .mode-switch-container {
                 const text = (extractData && extractData.text) ? extractData.text : '';
                 if (!text) throw new Error('No text could be extracted from the document.');
                 const htmlViewUrl = (extractData && extractData.result_view) ? extractData.result_view : null;
+                const docToken = (extractData && extractData.doc_token) ? extractData.doc_token : null;
 
                 // 2) Ejecutar los mismos servicios de texto y mostrar el split view.
                 //    (runAnalysesOnText gestiona loading, errores y render.)
                 await this.runAnalysesOnText(text, selectedAnalysisTypes, htmlViewUrl);
+
+                // 3) Settings > Privacy > "Document Retention": si el usuario pidió
+                //    borrar sus documentos tras el análisis, hacerlo ahora que ya
+                //    se generaron y mostraron los resultados. No bloquea ni rompe
+                //    la UI si falla — el análisis ya se completó igual.
+                this._maybeDeleteAfterAnalysis(docToken);
             } catch (error) {
                 hideCustomLoadingOnDiv('inputWrapper');
                 console.error('Error in file analysis:', error);
@@ -2815,6 +2832,29 @@ body.xp-file-preview .mode-switch-container {
                     analysisButton.disabled = false;
                     analysisButton.innerHTML = '<i class="animation"></i>Analysis<i class="animation"></i>';
                 }
+            }
+        }
+
+        // Settings > Privacy > "Document Retention": consulta la preferencia FRESCA
+        // (no cacheada — pudo cambiar en otra pestaña) y, si está activa, borra la
+        // carpeta del documento subido (archivo original + preview/imágenes).
+        // Silencioso: un fallo aquí no debe alarmar al usuario, el análisis ya se mostró.
+        async _maybeDeleteAfterAnalysis(docToken) {
+            if (!docToken) return;
+            try {
+                const pref = await fetch('/api/preferences/document-retention', { credentials: 'same-origin' });
+                if (!pref.ok) return;
+                const prefData = await pref.json();
+                if (!prefData || !prefData.delete_after_analysis) return;
+
+                await fetch('/x_doc/delete_uploaded_document', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ doc_token: docToken })
+                });
+            } catch (err) {
+                console.warn('Document retention cleanup failed:', err);
             }
         }
 
@@ -3150,6 +3190,8 @@ body.xp-file-preview .mode-switch-container {
             if (!response.ok) throw new Error(await this._errMsg(response));
 
             const submitData = await response.json();
+            // Cache hit: el backend devuelve el reporte completo sin job que pollear.
+            if (submitData.done && submitData.result) return submitData.result;
             const jobId = submitData.job_id;
             if (!jobId) throw new Error('FinderX did not return a job id.');
 
@@ -3504,7 +3546,7 @@ body.xp-file-preview .mode-switch-container {
             const summary = result.segment_summary || {};
             const segs    = Array.isArray(result.segment_matches) ? result.segment_matches : [];
             const matches = Array.isArray(result.academic_matches) ? result.academic_matches : [];
-            const flagged  = Number(summary.segments_flagged) || segs.filter(s => String(s.decision || '').toLowerCase() === 'plagiarism').length;
+            const flagged  = Number(summary.segments_flagged) || segs.filter(s => ['plagiarism', 'paraphrase'].includes(String(s.decision || '').toLowerCase())).length;
             const analyzed = Number(summary.segments_analyzed) || segs.length;
 
             const card = this._buildIntegrityCard({
@@ -3649,13 +3691,21 @@ body.xp-file-preview .mode-switch-container {
             const confidence  = String(seg.confidence || 'none').toLowerCase();
             const reason      = seg.reason || '';
             const src         = seg.matched_source || null;
-            const isPlag      = decision === 'plagiarism';
+            // FinderX cuenta como "flagged" plagiarism Y paraphrase
+            // (segment_summary.segments_flagged) — el render debe coincidir.
+            const isPlag      = decision === 'plagiarism' || decision === 'paraphrase';
             const idx         = seg.segment_index != null ? seg.segment_index : '';
             const charRange   = (seg.char_start != null && seg.char_end != null) ? `chars ${seg.char_start}–${seg.char_end}` : '';
             const preview     = this._escapeHtml(seg.text_preview || '');
             const confColorMap = { high: '#dc2626', medium: '#d97706', low: '#f59e0b', none: '#94a3b8' };
             const confColor    = confColorMap[confidence] || '#94a3b8';
-            const metric = (val, lbl, col) => `<div class="seg-metric"><span class="seg-metric-val" style="color:${col}">${val}</span><span class="seg-metric-lbl">${lbl}</span></div>`;
+            const metric = (val, lbl, col, tip) => `<div class="seg-metric"><span class="seg-metric-val" style="color:${col}">${val}</span><span class="seg-metric-lbl"${tip ? ` data-tip="${tip}"` : ''}>${lbl}</span></div>`;
+            const METRIC_TIP = {
+                'Literal': 'Percentage of exact overlapping word sequences (n-grams) found in the matched source.',
+                'Semantic': 'How similar the meaning is to the matched source, even with different wording.',
+                'Consec.': 'Longest run of consecutive identical words found in the matched source.',
+                'Match': 'Overall confidence score that this segment matches the source.',
+            };
 
             // Cleared / original segment: calm card that still explains WHY it is not plagiarism.
             if (!isPlag) {
@@ -3679,21 +3729,23 @@ body.xp-file-preview .mode-switch-container {
                     <div class="block-content" style="color:#475569">"${preview}"</div>
                     ${reason ? `<div class="seg-reason"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>${this._escapeHtml(reason)}</div>` : ''}
                     <div class="seg-metrics">
-                        ${metric(ngramPct + '%', 'Literal', ngramPct >= 25 ? '#d97706' : '#94a3b8')}
-                        ${metric(semanticPct + '%', 'Semantic', '#64748b')}
-                        ${metric(matchScore + '%', 'Match', '#64748b')}
+                        ${metric(ngramPct + '%', 'Literal', ngramPct >= 25 ? '#d97706' : '#94a3b8', METRIC_TIP['Literal'])}
+                        ${metric(semanticPct + '%', 'Semantic', '#64748b', METRIC_TIP['Semantic'])}
+                        ${metric(matchScore + '%', 'Match', '#64748b', METRIC_TIP['Match'])}
                     </div>
                 </div>`;
             }
 
             // Flagged segment.
-            const color = confidence === 'high' ? '#dc2626' : '#d97706';
-            const statusLabel = confidence === 'high' ? 'Plagiarism detected' : 'Possible plagiarism';
+            const color = (decision === 'plagiarism' && confidence === 'high') ? '#dc2626' : '#d97706';
+            const statusLabel = decision === 'paraphrase' ? 'Possible paraphrase'
+                : confidence === 'high' ? 'Plagiarism detected' : 'Possible plagiarism';
 
             let sourceHtml = '';
             if (src) {
                 const title = this._escapeHtml(src.title || 'Source');
-                const url = src.url || (src.doi ? `https://doi.org/${src.doi}` : null);
+                // _doiHref: no re-prefija DOIs que ya vienen como URL completa y escapa.
+                const url = this._doiHref(src);
                 const titleHtml = url
                     ? `<a class="seg-source-link" href="${url}" target="_blank" rel="noopener noreferrer">${title}</a>`
                     : `<strong class="seg-source-link" style="color:#0f172a">${title}</strong>`;
@@ -3722,10 +3774,10 @@ body.xp-file-preview .mode-switch-container {
             </div>`;
 
             const metricsHtml = `<div class="seg-metrics">
-                ${metric(ngramPct + '%', 'Literal', color)}
-                ${metric(semanticPct + '%', 'Semantic', '#064CDB')}
-                ${metric(contiguous, 'Consec.', '#475569')}
-                ${metric(matchScore + '%', 'Match', color)}
+                ${metric(ngramPct + '%', 'Literal', color, METRIC_TIP['Literal'])}
+                ${metric(semanticPct + '%', 'Semantic', '#064CDB', METRIC_TIP['Semantic'])}
+                ${metric(contiguous, 'Consec.', '#475569', METRIC_TIP['Consec.'])}
+                ${metric(matchScore + '%', 'Match', color, METRIC_TIP['Match'])}
             </div>`;
 
             const focusAttr = (opts.origIndex != null)
@@ -3847,8 +3899,8 @@ body.xp-file-preview .mode-switch-container {
             return `
             <div class="results-content acad-sec" style="padding:8px 16px 16px">
                 <div class="acad-sec-hdr">
-                    <h3 class="acad-sec-title">Related Sources</h3>
-                    <span class="acad-count">${matches.length}</span>
+                    <h3 class="acad-sec-title" data-tip="Academic and web sources found to be topically related to your text — not necessarily copied.">Related Sources</h3>
+                    <span class="acad-count" data-tip="Number of related sources found in the academic corpus.">${matches.length}</span>
                 </div>
                 <div class="acad-hint">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
@@ -4046,9 +4098,11 @@ body.xp-file-preview .mode-switch-container {
                 container.innerHTML = '<div style="font-size:0.82rem;color:#94a3b8;padding:8px 0">No segments — content appears original.</div>';
                 return;
             }
-            // Show plagiarism segments first, then originals (compacted)
-            const flagged  = segments.filter(s => String(s.decision || '').toLowerCase() === 'plagiarism');
-            const original = segments.filter(s => String(s.decision || '').toLowerCase() !== 'plagiarism');
+            // Show flagged segments first (plagiarism + paraphrase — same set that
+            // FinderX counts in segment_summary.segments_flagged), then the rest.
+            const FLAGGED = ['plagiarism', 'paraphrase'];
+            const flagged  = segments.filter(s => FLAGGED.includes(String(s.decision || '').toLowerCase()));
+            const original = segments.filter(s => !FLAGGED.includes(String(s.decision || '').toLowerCase()));
             const ordered  = [...flagged, ...original];
             ordered.forEach((seg, i) => {
                 setTimeout(() => {
@@ -4078,8 +4132,20 @@ body.xp-file-preview .mode-switch-container {
             return `<circle cx="70" cy="70" r="${r}" fill="none" stroke="${color}1a" stroke-width="10"/>`
                  + `<circle class="ar-arc" cx="70" cy="70" r="${r}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}" data-final="${off.toFixed(1)}" transform="rotate(-90 70 70)"/>`;
         }
+        // name -> plain-English explanation of what this ring/metric measures.
+        _mtLegendTip(name) {
+            const TIPS = {
+                'AI': 'How much of the text looks machine-generated, based on writing-pattern analysis.',
+                'Human': 'How much of the text looks naturally written by a person.',
+                'Similarity': 'How much of the text matches other sources found on the web or in academic databases.',
+                'Citations': 'Overall quality of how sources are cited and referenced in this document.',
+                'Original': 'How much of the text appears unique — shown when no analysis has flagged anything yet.',
+            };
+            return TIPS[name] || '';
+        }
         _mtLegendRow(color, name, sub, pct) {
-            return `<div style="display:flex;align-items:center;gap:9px;">
+            const tip = this._mtLegendTip(name);
+            return `<div${tip ? ` data-tip="${tip}"` : ''} style="display:flex;align-items:center;gap:9px;">
                 <div style="width:7px;height:7px;border-radius:50%;background:${color};box-shadow:0 0 5px ${color};flex-shrink:0;"></div>
                 <div style="flex:1;min-width:0;overflow:hidden;"><span style="font-size:11.5px;font-weight:600;color:#0f172a;">${name}</span><span style="font-size:10px;color:#94a3b8;margin-left:4px;">${sub}</span></div>
                 <span style="font-size:12px;font-weight:700;color:${color};font-variant-numeric:tabular-nums;flex-shrink:0;">${pct}%</span>
@@ -4133,7 +4199,7 @@ body.xp-file-preview .mode-switch-container {
             const originalPct = source ? Math.max(0, 100 - overall) : 0;
             const summary = (source && source.segment_summary) || {};
             const segs = (source && Array.isArray(source.segment_matches)) ? source.segment_matches : [];
-            const flaggedN = source ? (num(summary.segments_flagged) || segs.filter(x => String(x.decision || '').toLowerCase() === 'plagiarism').length) : 0;
+            const flaggedN = source ? (num(summary.segments_flagged) || segs.filter(x => ['plagiarism', 'paraphrase'].includes(String(x.decision || '').toLowerCase())).length) : 0;
             const plagFlagged = flaggedN > 0;
 
             // Citas: MISMO score que muestra el tab "Citations & References".
@@ -4167,20 +4233,20 @@ body.xp-file-preview .mode-switch-container {
             const style = this._mtStyleScore(ai ? ai.stylometric : null);
             const refs = this._mtRefsScore(ai ? ai.citation : null);
             const alerts = [
-                ai       ? { goto: 'ai',   high: aiPct >= 50, icon: 'fa-microchip', title: 'AI-Generated Content', txt: `${aiPct}% of the text shows AI patterns`, btn: 'View Details' } : null,
-                source   ? { goto: 'plag', high: plagFlagged, icon: plagFlagged ? 'fa-copy' : 'fa-shield-alt', title: 'Plagiarism Report',
+                ai       ? { goto: 'ai',   high: aiPct >= 50, icon: 'fa-microchip', title: 'AI-Generated Content', tip: 'Estimate of how much of the text was written by an AI model, based on writing-pattern analysis.', txt: `${aiPct}% of the text shows AI patterns`, btn: 'View Details' } : null,
+                source   ? { goto: 'plag', high: plagFlagged, icon: plagFlagged ? 'fa-copy' : 'fa-shield-alt', title: 'Plagiarism Report', tip: 'Summary of text passages that match known external sources.',
                              txt: plagFlagged ? `${flaggedN} passage${flaggedN === 1 ? '' : 's'} match known sources · ${exact}% literal copy`
                                               : `No copied passages · ${overall}% thematic similarity`, btn: 'View Report' } : null,
-                citation ? { goto: 'cit',  high: (citRiskLvl === 'high' || citRiskLvl === 'critical'), icon: 'fa-quote-right', title: 'Citations, References & Bibliography',
+                citation ? { goto: 'cit',  high: (citRiskLvl === 'high' || citRiskLvl === 'critical'), icon: 'fa-quote-right', title: 'Citations, References & Bibliography', tip: 'Summary of how well the document’s citations and reference list are formed and validated.',
                              txt: `Quality ${citScore}/100 · ${citRiskLabel}`, btn: 'View Citations' } : null,
-                (ai && ai.stylometric) ? { goto: 'style', high: !!(style && style.cls === 'score-low'), icon: 'fa-pen-nib', title: 'Style Analysis', txt: style ? style.label : 'Not analyzed', btn: 'View Style' } : null,
-                (ai && ai.citation && refs.total > 0) ? { goto: 'refs', high: refs.cls === 'score-low', icon: 'fa-book-open', title: 'References Integrity', txt: refs.label, btn: 'View References' } : null,
+                (ai && ai.stylometric) ? { goto: 'style', high: !!(style && style.cls === 'score-low'), icon: 'fa-pen-nib', title: 'Style Analysis', tip: 'How consistent the writing style is across the document — big shifts can signal mixed authorship.', txt: style ? style.label : 'Not analyzed', btn: 'View Style' } : null,
+                (ai && ai.citation && refs.total > 0) ? { goto: 'refs', high: refs.cls === 'score-low', icon: 'fa-book-open', title: 'References Integrity', tip: 'How trustworthy the detected references are — whether they look real, verifiable, and properly used.', txt: refs.label, btn: 'View References' } : null,
             ].filter(Boolean);
             const alertCards = alerts.map(a => `
                 <div class="alert-card ${a.high ? 'alert-high' : 'alert-medium'}" style="border-left-color:${a.high ? '#ef4444' : '#3b82f6'};">
                     <div class="alert-icon"><i class="fas ${a.icon}"></i></div>
                     <div class="alert-content">
-                        <h3>${a.title}</h3><p>${a.txt}</p>
+                        <h3 data-tip="${a.tip}">${a.title}</h3><p>${a.txt}</p>
                         <button class="btn-link" data-goto="${a.goto}">${a.btn}</button>
                     </div>
                 </div>`).join('');
@@ -4192,21 +4258,21 @@ body.xp-file-preview .mode-switch-container {
             </div>
             <div class="integrity-score">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <h4 style="margin:0;font-size:14px;font-weight:700;">Integrity Score</h4>
+                    <h4 data-tip="Combined risk score — the higher of the AI-generation risk and any confirmed plagiarism risk." style="margin:0;font-size:14px;font-weight:700;">Integrity Score</h4>
                     <span class="score-badge" style="background:${risk.c}1a;color:${risk.c};border:1px solid ${risk.c};">${risk.t}</span>
                 </div>
                 <div style="margin-bottom:16px;">
-                    <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:4px;"><span>Document Integrity Risk Level</span><span style="font-weight:700;color:${risk.c}">${riskPct}%</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:4px;"><span data-tip="Overall risk level for this document, from 0% (no concerns) to 100% (high risk).">Document Integrity Risk Level</span><span style="font-weight:700;color:${risk.c}">${riskPct}%</span></div>
                     <div class="score-meter" style="height:8px;margin:0;"><div style="height:100%;width:${Math.max(8, riskPct)}%;background:${risk.c};transition:width .6s;"></div></div>
                 </div>
                 <div>
-                    <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:4px;"><span>Integrity Distribution Sequence</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:4px;"><span data-tip="Visual breakdown of how much of the text is human-written, AI-generated, or similar to other sources.">Integrity Distribution Sequence</span></div>
                     ${dist}
                 </div>
                 <div style="display:flex;gap:12px;font-size:10px;margin-top:12px;flex-wrap:wrap;color:#475569;">
-                    <div style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#10b981;"></span> Human</div>
-                    <div style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></span> AI</div>
-                    <div style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#f59e0b;"></span> Similarity</div>
+                    <div data-tip="Share of the text that reads as naturally written by a person." style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#10b981;"></span> Human</div>
+                    <div data-tip="Share of the text that shows patterns typical of AI-generated writing." style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></span> AI</div>
+                    <div data-tip="Share of the text that matches other sources found on the web or in academic databases." style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#f59e0b;"></span> Similarity</div>
                 </div>
             </div>
             <div class="alert-cards">${alertCards}</div>`;
@@ -4391,7 +4457,7 @@ body.xp-file-preview .mode-switch-container {
             const meta = source.metadata || {};
             const language = source.language ? String(source.language).toUpperCase() : '';
 
-            const flaggedSegs = segs.filter(x => String(x.decision || '').toLowerCase() === 'plagiarism');
+            const flaggedSegs = segs.filter(x => ['plagiarism', 'paraphrase'].includes(String(x.decision || '').toLowerCase()));
             const cleanSegs   = segs.filter(x => String(x.decision || '').toLowerCase() !== 'plagiarism');
             const analyzed = analyzedRaw || segs.length;
             const flaggedN = num(summary.segments_flagged) || flaggedSegs.length;
@@ -4417,7 +4483,7 @@ body.xp-file-preview .mode-switch-container {
             }
 
             const head = `<div class="plag-hero">
-                <div class="plag-hero-ring">${this._mtGauge(overall, ringColor)}</div>
+                <div class="plag-hero-ring" data-tip="Overall similarity score — how much of this text matches sources found on the web or in academic databases.">${this._mtGauge(overall, ringColor)}</div>
                 <div class="plag-hero-main">
                     <div class="plag-hero-verdict" style="color:${vColor}">${vLabel}<span class="plag-badge" style="background:${vBadgeCol}1a;color:${vBadgeCol}">${vBadge}</span></div>
                     <div class="plag-hero-sub">${vSub}</div>
@@ -4425,17 +4491,17 @@ body.xp-file-preview .mode-switch-container {
             </div>`;
 
             const scoreTiles = `<div class="plag-scores">
-                <div class="plag-score"><div class="plag-score-v" style="color:${colFor(overall)}">${overall}%</div><div class="plag-score-l">Overall</div><div class="plag-score-h">Similarity to sources</div></div>
-                <div class="plag-score"><div class="plag-score-v" style="color:${colFor(exact)}">${exact}%</div><div class="plag-score-l">Exact</div><div class="plag-score-h">Literal text overlap</div></div>
-                <div class="plag-score"><div class="plag-score-v" style="color:#064CDB">${semantic}%</div><div class="plag-score-l">Semantic</div><div class="plag-score-h">Meaning overlap</div></div>
-                <div class="plag-score"><div class="plag-score-v" style="color:#475569;text-transform:capitalize;font-size:.98rem">${esc(conf)}</div><div class="plag-score-l">Confidence</div><div class="plag-score-h">Detection certainty</div></div>
+                <div class="plag-score"><div class="plag-score-v" style="color:${colFor(overall)}">${overall}%</div><div class="plag-score-l" data-tip="Combined similarity score across all analyzed segments — the headline plagiarism number.">Overall</div><div class="plag-score-h">Similarity to sources</div></div>
+                <div class="plag-score"><div class="plag-score-v" style="color:${colFor(exact)}">${exact}%</div><div class="plag-score-l" data-tip="Percentage of text that is a literal, word-for-word copy of a source.">Exact</div><div class="plag-score-h">Literal text overlap</div></div>
+                <div class="plag-score"><div class="plag-score-v" style="color:#064CDB">${semantic}%</div><div class="plag-score-l" data-tip="Percentage of text that shares the same meaning as a source, even when reworded (paraphrased).">Semantic</div><div class="plag-score-h">Meaning overlap</div></div>
+                <div class="plag-score"><div class="plag-score-v" style="color:#475569;text-transform:capitalize;font-size:.98rem">${esc(conf)}</div><div class="plag-score-l" data-tip="How certain the system is about this plagiarism verdict.">Confidence</div><div class="plag-score-h">Detection certainty</div></div>
             </div>`;
 
             const summaryRow = analyzed > 0 ? `<div class="score-breakdown" style="margin-bottom:14px">
-                <div class="score-item"><span>Segments</span><span>${analyzed}</span></div>
-                <div class="score-item"><span>Flagged</span><span style="color:${flaggedN > 0 ? '#dc2626' : '#059669'}">${flaggedN}</span></div>
-                <div class="score-item"><span>Clean</span><span style="color:#059669">${cleanN}</span></div>
-                <div class="score-item"><span>Flagged ratio</span><span>${(ratio * 100).toFixed(1)}%</span></div>
+                <div class="score-item"><span data-tip="Total number of text chunks that were checked against external sources.">Segments</span><span>${analyzed}</span></div>
+                <div class="score-item"><span data-tip="Segments that matched a source closely enough to be marked as plagiarism or paraphrase.">Flagged</span><span style="color:${flaggedN > 0 ? '#dc2626' : '#059669'}">${flaggedN}</span></div>
+                <div class="score-item"><span data-tip="Segments with no meaningful match to any external source.">Clean</span><span style="color:#059669">${cleanN}</span></div>
+                <div class="score-item"><span data-tip="Share of all analyzed segments that were flagged as plagiarism or paraphrase.">Flagged ratio</span><span>${(ratio * 100).toFixed(1)}%</span></div>
             </div>` : '';
 
             const noteHtml = (!hasFlag && (overall >= 25 || exact >= 25)) ? `<div class="plag-note">
@@ -4564,34 +4630,34 @@ body.xp-file-preview .mode-switch-container {
                     <div class="xcite-q-num" style="color:${qColor}">${qScore}<span>/100</span></div>
                 </div>
                 <div class="xcite-q-main">
-                    <div class="xcite-q-top"><span class="xcite-q-title">Citation Quality</span><span class="xcite-risk" style="background:${rk.bg};color:${rk.c}">${rk.t}</span></div>
+                    <div class="xcite-q-top"><span class="xcite-q-title" data-tip="Overall score combining citation style consistency, coverage, and bibliography accuracy.">Citation Quality</span><span class="xcite-risk" style="background:${rk.bg};color:${rk.c}">${rk.t}</span></div>
                     <div class="xcite-q-metrics">
-                        <div><b title="${esc(c.detected_style || '—')}">${esc(c.detected_style || '—')}</b><span>Style</span></div>
-                        <div><b>${Math.round(num(c.style_consistency))}%</b><span>Consistency</span></div>
-                        <div><b>${Math.round(num(c.citation_coverage))}%</b><span>Coverage</span></div>
-                        <div><b>${Math.round(num(c.bibliography_coverage))}%</b><span>Biblio.</span></div>
+                        <div data-tip="The citation format detected in this document (e.g. APA, IEEE, MLA)."><b title="${esc(c.detected_style || '—')}">${esc(c.detected_style || '—')}</b><span>Style</span></div>
+                        <div data-tip="How consistently the same citation style is used throughout the document."><b>${Math.round(num(c.style_consistency))}%</b><span>Consistency</span></div>
+                        <div data-tip="Percentage of claims or quotes in the text that are backed by a citation."><b>${Math.round(num(c.citation_coverage))}%</b><span>Coverage</span></div>
+                        <div data-tip="Percentage of the bibliography that could be verified against academic databases."><b>${Math.round(num(c.bibliography_coverage))}%</b><span>Biblio.</span></div>
                     </div>
                 </div>
             </div>`;
 
-            const chip = (k, v, col) => `<div class="score-item"><span>${k}</span><span${col ? ` style="color:${col}"` : ''}>${v}</span></div>`;
+            const chip = (k, v, col, tip) => `<div class="score-item"><span${tip ? ` data-tip="${tip}"` : ''}>${k}</span><span${col ? ` style="color:${col}"` : ''}>${v}</span></div>`;
             const summary = `<div class="xcite-sec-h"><span>Summary</span></div>
             <div class="score-breakdown" style="margin-bottom:14px">
-                ${chip('Citations', num(c.citations_found))}
-                ${chip('References', num(c.references_found))}
-                ${chip('Valid', nValid, '#059669')}
-                ${chip('Partial', num(c.partial_references), num(c.partial_references) > 0 ? '#d97706' : '')}
-                ${chip('Not found', nNotFound, nNotFound > 0 ? '#dc2626' : '')}
-                ${chip('Orphan cites', num(c.orphan_citations), num(c.orphan_citations) > 0 ? '#d97706' : '')}
-                ${chip('Orphan refs', num(c.orphan_references), num(c.orphan_references) > 0 ? '#d97706' : '')}
+                ${chip('Citations', num(c.citations_found), '', 'Total number of in-text citation markers found (e.g. (Author, Year) or [1]).')}
+                ${chip('References', num(c.references_found), '', 'Total number of entries found in the bibliography / reference list.')}
+                ${chip('Valid', nValid, '#059669', 'References that were successfully verified against an academic database.')}
+                ${chip('Partial', num(c.partial_references), num(c.partial_references) > 0 ? '#d97706' : '', 'References that were found but with some mismatched details, like title or year.')}
+                ${chip('Not found', nNotFound, nNotFound > 0 ? '#dc2626' : '', 'References that could not be verified against any academic database.')}
+                ${chip('Orphan cites', num(c.orphan_citations), num(c.orphan_citations) > 0 ? '#d97706' : '', 'In-text citations that have no matching entry in the bibliography.')}
+                ${chip('Orphan refs', num(c.orphan_references), num(c.orphan_references) > 0 ? '#d97706' : '', 'Bibliography entries that are never cited anywhere in the text.')}
             </div>`;
 
             const cr = c.coverage_report || {}, doi = cr.doi_stats || {};
             const coverage = (cr.citation_coverage_score != null || cr.citation_integrity_index != null || doi.found_in_text != null) ? `<div class="score-breakdown" style="margin-bottom:14px">
-                ${chip('Coverage (CCS)', Math.round(num(cr.citation_coverage_score)) + '%')}
-                ${chip('Integrity (CII)', Math.round(num(cr.citation_integrity_index)) + '%')}
-                ${chip('False-neg risk', Math.round(num(cr.false_negative_risk)) + '%')}
-                ${chip('DOIs resolved', num(doi.resolved) + '/' + num(doi.found_in_text))}
+                ${chip('Coverage (CCS)', Math.round(num(cr.citation_coverage_score)) + '%', '', 'Citation Coverage Score — percentage of the text’s claims that have a supporting citation nearby.')}
+                ${chip('Integrity (CII)', Math.round(num(cr.citation_integrity_index)) + '%', '', 'Citation Integrity Index — how well the bibliography as a whole is verified and consistent.')}
+                ${chip('False-neg risk', Math.round(num(cr.false_negative_risk)) + '%', '', 'Estimated chance that content needing a citation was missed by the detector.')}
+                ${chip('DOIs resolved', num(doi.resolved) + '/' + num(doi.found_in_text), '', 'Number of DOI identifiers found in the text that were successfully looked up, out of the total found.')}
             </div>` : '';
 
             const stMap = {
@@ -4725,27 +4791,26 @@ body.xp-file-preview .mode-switch-container {
             };
             // Claim ANTES del marcador numérico: en estilo [n] (Wikipedia/IEEE) el
             // marcador va DESPUÉS de su afirmación → el texto citado es lo que hay
-            // entre el marcador anterior (]/salto/fin de oración real) y este marcador.
+            // entre el marcador anterior (]/salto de párrafo) y este marcador.
+            // Se captura el párrafo completo, no solo la oración inmediata.
             const claimBefore = (text, bStart, bEnd) => {
                 let p = bStart;
-                while (p > 0 && /["'”’»);:,.!?\s]/.test(text[p - 1])) p--;   // puntuación del propio claim
+                while (p > 0 && /["'‘’»);:,.!?\s]/.test(text[p - 1])) p--;   // puntuación del propio claim
                 let st = p;
-                const MAXC = 500;
+                const MAXC = 1400;  // ventana amplia: párrafos de varias oraciones
                 while (st > 0 && (p - st) < MAXC) {
                     const ch = text[st - 1];
-                    if (ch === ']' || ch === '\n' || ch === '!' || ch === '?') break;
-                    if (ch === '.' && /\s/.test(text[st] || ' ')) {
-                        let w = st - 1;
-                        while (w > 0 && /[A-Za-zÀ-ɏ]/.test(text[w - 1])) w--;
-                        const word = text.slice(w, st - 1);
-                        const abbr = (word.length === 1 && /[A-Z]/.test(word)) ||
-                            /^(al|etc|cf|vs|vol|fig|no|pp?|eds?|ej|ca|dr|mr|mrs|ms|prof|st|jr|sr|approx|ibid|art|cap|ed|núm|pág|sig)$/i.test(word);
-                        if (!abbr) break;
+                    if (ch === ']') break;          // fin del marcador [n] anterior
+                    if (ch === '\n') {
+                        // Solo parar en salto que separa párrafos reales (línea en blanco);
+                        // un salto simple dentro del párrafo es un line-wrap de PDF.
+                        const prevCh = st > 1 ? text[st - 2] : '';
+                        if (prevCh === '\n' || st === 1) break;
                     }
                     st--;
                 }
                 while (st < bStart && /\s/.test(text[st])) st++;
-                let claim = text.slice(st, bStart).replace(/\s+$/, '');
+                let claim = text.slice(st, bStart).replace(/\s+$/, '').replace(/\s+/g, ' ');
                 const claimTrunc = (p - st) >= MAXC;
                 if (claimTrunc) claim = claim.replace(/^\S*\s/, '');
                 return { bracket: true, claim, claimTrunc, docMatch: text.slice(bStart, bEnd), hlStart: st, hlEnd: bEnd };
@@ -4791,37 +4856,100 @@ body.xp-file-preview .mode-switch-container {
             };
             const normDoc = normalize(docText);
 
-            const citeItems = cites.map((ci, i) => {
-                const conf = ci.confidence != null ? Math.round(ci.confidence * 100) : null;
-                const meta = [esc(ci.author || ''), ci.year ? esc(String(ci.year)) : '', ci.style ? esc(String(ci.style).toUpperCase()) : ''].filter(Boolean).join(' · ');
-                const ctx = citeContext(docText, normDoc, ci.raw_text || '', ci.start_pos);
-                let bodyHtml;
-                const rawMarker = esc(ci.raw_text || '');
-                const docMarkerBadge = rawMarker ? `<span class="xcite-doc-marker" title="Marker in document">${rawMarker}</span>` : '';
-                if (ctx && ctx.bracket && ctx.claim) {
-                    bodyHtml = `<div class="xcite-intext xcite-ctx"><span class="xcite-ctx-label">Cited text</span>${docMarkerBadge} "${ctx.claimTrunc ? '…' : ''}${esc(ctx.claim)}"</div>`;
-                } else if (ctx && (ctx.pre || ctx.post)) {
-                    bodyHtml = `<div class="xcite-intext xcite-ctx"><span class="xcite-ctx-label">Cited text</span>${docMarkerBadge} "${ctx.preTrunc ? '…' : ''}${esc(ctx.pre)}${esc(ctx.post)}${ctx.postTrunc ? '…' : ''}"</div>`;
-                } else if (ctx) {
-                    const refText = refSummary(refByNumber(numFromRaw(ci.raw_text)));
-                    bodyHtml = refText
-                        ? `<div class="xcite-intext xcite-ctx"><span class="xcite-ctx-label">Reference</span>${docMarkerBadge} ${esc(refText)}</div>`
-                        : `<div class="xcite-intext">${docMarkerBadge} <span style="color:#94a3b8;font-style:normal;">No surrounding sentence found in the text.</span></div>`;
-                } else {
-                    bodyHtml = `<div class="xcite-intext">${docMarkerBadge} "${esc(ci.raw_text || '')}"</div>`;
+            // ── Group cites by reference marker and render one card per unique [n] ──
+            // Each card shows ALL passages in the text attributed to that reference,
+            // with the full paragraph text from the previous marker to this one.
+
+            // 1. Find ALL occurrences in the doc for each unique raw_text marker.
+            //    (The cites[] array may have one entry per occurrence OR per unique ref
+            //     depending on the backend; we handle both by re-scanning the doc.)
+            const seenMarkers = new Set();
+            const markerGroups = []; // [{rawKey, refNum, occs:[{origIdx,ctx,ci}]}] in doc order
+
+            // Collect unique markers preserving first-appearance order
+            cites.forEach((ci) => {
+                const key = String(ci.raw_text || '').trim();
+                if (key && !seenMarkers.has(key)) {
+                    seenMarkers.add(key);
+                    markerGroups.push({ rawKey: key, refNum: numFromRaw(key), occs: [] });
                 }
-                return `<div class="xcite-item clk" data-cite-focus="${i}" tabindex="0" role="button" aria-label="Highlight this citation in the text">
-                    <span class="xcite-num xcite-num--blue">${i + 1}</span>
+            });
+
+            // For each unique marker, find every occurrence in the document text
+            markerGroups.forEach(mg => {
+                const isBracket = /^\[\s*\d{1,4}\s*\]$/.test(mg.rawKey);
+                let allOccs = findAll(normDoc, mg.rawKey);
+                if (!allOccs.length && isBracket) {
+                    const nm = mg.rawKey.match(/^\[\s*(\d{1,4})\s*\]$/);
+                    if (nm) allOccs = findAllRegex(normDoc, new RegExp('\\[\\s*' + nm[1] + '\\s*\\]', 'g'));
+                }
+                // Map back to original text positions via normDoc.map
+                mg.occs = allOccs.map((o, oi) => {
+                    const cb = claimBefore(docText, o.start, o.end);
+                    // Find the matching ci entry for this occurrence (by position proximity)
+                    const matchCi = cites.reduce((best, ci) => {
+                        if (String(ci.raw_text || '').trim() !== mg.rawKey) return best;
+                        const dist = Math.abs((ci.start_pos ?? 0) - o.start);
+                        return (!best || dist < best.dist) ? { ci, dist } : best;
+                    }, null);
+                    return { ctx: cb, ci: matchCi ? matchCi.ci : cites.find(c => String(c.raw_text||'').trim()===mg.rawKey) || {}, origIdx: oi };
+                }).filter(o => o.ctx);
+            });
+
+            // Sort groups by reference number
+            markerGroups.sort((a, b) => (a.refNum || 9999) - (b.refNum || 9999));
+
+            const citeItems = markerGroups.map((mg, gi) => {
+                if (!mg.occs.length) return '';
+                const firstCi = mg.occs[0].ci || {};
+                const conf = firstCi.confidence != null ? Math.round(firstCi.confidence * 100) : null;
+                const style = firstCi.style ? esc(String(firstCi.style).toUpperCase()) : '';
+                const refData = refByNumber(mg.refNum);
+                const refLabel = refData
+                    ? esc(refData.title || (Array.isArray(refData.authors) && refData.authors[0] ? refData.authors[0] : '') || '')
+                    : '';
+
+                const multipleOccs = mg.occs.length > 1;
+
+                const occHtml = mg.occs.map((occ, oi) => {
+                    const { ctx } = occ;
+                    let passageText = '';
+                    let hasText = false;
+                    if (ctx && ctx.bracket && ctx.claim && ctx.claim.length > 1) {
+                        passageText = `"${ctx.claimTrunc ? '\u2026' : ''}${esc(ctx.claim.replace(/\s+/g, ' ').trim())}"`;
+                        hasText = true;
+                    } else if (ctx && (ctx.pre || ctx.post)) {
+                        passageText = `"${ctx.preTrunc ? '\u2026' : ''}${esc(ctx.pre)}${esc(ctx.post)}${ctx.postTrunc ? '\u2026' : ''}"`;
+                        hasText = true;
+                    }
+                    // Find the real cite index for data-cite-focus (jump-to-text)
+                    const focusIdx = cites.findIndex(c =>
+                        String(c.raw_text || '').trim() === mg.rawKey &&
+                        !mg.occs.slice(0, oi).some(prev => prev._ciIdx === cites.indexOf(c))
+                    );
+                    occ._ciIdx = focusIdx >= 0 ? focusIdx : 0;
+                    return `<div class="xcite-occ xcite-occ-btn clk" data-cite-focus="${occ._ciIdx}" tabindex="0" role="button" aria-label="Jump to occurrence ${oi + 1}">
+                        ${multipleOccs ? `<span class="xcite-occ-idx">${oi + 1}</span>` : ''}
+                        <span class="xcite-occ-text${hasText ? '' : ' xcite-occ-empty'}">${hasText ? passageText : 'No surrounding text found.'}</span>
+                    </div>`;
+                }).join('');
+
+                return `<div class="xcite-item" data-cite-focus="${mg.occs[0]._ciIdx ?? 0}" tabindex="0" role="button" aria-label="Citation ${esc(mg.rawKey)}">
+                    <span class="xcite-num xcite-num--blue xcite-num--marker">${esc(mg.rawKey)}</span>
                     <div class="xcite-body">
-                        ${bodyHtml}
-                        ${(meta || conf != null) ? `<div class="xcite-meta">${meta ? `<span class="xcite-metabits">${meta}</span>` : ''}${conf != null ? `<span class="xcite-conf-chip">${conf}%</span>` : ''}</div>` : ''}
+                        <div class="xcite-ctx-label">Cited text${multipleOccs ? `<span class="xcite-occ-count">${mg.occs.length} passages</span>` : ''}</div>
+                        ${refLabel ? `<div style="font-size:.68rem;color:#64748b;margin-bottom:4px;font-style:normal">${refLabel}</div>` : ''}
+                        <div class="xcite-occs">${occHtml}</div>
+                        ${(style || conf != null) ? `<div class="xcite-meta">${style ? `<span class="xcite-metabits">${style}</span>` : ''}${conf != null ? `<span class="xcite-conf-chip">${conf}%</span>` : ''}</div>` : ''}
                     </div>
-                    <span class="xcite-jump" title="Highlight in text"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
                 </div>`;
-            }).join('');
+            }).filter(Boolean).join('');
+
+            // Count of unique reference markers
+            const uniqueRefCount = markerGroups.length;
             const citesHtml = cites.length
-                ? `<div class="xcite-sec-h" style="margin-top:18px"><span>In-text citations</span><span class="xcite-count">${cites.length}</span></div>
-                   <p class="xcite-hint"><span class="xcite-hint-dot"></span> Highlighted in blue in your text — click any entry to jump to it.</p>
+                ? `<div class="xcite-sec-h" style="margin-top:18px"><span>In-text citations</span><span class="xcite-count">${uniqueRefCount} references · ${cites.length} occurrences</span></div>
+                   <p class="xcite-hint"><span class="xcite-hint-dot"></span> Grouped by reference — click a passage to jump to it in the text.</p>
                    <div class="xcite-list">${citeItems}</div>`
                 : '';
 
@@ -5567,7 +5695,7 @@ body.xp-file-preview .mode-switch-container {
             // Plagio: usar char_start/char_end si son válidos y coinciden con el preview; si no, búsqueda tolerante.
             if (source && Array.isArray(source.segment_matches)) {
                 source.segment_matches.forEach((seg, plagIdx) => {
-                    if (String(seg.decision || '').toLowerCase() !== 'plagiarism') return;
+                    if (!['plagiarism', 'paraphrase'].includes(String(seg.decision || '').toLowerCase())) return;
                     const cs = seg.char_start, ce = seg.char_end;
                     const head = norm(seg.text_preview).slice(0, 14);
                     let placed = false;

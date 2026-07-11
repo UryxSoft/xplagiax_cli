@@ -165,6 +165,24 @@ with app.app_context():
             db.session.commit()
     except Exception:
         db.session.rollback()
+
+    # Añadir columna solo si no existe (idempotente) — preferencia de retención
+    # de documentos (Settings > Privacy > Document Retention).
+    try:
+        col_exists = db.session.execute(db.text(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS "
+            "WHERE TABLE_SCHEMA = DATABASE() "
+            "  AND TABLE_NAME   = 'user_preferences' "
+            "  AND COLUMN_NAME  = 'delete_after_analysis'"
+        )).scalar()
+        if not col_exists:
+            db.session.execute(db.text(
+                "ALTER TABLE user_preferences "
+                "ADD COLUMN delete_after_analysis TINYINT(1) NOT NULL DEFAULT 0"
+            ))
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
     init_cleanup_system()
     _run_scheduler = (
         os.environ.get('WERKZEUG_RUN_MAIN') == 'true'

@@ -3,6 +3,7 @@ Copyright (c) 2025 - present URYX TECHNOLOGIES SRL
 """
 import json
 import os
+import shutil
 import time
 import logging
 from werkzeug.utils import secure_filename
@@ -21,7 +22,7 @@ from settings.utilities import verify_token
 from modules.bucket_service.bucket_routes import get_storage_client, clear_cache_for_user
 from flask_cors import CORS
 from typing import Dict, Any, List
-from settings.connections import db
+from settings.connections import db, limiter
 from modules.models.model import Users, DocumentAnalysis, ClassifiedParagraph, Folder, File, CollaborativePermission, Tag, SmartRule, FileTag, ItemShare, ItemHistory
 
 logger = logging.getLogger(__name__)
@@ -2049,6 +2050,11 @@ def extract_text():
         html_url = convert_absolute_to_url(result_view, user_id) if result_view else ''
         images_urls = convert_images_to_urls(extracted.get('images', []), user_id)
 
+        # Token firmado sobre la carpeta donde se guardó el upload (archivo original +
+        # /images con preview/annotations). Permite al front pedir su borrado más tarde
+        # (Document Retention) sin exponer la ruta real ni depender de la cookie de sesión.
+        doc_token = _sign_job('doc', os.path.dirname(path))
+
         return jsonify({
             'success': True,
             'text': full_text,
@@ -2058,7 +2064,8 @@ def extract_text():
             'images': images_urls or [],
             'annotations': extracted.get('annotations', []),
             'urls': extracted.get('urls', []),
-            'result_view': html_url or ''
+            'result_view': html_url or '',
+            'doc_token': doc_token
         }), 200
 
     except Exception as e:
@@ -2069,6 +2076,42 @@ def extract_text():
             'error': 'Unexpected error extracting text',
             'details': str(e)
         }), 500
+
+
+@x_doc.route('/delete_uploaded_document', methods=['POST'])
+@login_required
+def delete_uploaded_document():
+    """Borra la carpeta de un documento subido vía /extract_text (Document Retention).
+
+    Requiere el `doc_token` devuelto por /extract_text — firmado con el user_id, así
+    que solo quien subió el archivo puede pedir su borrado (mismo mecanismo que
+    _sign_job/_unsign_job usan los jobs de IA/FinderX).
+    """
+    data = request.get_json(silent=True) or {}
+    doc_token = data.get('doc_token')
+    if not doc_token:
+        return jsonify({'error': 'Missing doc_token'}), 400
+
+    real_path = _unsign_job('doc', doc_token)
+    if real_path is None:
+        return jsonify({'error': 'Invalid or expired document token'}), 403
+
+    # Defensa en profundidad: aunque el token ya está firmado, confirmar que la
+    # carpeta a borrar vive dentro del directorio de uploads del propio usuario.
+    user_root = os.path.abspath(os.path.join(UPLOAD_FOLDER, str(current_user.id)))
+    target = os.path.abspath(real_path)
+    if os.path.commonpath([user_root, target]) != user_root:
+        logger.warning('delete_uploaded_document: path outside user root, user=%s path=%s',
+                        current_user.id, target)
+        return jsonify({'error': 'Invalid document path'}), 403
+
+    try:
+        shutil.rmtree(target, ignore_errors=True)
+    except Exception as exc:
+        logger.error('delete_uploaded_document failed: %s', exc)
+        return jsonify({'error': 'Could not delete the document'}), 500
+
+    return jsonify({'success': True}), 200
 
 
 def convert_images_to_urls(images_list, user_id=None):
@@ -3864,6 +3907,22 @@ FINDERX_SERVICE_API_KEY = (
     or os.environ.get('FINDERX_API_KEY')
     or 'xpx-3Td8C2oecnAXRT0-VioypUjMWTtSTQVj3k2kE8Q-5tc'
 )
+
+# ── marktrack: misma identidad de usuario (users compartida), servicio hermano.
+# Usado SOLO para el borrado interno servidor-a-servidor (Delete All Documents) —
+# nunca invocado desde el navegador. Clave compartida con marktrack's
+# INTERNAL_SERVICE_KEY (routes/document_routes.py), mismo patrón que el
+# X-API-Key que ambas apps ya usan para hablar con FinderX.
+MARKTRACK_SERVICE_BASE = (
+    os.environ.get('MARKTRACK_SERVICE_BASE')
+    or os.environ.get('MARKTRACK_URL')
+    or 'http://localhost:5001'
+)
+MARKTRACK_INTERNAL_KEY = (
+    os.environ.get('MARKTRACK_INTERNAL_KEY')
+    or os.environ.get('INTERNAL_SERVICE_KEY')
+    or 'xpx-internal-4f8c2a9d6e1b7f3c5a8d2e9b4c7f1a6d'
+)
 # Polling: cada cuánto y por cuánto tiempo esperar a que el job termine.
 FINDERX_POLL_INTERVAL = float(os.environ.get('FINDERX_POLL_INTERVAL', '1.5'))
 FINDERX_POLL_TIMEOUT = float(os.environ.get('FINDERX_POLL_TIMEOUT', '180'))
@@ -3886,7 +3945,12 @@ def finderx_check():
 
     try:
         submit = session_pool.post(
-            f'{FINDERX_SERVICE_BASE}/api/v1/analyze',
+            # FinderX ≥2.0: el tab "Plagiarism checker" usa el modo académico
+            # (/api/v1/academic-check: OpenAlex, Semantic Scholar, arXiv…) — es el
+            # contrato nuevo con segment_matches/segment_summary. /api/v1/analyze
+            # (modo full con internet) sigue existiendo pero no es lo que este
+            # panel presenta.
+            f'{FINDERX_SERVICE_BASE}/api/v1/academic-check',
             headers=headers,
             # 500k cap (was 50k): FinderX distributes an adaptive, capped chunk
             # budget (max_chunks_cap=60) across the WHOLE document, so a thesis is
@@ -3910,6 +3974,17 @@ def finderx_check():
 
     # La API envuelve bajo 'data'; el campo es 'task_id' (o job_id/id/taskId).
     inner = sd.get('data', sd)
+
+    # Cache hit de FinderX: el submit devuelve el reporte completo directamente
+    # ({'cached': True, 'report': {...}}) en vez de un task_id — sin este manejo
+    # un texto repetido fallaba con "did not return a job id".
+    if inner.get('cached') and isinstance(inner.get('report'), dict):
+        rep = inner['report']
+        res = rep.get('result') if isinstance(rep.get('result'), dict) else (
+            rep if 'scores' in rep else None)
+        if res:
+            return jsonify({'done': True, 'status': 'completed', 'result': res}), 200
+
     job_id = (inner.get('task_id') or inner.get('job_id')
               or inner.get('id') or inner.get('taskId'))
     if not job_id:
@@ -3968,8 +4043,9 @@ def citation_validation():
     """Valida SOLO citas y referencias vía FinderX (:8000 /api/v1/citation-validation).
 
     A diferencia de /finderx_check (búsqueda de fuentes/plagio), esto NO busca en el
-    corpus académico: solo detecta y valida las citas/referencias del texto. Es
-    síncrono (la API devuelve el resultado directo, sin job_id).
+    corpus académico: solo detecta y valida las citas/referencias del texto.
+    FinderX ≥2.0 encola la validación (202 + task_id) — este proxy hace el poll a
+    /api/v1/task/<id> y devuelve el reporte, así el front lo sigue viendo síncrono.
     """
     data = request.get_json(silent=True) or {}
     text = (data.get('text') or '').strip()
@@ -4012,6 +4088,46 @@ def citation_validation():
 
     # La API envuelve el resultado bajo 'data'.
     result = rd.get('data', rd) if isinstance(rd, dict) else rd
+
+    # FinderX ≥2.0: con validate=true la validación se ENCOLA (202 con task_id)
+    # y el reporte se recoge en GET /api/v1/task/<id>. Hacemos el poll aquí para
+    # conservar el contrato síncrono con el front (mismo tiempo de espera que
+    # tenía la versión síncrona: el read timeout de 180s de arriba).
+    task_id = result.get('task_id') if isinstance(result, dict) else None
+    if task_id and 'detected_style' not in result:
+        deadline = time.time() + 175
+        interval = max(FINDERX_POLL_INTERVAL, 1.5)
+        while True:
+            if time.time() >= deadline:
+                logger.error('FinderX citation task %s timed out', task_id)
+                return jsonify({'error': 'Citation validation timed out.'}), 504
+            time.sleep(interval)
+            try:
+                poll = session_pool.get(
+                    f'{FINDERX_SERVICE_BASE}/api/v1/task/{task_id}',
+                    headers=headers, timeout=(5, 25),
+                )
+            except requests.exceptions.RequestException as exc:
+                logger.error('FinderX citation task poll failed: %s', exc)
+                return jsonify({'error': 'Could not reach the FinderX service.'}), 502
+            if not poll.ok:
+                logger.error('FinderX citation task poll returned %s: %s',
+                             poll.status_code, poll.text[:300])
+                return jsonify({'error': f'FinderX service error ({poll.status_code}).'}), 502
+            try:
+                pd = poll.json()
+            except ValueError:
+                return jsonify({'error': 'Invalid response from FinderX service.'}), 502
+            inner = pd.get('data', pd) if isinstance(pd, dict) else {}
+            status = str(inner.get('status') or '').lower()
+            if status == 'completed':
+                result = inner.get('result') or {}
+                break
+            if status in ('failed', 'error', 'not_found'):
+                logger.error('FinderX citation task %s → %s: %s',
+                             task_id, status, str(inner.get('error'))[:300])
+                return jsonify({'error': 'Citation validation failed.'}), 502
+
     logger.info('FinderX citation-validation OK → keys=%s',
                 list(result.keys()) if isinstance(result, dict) else None)
     return jsonify({'result': result}), 200
@@ -4175,3 +4291,272 @@ def history_clear():
     AnalysisHistory.query.filter_by(user_id=current_user.id).delete()
     db.session.commit()
     return jsonify({'ok': True}), 200
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Delete All Documents — borrado total, irreversible, de TODOS los documentos,
+# análisis, historial y almacenamiento del usuario. Alcanza también marktrack
+# (misma tabla `users` compartida — ver auditoría del feature). No hay 2PC real
+# entre appcli2/marktrack/SeaweedFS/Qdrant/disco: cada sistema es transaccional
+# en sí mismo, la operación completa es idempotente/reintentable, y se reporta
+# honestamente qué se borró y qué no se pudo alcanzar (nunca se falsea éxito).
+# ════════════════════════════════════════════════════════════════════════════
+import threading as _threading
+_purge_lock = _threading.Lock()
+_purge_in_progress = set()  # user_ids con un borrado en curso EN ESTE proceso
+
+
+def _purge_local_storage(user_id):
+    """Borra los directorios locales del usuario en uploads_analysis/ y
+    uploads_save/. Mismo patrón de contención de ruta que /delete_uploaded_document
+    (nunca borra fuera de <base>/<user_id>)."""
+    for base in (UPLOAD_FOLDER, SAVE_FOLDER):
+        abs_base = os.path.abspath(base)
+        user_root = os.path.abspath(os.path.join(abs_base, str(user_id)))
+        if not os.path.isdir(user_root):
+            continue
+        if os.path.commonpath([abs_base, user_root]) != abs_base:
+            logger.warning('purge_all: refusing to delete out-of-bounds path user=%s path=%s',
+                            user_id, user_root)
+            continue
+        try:
+            shutil.rmtree(user_root, ignore_errors=True)
+        except Exception as exc:
+            logger.warning('purge_all: local storage cleanup failed user=%s base=%s: %s',
+                            user_id, base, exc)
+
+
+def _purge_seaweedfs(user_id, minio_urls):
+    """Borra objetos SeaweedFS: los explícitos (File.minio_url) + el namespace
+    documents/<user_id>/ completo (cubre uploads vía /uploadsave_ que nunca
+    crearon fila File — ver auditoría). Best-effort y en paralelo; un fallo
+    individual no interrumpe el resto."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    deleted = 0
+    try:
+        client = get_storage_client()
+    except Exception as exc:
+        logger.warning('purge_all: SeaweedFS client unavailable user=%s: %s', user_id, exc)
+        return deleted
+
+    def _del_file(url):
+        try:
+            return bool(client.delete_file(url))
+        except Exception as exc:
+            logger.warning('purge_all: delete_file failed user=%s url=%s: %s', user_id, url, exc)
+            return False
+
+    def _del_doc(doc_id):
+        try:
+            client.delete_document_by_id(doc_id, user_id)
+            return True
+        except Exception as exc:
+            logger.warning('purge_all: delete_document_by_id failed user=%s doc=%s: %s',
+                            user_id, doc_id, exc)
+            return False
+
+    tasks = [(_del_file, u) for u in minio_urls if u]
+    try:
+        docs = client.list_user_documents(user_id)
+    except Exception as exc:
+        logger.warning('purge_all: list_user_documents failed user=%s: %s', user_id, exc)
+        docs = []
+    tasks += [(_del_doc, d.get('document_id')) for d in docs if d.get('document_id')]
+
+    if not tasks:
+        return deleted
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = [executor.submit(fn, arg) for fn, arg in tasks]
+        for fut in as_completed(futures):
+            if fut.result():
+                deleted += 1
+    return deleted
+
+
+def _purge_qdrant_images(candidate_group_ids):
+    """Best-effort: borra imágenes indexadas en Qdrant para cada posible
+    group_id (File.id / DocumentAnalysis.analysis_id — no hay vínculo
+    garantizado con user_id en los payloads de Qdrant, ver auditoría).
+    NUNCA usa clear_collection (borraría de TODOS los usuarios)."""
+    purged = 0
+    if not candidate_group_ids:
+        return purged
+    try:
+        from modules.image_service.ai_image_routes import require_qdrant, COLLECTION
+        from qdrant_client.http.models import Filter, FieldCondition, MatchValue, FilterSelector
+    except Exception as exc:
+        logger.warning('purge_all: Qdrant image module unavailable: %s', exc)
+        return purged
+
+    qdrant, error = require_qdrant()
+    if error or qdrant is None:
+        return purged
+
+    for gid in candidate_group_ids:
+        try:
+            qdrant.delete(
+                collection_name=COLLECTION,
+                points_selector=FilterSelector(
+                    filter=Filter(must=[FieldCondition(key='group_id', match=MatchValue(value=str(gid)))])
+                ),
+            )
+            purged += 1
+        except Exception as exc:
+            logger.warning('purge_all: qdrant delete_by_group failed group_id=%s: %s', gid, exc)
+    return purged
+
+
+def _purge_marktrack_documents(user_id):
+    """Llama al endpoint interno de marktrack para borrar los Document que ese
+    usuario posee allí. Best-effort: si marktrack no responde, el borrado en
+    appcli2 continúa igual — se reporta como no alcanzado (ver plan aprobado)."""
+    headers = {'Content-Type': 'application/json', 'X-Internal-Key': MARKTRACK_INTERNAL_KEY}
+    try:
+        resp = session_pool.post(
+            f'{MARKTRACK_SERVICE_BASE}/api/internal/documents/delete-all',
+            headers=headers,
+            json={'user_id': user_id},
+            timeout=(5, 30),
+        )
+    except requests.exceptions.RequestException as exc:
+        logger.warning('purge_all: marktrack unreachable user=%s: %s', user_id, exc)
+        return {'reachable': False, 'deleted_count': 0, 'errors': [str(exc)]}
+
+    if not resp.ok:
+        logger.warning('purge_all: marktrack returned %s user=%s: %s',
+                        resp.status_code, user_id, resp.text[:300])
+        return {'reachable': False, 'deleted_count': 0, 'errors': [f'HTTP {resp.status_code}']}
+
+    try:
+        data = resp.json()
+    except ValueError:
+        return {'reachable': False, 'deleted_count': 0, 'errors': ['Invalid response from marktrack']}
+
+    return {
+        'reachable': True,
+        'deleted_count': int(data.get('deleted_count') or 0),
+        'errors': data.get('errors') or [],
+    }
+
+
+def purge_all_user_documents(user_id):
+    """Borra TODOS los documentos/análisis/historial del usuario en appcli2:
+    almacenamiento físico (disco local + SeaweedFS + Qdrant imágenes,
+    best-effort) primero, luego las filas SQL (hijas antes que padres, todo en
+    una transacción). Idempotente: reintentar sobre un usuario ya purgado no
+    falla, simplemente no encuentra nada que borrar.
+    """
+    from modules.models.model import AnalysisHistory, Documents, ClassifiedParagraph
+
+    # 1) Enumerar ANTES de borrar SQL — las filas son la única referencia a lo físico.
+    file_rows = File.query.filter_by(user_id=user_id).all()
+    minio_urls = [f.minio_url for f in file_rows if f.minio_url]
+    file_ids = [f.id for f in file_rows]
+    analysis_ids = [a.analysis_id for a in
+                    DocumentAnalysis.query.filter_by(user_id=user_id).with_entities(DocumentAnalysis.analysis_id).all()]
+    candidate_group_ids = [str(fid) for fid in file_ids] + [str(aid) for aid in analysis_ids]
+
+    # 2) Borrado físico/externo — best-effort, nunca bloquea el borrado SQL.
+    storage_files_deleted = _purge_seaweedfs(user_id, minio_urls)
+    embeddings_deleted = _purge_qdrant_images(candidate_group_ids)
+    _purge_local_storage(user_id)
+
+    # 3) Borrado SQL — hijos antes que padres (bulk .delete() NO dispara cascade
+    #    de relación ORM, solo el de FK a nivel de BD — hay que ser explícitos).
+    try:
+        if analysis_ids:
+            ClassifiedParagraph.query.filter(
+                ClassifiedParagraph.analysis_id.in_(analysis_ids)
+            ).delete(synchronize_session=False)
+        analysis_count = DocumentAnalysis.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+        if file_ids:
+            FileTag.query.filter(FileTag.file_id.in_(file_ids)).delete(synchronize_session=False)
+
+        CollaborativePermission.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        ItemShare.query.filter_by(owner_id=user_id).delete(synchronize_session=False)
+        ItemHistory.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        Tag.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        SmartRule.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        documents_count = File.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        Folder.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        reports_count = AnalysisHistory.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        Documents.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+
+        user = Users.query.get(user_id)
+        if user is not None:
+            user.used_storage_bytes = 0
+
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
+    cache_keys_cleared = 0
+    try:
+        from modules.bucket_service.bucket_routes import _session_cache as _bucket_cache
+        cache_keys_cleared = len([k for k in _bucket_cache if str(user_id) in k])
+    except Exception:
+        pass
+    try:
+        clear_cache_for_user(user_id)
+    except Exception as exc:
+        logger.warning('purge_all: clear_cache_for_user failed user=%s: %s', user_id, exc)
+
+    return {
+        'documents': documents_count,
+        'analysis': analysis_count,
+        'reports': reports_count,
+        'embeddings': embeddings_deleted,
+        'storage_files': storage_files_deleted,
+        'cache_keys': cache_keys_cleared,
+    }
+
+
+@x_doc.route('/documents/all', methods=['DELETE'])
+@login_required
+@limiter.limit('5 per hour')
+def delete_all_documents():
+    """Borra TODOS los documentos/análisis/historial/almacenamiento del usuario
+    autenticado, en appcli2 Y en marktrack (misma identidad de usuario).
+    Irreversible. Solo actúa sobre current_user.id — nunca acepta un id del cliente.
+    """
+    user_id = current_user.id
+
+    with _purge_lock:
+        if user_id in _purge_in_progress:
+            return jsonify({'error': 'A deletion is already in progress for this account.'}), 409
+        _purge_in_progress.add(user_id)
+
+    try:
+        try:
+            appcli2_stats = purge_all_user_documents(user_id)
+        except Exception:
+            logger.exception('purge_all_user_documents failed for user=%s', user_id)
+            return jsonify({'error': 'Could not delete your documents. Please try again.'}), 500
+
+        marktrack_result = _purge_marktrack_documents(user_id)
+
+        warnings = []
+        if not marktrack_result['reachable']:
+            warnings.append('marktrack: service unreachable — its documents were not deleted, retry later.')
+        elif marktrack_result['errors']:
+            warnings.append(f"marktrack: {len(marktrack_result['errors'])} document(s) had dependent "
+                             f"records and were skipped — retry.")
+
+        logger.info('delete_all_documents user=%s appcli2=%s marktrack=%s',
+                    user_id, appcli2_stats, marktrack_result)
+
+        return jsonify({
+            'success': True,
+            'deleted': {
+                **appcli2_stats,
+                'marktrack_documents': marktrack_result['deleted_count'],
+            },
+            'warnings': warnings,
+            'marktrack_reachable': marktrack_result['reachable'],
+        }), 200
+    finally:
+        with _purge_lock:
+            _purge_in_progress.discard(user_id)

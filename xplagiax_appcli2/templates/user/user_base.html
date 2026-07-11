@@ -57,14 +57,6 @@
         </svg>
       </div>
 
-      <a href="{{ url_for('x_users.home') }}"
-        class="nav-btn {{ 'active' if request.endpoint == 'x_users.home' else '' }}" data-tip="Home">
-        <svg viewBox="0 0 24 24">
-          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-          <polyline points="9 22 9 12 15 12 15 22" />
-        </svg>
-      </a>
-
       <a href="{{ url_for('x_users.analysis') }}"
         class="nav-btn {{ 'active' if request.endpoint == 'x_users.analysis' else '' }}" data-tip="Analysis">
         <svg viewBox="0 0 24 24">
@@ -866,6 +858,17 @@
       closeBt && closeBt.addEventListener('click', close);
       overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
       document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && overlay.classList.contains('open')) close(); });
+
+      // Settings loads /account?embed=1 in this iframe — after a destructive
+      // action there (e.g. Delete All Documents) it posts back here so the
+      // parent shell's own widgets (mini-progress badge) refresh live, without
+      // a full page reload. Origin-checked; ignores anything else.
+      window.addEventListener('message', function (e) {
+        if (e.origin !== window.location.origin || !e.data || e.data.type !== 'documents-deleted') return;
+        if (typeof analysisTracker !== 'undefined' && analysisTracker) {
+          analysisTracker.loadStats().then(function () { analysisTracker.updateProgressBar(); });
+        }
+      });
 
       // Auto-open after OAuth redirect (?openSettings=integrations&connected=provider)
       var params = new URLSearchParams(window.location.search);

@@ -709,18 +709,7 @@
                 <div class="sm-row-desc">Automatically delete documents after analysis.</div>
               </div>
               <label class="sm-switch" aria-label="Document retention">
-                <input type="checkbox" onchange="smToast('Retention policy updated.','success')">
-                <span class="sm-switch-track"></span>
-              </label>
-            </div>
-            <div class="sm-divider"></div>
-            <div class="sm-row">
-              <div class="sm-row-left">
-                <div class="sm-row-label">Third-Party Sharing</div>
-                <div class="sm-row-desc">Allow sharing data with partner services.</div>
-              </div>
-              <label class="sm-switch" aria-label="Third-party sharing">
-                <input type="checkbox" onchange="smToast('Privacy preference saved.','success')">
+                <input type="checkbox" id="retentionSwitch" onchange="smSetDocumentRetention(this)">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
@@ -746,7 +735,7 @@
               <div class="sm-row-label">Delete All Documents</div>
               <div class="sm-row-desc">Permanently remove all stored documents and analyses.</div>
             </div>
-            <button class="sm-btn sm-btn-danger" onclick="smToast('Contact support to delete all documents.','info')">Delete All</button>
+            <button class="sm-btn sm-btn-danger" onclick="smOpenDeleteAllModal()">Delete All</button>
           </div>
           <div class="sm-row">
             <div class="sm-row-left">
@@ -961,6 +950,39 @@
 
 <!-- ── Toast container ──────────────────────────────────── -->
 <div class="sm-toast-wrap" id="smToastWrap"></div>
+
+<!-- ── Delete All Documents — confirmation modal ──────────────────────── -->
+<div class="sm-danger-modal-overlay" id="deleteAllOverlay" role="dialog" aria-modal="true" aria-labelledby="deleteAllTitle">
+  <div class="sm-danger-modal">
+    <div class="sm-danger-modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <h3 id="deleteAllTitle">Delete All Documents</h3>
+    <p class="sm-danger-modal-desc">
+      This action will permanently delete all uploaded documents, analysis reports,
+      plagiarism results, AI detection reports, citations, references, replay history
+      and every associated file.
+    </p>
+    <div class="sm-danger-modal-warn">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>This action cannot be undone.</span>
+    </div>
+    <div class="sm-danger-modal-progress" id="deleteAllProgress">
+      <div class="sm-danger-modal-progress-label">
+        <span class="sm-danger-modal-spin" style="display:inline-block"></span>
+        <span id="deleteAllProgressText">Removing documents…</span>
+      </div>
+      <div class="sm-danger-modal-progress-bar"><div class="sm-danger-modal-progress-fill" id="deleteAllProgressFill"></div></div>
+    </div>
+    <div class="sm-danger-modal-actions" id="deleteAllActions">
+      <button class="sm-btn sm-btn-ghost" id="deleteAllCancelBtn" onclick="smCloseDeleteAllModal()">Cancel</button>
+      <button class="sm-btn sm-btn-danger-solid" id="deleteAllConfirmBtn" onclick="smConfirmDeleteAll()">
+        <span class="sm-danger-modal-spin"></span>
+        <span>Delete Everything</span>
+      </button>
+    </div>
+  </div>
+</div>
 
 
 <!-- ── Cancel Subscription Modal ────────────────────────── -->
@@ -1297,7 +1319,144 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSubscriptionStatus();
   secLoadSessions();
   secLoadChart();
+  smLoadDocumentRetention();
 });
+
+/* ───── Privacy: Document Retention ──────────────────────── */
+async function smLoadDocumentRetention() {
+  const el = document.getElementById('retentionSwitch');
+  if (!el) return;
+  try {
+    const res = await fetch('/api/preferences/document-retention', { credentials: 'include' });
+    const data = await res.json();
+    if (res.ok && data.success) el.checked = !!data.delete_after_analysis;
+  } catch (_) { /* deja el switch en su estado por defecto (off) si falla */ }
+}
+
+async function smSetDocumentRetention(el) {
+  const enabled = el.checked;
+  el.disabled = true;
+  try {
+    const res = await fetch('/api/preferences/document-retention', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      smToast(enabled ? 'Documents will be deleted after each analysis.' : 'Retention policy updated.', 'success');
+    } else {
+      el.checked = !enabled;
+      smToast(data.error || 'Could not save retention policy.', 'error');
+    }
+  } catch (_) {
+    el.checked = !enabled;
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    el.disabled = false;
+  }
+}
+
+/* ───── Danger zone: Delete All Documents ────────────────────
+   Irreversible, full-account purge (appcli2 + marktrack — see feature docs).
+   The backend call is a single request, not a stream, so the staged labels
+   below are a time-based UX heuristic (not real server progress) that always
+   resolves cleanly once the response arrives, whichever stage it's on. ──── */
+let _deleteAllInFlight = false;
+let _deleteAllProgressTimer = null;
+
+const DELETE_ALL_STAGES = [
+  'Removing documents…', 'Removing reports…', 'Deleting storage…',
+  'Removing embeddings…', 'Cleaning cache…', 'Updating indexes…', 'Finalizing…'
+];
+
+function smOpenDeleteAllModal() {
+  const overlay = document.getElementById('deleteAllOverlay');
+  if (overlay) overlay.classList.add('open');
+}
+
+function smCloseDeleteAllModal() {
+  if (_deleteAllInFlight) return; // no cerrar mientras el borrado está en curso
+  const overlay = document.getElementById('deleteAllOverlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+function _deleteAllStartProgress() {
+  const progress = document.getElementById('deleteAllProgress');
+  const textEl = document.getElementById('deleteAllProgressText');
+  const fillEl = document.getElementById('deleteAllProgressFill');
+  if (progress) progress.classList.add('active');
+  let stage = 0;
+  let pct = 4;
+  const tick = () => {
+    if (textEl) textEl.textContent = DELETE_ALL_STAGES[stage];
+    if (fillEl) fillEl.style.width = pct + '%';
+    stage = Math.min(stage + 1, DELETE_ALL_STAGES.length - 1);
+    pct = Math.min(pct + 13, 92); // nunca llega a 100% solo — eso lo marca la respuesta real
+  };
+  tick();
+  _deleteAllProgressTimer = setInterval(tick, 900);
+}
+
+function _deleteAllStopProgress(complete) {
+  if (_deleteAllProgressTimer) { clearInterval(_deleteAllProgressTimer); _deleteAllProgressTimer = null; }
+  const fillEl = document.getElementById('deleteAllProgressFill');
+  const textEl = document.getElementById('deleteAllProgressText');
+  if (complete && fillEl && textEl) {
+    fillEl.style.width = '100%';
+    textEl.textContent = 'Finalizing…';
+  }
+}
+
+async function smConfirmDeleteAll() {
+  if (_deleteAllInFlight) return;
+  _deleteAllInFlight = true;
+
+  const confirmBtn = document.getElementById('deleteAllConfirmBtn');
+  const cancelBtn = document.getElementById('deleteAllCancelBtn');
+  confirmBtn.disabled = true;
+  cancelBtn.disabled = true;
+  confirmBtn.classList.add('loading');
+  _deleteAllStartProgress();
+
+  try {
+    const res = await fetch('/x_doc/documents/all', { method: 'DELETE', credentials: 'include' });
+    let data = {};
+    try { data = await res.json(); } catch (_) {}
+
+    if (res.ok && data.success) {
+      _deleteAllStopProgress(true);
+      await new Promise(r => setTimeout(r, 350)); // deja ver el 100% antes de cerrar
+      smCloseDeleteAllModalForce();
+      smToast('All your documents have been permanently deleted.', 'success');
+      if (data.marktrack_reachable === false) {
+        smToast('Some data in the collaborative workspace could not be reached — it will be retried automatically.', 'info');
+      }
+      try {
+        (window.top || window).postMessage({ type: 'documents-deleted', deleted: data.deleted || null }, window.location.origin);
+      } catch (_) {}
+    } else {
+      _deleteAllStopProgress(false);
+      smToast(data.error || 'Could not delete your documents. Please try again.', 'error');
+    }
+  } catch (_) {
+    _deleteAllStopProgress(false);
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    _deleteAllInFlight = false;
+    confirmBtn.disabled = false;
+    cancelBtn.disabled = false;
+    confirmBtn.classList.remove('loading');
+    const progress = document.getElementById('deleteAllProgress');
+    if (progress) progress.classList.remove('active');
+  }
+}
+
+function smCloseDeleteAllModalForce() {
+  const overlay = document.getElementById('deleteAllOverlay');
+  if (overlay) overlay.classList.remove('open');
+}
 
 /* ───── Security: password change ────────────────────────── */
 function secTogglePwForm() {

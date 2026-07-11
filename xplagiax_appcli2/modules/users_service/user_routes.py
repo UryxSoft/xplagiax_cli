@@ -39,7 +39,7 @@ def block_starter(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated or current_user.user_type == 'Starter':
             # Si es Starter, no puede entrar a /documents
-            return redirect(url_for('x_users.home'))
+            return redirect(url_for('x_users.analysis'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -312,7 +312,7 @@ def account():
     # Si no llega el parámetro embed=1, redirigir al home
     # (la pantalla completa de /account ya no existe; se usa el modal)
     if not request.args.get('embed'):
-        return redirect(url_for('x_users.home'))
+        return redirect(url_for('x_users.analysis'))
 
     try:
         user_data = get_user_data()
@@ -930,13 +930,55 @@ def reset_welcome_modal():
             'success': True,
             'message': message
         })
-    
+
     except Exception as e:
         db.session.rollback()
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
+
+@x_users.route('/api/preferences/document-retention', methods=['GET'])
+@login_required
+def get_document_retention():
+    """API: Devuelve si el usuario quiere que sus documentos se borren tras el análisis."""
+    try:
+        preference = UserPreference.query.filter_by(user_id=current_user.id).first()
+        if not preference:
+            preference = UserPreference(user_id=current_user.id, delete_after_analysis=False)
+            db.session.add(preference)
+            db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'delete_after_analysis': bool(preference.delete_after_analysis)
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@x_users.route('/api/preferences/document-retention', methods=['POST'])
+@login_required
+def set_document_retention():
+    """API: Guarda si el usuario quiere que sus documentos se borren tras el análisis."""
+    try:
+        data = request.get_json(silent=True) or {}
+        enabled = bool(data.get('enabled', False))
+
+        preference = UserPreference.query.filter_by(user_id=current_user.id).first()
+        if not preference:
+            preference = UserPreference(user_id=current_user.id)
+            db.session.add(preference)
+
+        preference.delete_after_analysis = enabled
+        preference.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({'success': True, 'delete_after_analysis': enabled})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @x_users.route('/storage_info')
 @login_required
 def get_storage_info():
