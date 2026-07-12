@@ -30,8 +30,11 @@
 .xpa-h-search-clr{background:none;border:none;color:#94a3b8;cursor:pointer;padding:4px;display:none;align-items:center;justify-content:center;border-radius:6px;min-width:28px;min-height:28px;transition:color .1s}
 .xpa-h-search-clr:hover{color:#374151}
 .xpa-h-search input:not(:placeholder-shown)~.xpa-h-search-clr{display:inline-flex}
-.xpa-h-close{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;width:44px;height:44px;border-radius:10px;border:1.5px solid transparent;background:none;color:#64748b;cursor:pointer;transition:all .12s;flex-shrink:0}
-.xpa-h-close:hover{background:#f1f5f9;color:#374151;border-color:#e2e8f0}
+.xpa-h-close{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;width:44px;height:44px;border-radius:10px;border:1.5px solid transparent;background:none;color:#64748b;cursor:pointer;transition:background .15s,color .15s,border-color .15s,transform .15s;flex-shrink:0}
+.xpa-h-close svg{transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.xpa-h-close:hover{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+.xpa-h-close:hover svg{transform:rotate(90deg)}
+.xpa-h-close:active{transform:scale(.88)}
 .xpa-h-close:focus-visible{outline:2px solid #064CDB;outline-offset:2px}
 
 /* ━━ FILTER CHIPS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -76,6 +79,7 @@
 .xpa-h-item-r1{display:flex;align-items:center;gap:7px}
 .xpa-h-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--risk-c,#cbd5e1)}
 .xpa-h-ititle{flex:1;min-width:0;font-size:clamp(.78rem,2vw,.83rem);font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
+.xpa-h-hl{background:#fef08a;color:inherit;border-radius:3px;padding:0 1px}
 .xpa-h-itime{font-size:.68rem;color:#94a3b8;flex-shrink:0;font-weight:500;white-space:nowrap}
 .xpa-h-item-r2{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .xpa-h-badge{display:inline-flex;align-items:center;gap:3px;font-size:.64rem;font-weight:700;padding:2px 7px;border-radius:20px;border:1px solid;letter-spacing:.01em;white-space:nowrap}
@@ -129,10 +133,10 @@
 .xpa-h-ftr-l{display:flex;align-items:center;gap:4px}
 .xpa-h-ftr-r{display:flex;align-items:center;gap:3px}
 .xpa-h-ftr-icon,.xpa-h-ftr-sep{display:none}
-.xpa-h-ftr-btn{display:inline-flex;align-items:center;gap:5px;height:36px;padding:0 12px;border-radius:8px;border:1.5px solid transparent;background:none;font-size:.71rem;font-weight:600;color:#374151;cursor:pointer;transition:background .1s;white-space:nowrap;min-height:36px}
-.xpa-h-ftr-btn:hover{background:#f1f5f9}
+.xpa-h-ftr-btn{display:inline-flex;align-items:center;gap:5px;height:36px;padding:0 12px;border-radius:8px;border:1.5px solid transparent;background:none;font-size:.71rem;font-weight:600;color:#374151;cursor:pointer;transition:background .12s,color .12s,border-color .12s;white-space:nowrap;min-height:36px}
+.xpa-h-ftr-btn:hover{background:#f1f5f9;color:#0f172a;border-color:#e2e8f0}
 .xpa-h-ftr-btn:disabled{opacity:.35;cursor:not-allowed}
-.xpa-h-ftr-btn:disabled:hover{background:none}
+.xpa-h-ftr-btn:disabled:hover{background:none;color:#374151;border-color:transparent}
 .xpa-h-ftr-btn:focus-visible{outline:2px solid #064CDB;outline-offset:2px}
 .xpa-h-kbd{display:none;font-size:.62rem;font-weight:500;color:#94a3b8;border:1px solid #e2e8f0;border-radius:5px;padding:1px 5px;background:#f8fafc;line-height:1.4}
 
@@ -162,8 +166,9 @@
   .xpa-h-detail-panel{position:static;transform:none!important;transition:none}
   .xpa-h-detail-nav{display:none}
   .xpa-h-hdr-left{flex:0 0 38%;border-right:1px solid #e8edf5}
-  .xpa-h-ftr-icon{display:inline-flex;width:34px;height:34px;border-radius:8px;border:1.5px solid transparent;background:none;color:#64748b;cursor:pointer;transition:all .12s}
+  .xpa-h-ftr-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;border:1.5px solid transparent;background:none;color:#64748b;cursor:pointer;transition:background .12s,color .12s,border-color .12s,transform .12s}
   .xpa-h-ftr-icon:hover{background:#f1f5f9;color:#374151;border-color:#e2e8f0}
+  .xpa-h-ftr-icon:active{transform:scale(.9)}
   .xpa-h-ftr-sep{display:block;width:1px;height:18px;background:#e8edf5;margin:0 5px}
   .xpa-h-kbd{display:inline-block}
   .xpa-hist-modal.minimized .xpa-h-body{grid-template-columns:1fr}
@@ -252,7 +257,10 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/></svg>
                 </button>
                 <div class="xpa-h-ftr-sep"></div>
-                <button class="xpa-h-ftr-btn" id="histClearAll" type="button">Clear all</button>
+                <button class="xpa-h-ftr-btn" id="histClearAll" type="button">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    Clear all
+                </button>
             </div>
             <div class="xpa-h-ftr-r">
                 <button class="xpa-h-ftr-btn" id="histFtrOpen" type="button" disabled>
@@ -316,6 +324,22 @@
         if (e.aiPct != null || e.overall != null) return '#059669';
         return '#cbd5e1';
     }
+    // Searchable text blob per entry: title/preview plus score + date synonyms,
+    // so queries like "citations", "today" or "80%" also surface matches.
+    function _haystack(e) {
+        const parts = [e.title, e.preview, _group(e.ts), _rel(e.ts)];
+        if (e.aiPct != null)  parts.push(e.aiPct + '% ai detection');
+        if (e.overall != null) parts.push(e.overall + '% similarity finderx sim');
+        if (e.cit != null)    parts.push(e.cit + ' citations citation');
+        return parts.filter(Boolean).join(' ').toLowerCase();
+    }
+    function _highlight(text, tokens) {
+        const escaped = _esc(text);
+        if (!tokens || !tokens.length) return escaped;
+        const pattern = tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean).join('|');
+        if (!pattern) return escaped;
+        return escaped.replace(new RegExp('(' + pattern + ')', 'gi'), '<mark class="xpa-h-hl">$1</mark>');
+    }
 
     class HistoryModalCtrl {
         constructor() {
@@ -363,7 +387,13 @@
             document.getElementById('histSearchClr')?.addEventListener('click', () => {
                 if (search) { search.value = ''; search.focus(); this._renderList(''); }
             });
-            if (search) search.addEventListener('input', () => this._renderList(search.value));
+            if (search) {
+                let searchDebounce;
+                search.addEventListener('input', () => {
+                    clearTimeout(searchDebounce);
+                    searchDebounce = setTimeout(() => this._renderList(search.value), 120);
+                });
+            }
 
             document.getElementById('histClearAll')?.addEventListener('click', () => this._confirmClearAll());
 
@@ -376,11 +406,12 @@
                 this._renderList(search ? search.value : '');
             });
 
-            modal.addEventListener('click', e => { if (e.target === modal) this.close(); });
+            // Intentional: clicking the overlay does NOT close the modal — histCloseBtn
+            // is the only way out, so no listener is attached here on purpose.
             document.addEventListener('keydown', e => {
                 if (modal.style.display !== 'flex') return;
                 const active = document.querySelector('.xpa-h-item.active');
-                if (e.key === 'Escape') { this.close(); return; }
+                if (e.key === '/' && document.activeElement !== search) { e.preventDefault(); if (search) search.focus(); return; }
                 if (e.key === 'Enter' && !e.shiftKey && active) { e.preventDefault(); this._openEntry(active.dataset.id); }
                 if (e.key === 'D' && (e.metaKey || e.ctrlKey) && e.shiftKey && active) { e.preventDefault(); this._deleteEntry(active.dataset.id); }
                 if (e.key === 'ArrowDown') { e.preventDefault(); this._nav(1); }
@@ -446,12 +477,16 @@
             const listEl = document.getElementById('histListEl');
             if (!listEl) return;
             const q = String(filter || '').toLowerCase().trim();
+            // Tokenized AND-match: each space-separated word must appear somewhere
+            // in the entry (title/preview/date/scores), in any order — so "thesis
+            // draft" also matches "draft of my thesis".
+            const qTokens = q ? q.split(/\s+/).filter(Boolean) : [];
             const all = this._items || [];
             let items = all;
             if (this._filter === 'ai')        items = items.filter(e => e.aiPct != null);
             if (this._filter === 'finderx')   items = items.filter(e => e.overall != null);
             if (this._filter === 'citations') items = items.filter(e => e.cit != null);
-            if (q) items = items.filter(e => ((e.title || '') + ' ' + (e.preview || '')).toLowerCase().includes(q));
+            if (qTokens.length) items = items.filter(e => { const h = _haystack(e); return qTokens.every(t => h.includes(t)); });
 
             this._setCount(all.length);
 
@@ -483,7 +518,7 @@
                     html += `<div class="xpa-h-item" data-id="${e.id}" style="--risk-c:${rc};animation-delay:${delay}ms" role="option" tabindex="0" aria-label="${_esc(e.title)}">
                         <div class="xpa-h-item-r1">
                             <span class="xpa-h-dot"></span>
-                            <span class="xpa-h-ititle">${_esc(e.title)}</span>
+                            <span class="xpa-h-ititle">${_highlight(e.title, qTokens)}</span>
                             <span class="xpa-h-itime">${_rel(e.ts)}</span>
                         </div>
                         <div class="xpa-h-item-r2">

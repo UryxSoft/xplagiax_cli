@@ -703,6 +703,47 @@ body {
   background: rgba(255, 255, 255, .18);
 }
 
+/* ===== REFRESH BUTTON ===== */
+.refresh-btn {
+  background: rgba(255, 255, 255, .1);
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, .85);
+  transition: background var(--transition-fast), transform 0.15s ease;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.refresh-btn svg {
+  transition: transform 0.35s ease;
+}
+
+.refresh-btn:hover {
+  background: rgba(255, 255, 255, .18);
+}
+
+.refresh-btn:hover svg {
+  transform: rotate(135deg);
+}
+
+.refresh-btn:active {
+  transform: scale(0.9);
+}
+
+.refresh-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.refresh-btn.is-spinning svg {
+  animation: spin 0.6s linear;
+}
+
 .white2-actions-menu {
   display: none;
   position: absolute;
