@@ -5,7 +5,13 @@
 ================================================================ */
 
 /* ── Design Tokens ───────────────────────────────────────────── */
-.sm-root {
+/* Defined on :root (not just .sm-root) so every element in this document
+   can resolve them — including #smToastWrap and the .sm-danger-modal*
+   overlays, which live as SIBLINGS of .sm-root (after its closing tag),
+   not descendants. Scoping tokens to .sm-root alone left those elements
+   with no valid --sm-* values at all (invisible/blank text, transparent
+   accents) since CSS custom properties only inherit down the DOM tree. */
+:root {
   --sm-bg:          #f4f7fc;
   --sm-sidebar-bg:  #ffffff;
   --sm-sidebar-w:   220px;
@@ -35,7 +41,9 @@
   --sm-dur-fast:    150ms;
   --sm-dur:         200ms;
   --sm-dur-slow:    300ms;
+}
 
+.sm-root {
   /* BASE — mobile column stack */
   display: flex;
   flex-direction: column;
@@ -836,32 +844,88 @@
   bottom: max(24px, env(safe-area-inset-bottom, 24px));
   right: max(16px, env(safe-area-inset-right, 16px));
   z-index: 99999;
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: 10px;
   pointer-events: none;
   max-width: calc(100vw - 32px);
 }
 .sm-toast {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 16px;
-  border-radius: var(--sm-radius-sm);
-  background: rgba(255,255,255,.97);
+  position: relative;
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 13px 14px 13px 16px;
+  border-radius: var(--sm-radius);
+  background: rgba(255,255,255,.92);
   border: 1px solid var(--sm-border);
-  backdrop-filter: blur(24px);
-  box-shadow: 0 8px 32px rgba(6,76,219,.14), 0 2px 8px rgba(0,0,0,.08);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 1px 1px rgba(16,24,60,.03), 0 8px 24px rgba(16,24,60,.10), 0 16px 40px -8px rgba(16,24,60,.12);
   font-size: 12.5px; color: var(--sm-t1);
-  min-width: min(240px, calc(100vw - 32px));
-  max-width: min(380px, calc(100vw - 32px));
+  min-width: min(280px, calc(100vw - 32px));
+  max-width: min(400px, calc(100vw - 32px));
   pointer-events: auto;
-  animation: sm-toast-in .25s var(--sm-bounce) both;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform var(--sm-dur) var(--sm-ease), box-shadow var(--sm-dur) var(--sm-ease);
+  animation: sm-toast-in .38s var(--sm-bounce) both;
 }
-.sm-toast.out { animation: sm-toast-out .2s var(--sm-ease) both; }
-@keyframes sm-toast-in  { from { opacity:0; transform:translateY(12px) scale(.95); } to { opacity:1; transform:translateY(0) scale(1); } }
-@keyframes sm-toast-out { from { opacity:1; transform:translateY(0) scale(1); }       to { opacity:0; transform:translateY(8px) scale(.97); } }
-.sm-toast-icon { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.sm-toast-icon svg { width:10px; height:10px; stroke:#fff; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
-.sm-toast-success .sm-toast-icon { background:var(--sm-success); }
-.sm-toast-error   .sm-toast-icon { background:var(--sm-danger); }
-.sm-toast-info    .sm-toast-icon { background:var(--sm-accent); }
+.sm-toast:hover { box-shadow: 0 2px 2px rgba(16,24,60,.04), 0 10px 28px rgba(16,24,60,.13), 0 20px 48px -8px rgba(16,24,60,.16); }
+.sm-toast.out { animation: sm-toast-out .22s var(--sm-ease) both; }
+
+/* Left accent bar — quick color scan per type */
+.sm-toast::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--sm-accent);
+}
+.sm-toast-success::before { background: var(--sm-success); }
+.sm-toast-error::before   { background: var(--sm-danger); }
+.sm-toast-info::before    { background: var(--sm-accent); }
+
+@keyframes sm-toast-in {
+  from { opacity: 0; transform: translateX(28px) scale(.92); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes sm-toast-out {
+  from { opacity: 1; max-height: 120px; margin-top: 0; transform: translateX(0) scale(1); }
+  to   { opacity: 0; max-height: 0; margin-top: -10px; transform: translateX(18px) scale(.94); }
+}
+
+.sm-toast-icon {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  margin-top: 1px;
+}
+.sm-toast-icon svg { width: 13px; height: 13px; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.sm-toast-success .sm-toast-icon { background: rgba(22,163,74,.12); }
+.sm-toast-success .sm-toast-icon svg { stroke: var(--sm-success); }
+.sm-toast-error   .sm-toast-icon { background: rgba(220,38,38,.12); }
+.sm-toast-error   .sm-toast-icon svg { stroke: var(--sm-danger); }
+.sm-toast-info    .sm-toast-icon { background: rgba(6,76,219,.12); }
+.sm-toast-info    .sm-toast-icon svg { stroke: var(--sm-accent); }
+
+.sm-toast-body { flex: 1; min-width: 0; padding-top: 2px; }
+.sm-toast-msg { font-size: 12.5px; line-height: 1.45; color: var(--sm-t1); word-break: break-word; }
+
+.sm-toast-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+  background: transparent; border: none; color: var(--sm-t3); cursor: pointer;
+  transition: background var(--sm-dur-fast) var(--sm-ease), color var(--sm-dur-fast) var(--sm-ease);
+}
+.sm-toast-close:hover { background: var(--sm-card-hover); color: var(--sm-t1); }
+.sm-toast-close svg { width: 11px; height: 11px; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+
+/* Auto-dismiss progress bar — drains left→right, pauses on hover */
+.sm-toast-progress {
+  position: absolute; left: 3px; right: 0; bottom: 0; height: 2.5px;
+  background: currentColor; opacity: .22; transform-origin: left center;
+  animation: sm-toast-drain linear forwards;
+  animation-play-state: running;
+}
+.sm-toast:hover .sm-toast-progress { animation-play-state: paused; }
+.sm-toast-success .sm-toast-progress { color: var(--sm-success); }
+.sm-toast-error   .sm-toast-progress { color: var(--sm-danger); }
+.sm-toast-info    .sm-toast-progress { color: var(--sm-accent); }
+@keyframes sm-toast-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* ── Panel animations ────────────────────────────────────────── */
 .sm-panel { display: none; animation: sm-panel-in .22s var(--sm-ease) both; }

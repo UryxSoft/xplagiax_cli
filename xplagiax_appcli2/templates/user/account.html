@@ -1047,6 +1047,18 @@
               <div class="sm-kv-label">Uptime</div>
               <div class="sm-kv-value" id="smUptime">—</div>
             </div>
+            <div class="sm-kv">
+              <div class="sm-kv-label">AI_TestPro (xota)</div>
+              <div class="sm-kv-value">v2026.07</div>
+            </div>
+            <div class="sm-kv">
+              <div class="sm-kv-label">FinderX</div>
+              <div class="sm-kv-value">v2.0.0</div>
+            </div>
+            <div class="sm-kv">
+              <div class="sm-kv-label">MarkTrack</div>
+              <div class="sm-kv-value">v1.0</div>
+            </div>
           </div>
           <div class="sm-card-foot">
             <a href="/x_system_status" class="sm-btn sm-btn-ghost" target="_blank">
@@ -1231,9 +1243,24 @@ document.getElementById('smSearchInput')?.addEventListener('input', function() {
 });
 
 /* ───── Toast ─────────────────────────────────────────────── */
+const SM_TOAST_DURATION = 4000;
+const SM_TOAST_MAX = 4;
+
+function smDismissToast(t) {
+  if (!t || t.classList.contains('out')) return;
+  clearTimeout(t._smTimer);
+  t.classList.add('out');
+  setTimeout(() => t.remove(), 220);
+}
+
 function smToast(msg, type = 'info') {
   const wrap = document.getElementById('smToastWrap');
   if (!wrap) return;
+
+  // Cap simultaneous toasts — dismiss the oldest instead of stacking forever.
+  const active = wrap.querySelectorAll('.sm-toast:not(.out)');
+  if (active.length >= SM_TOAST_MAX) smDismissToast(active[0]);
+
   const icons = {
     success: '<polyline points="20 6 9 17 4 12"/>',
     error:   '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
@@ -1245,11 +1272,33 @@ function smToast(msg, type = 'info') {
     <div class="sm-toast-icon">
       <svg viewBox="0 0 24 24">${icons[type] || icons.info}</svg>
     </div>
-    <span style="flex:1;font-size:12.5px">${msg}</span>
-    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--sm-t4);cursor:pointer;font-size:16px;line-height:1;padding:0 0 0 8px">&times;</button>
+    <div class="sm-toast-body"><div class="sm-toast-msg"></div></div>
+    <button class="sm-toast-close" aria-label="Dismiss">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="sm-toast-progress"></div>
   `;
+  // textContent, not innerHTML — msg may contain user-influenced text.
+  t.querySelector('.sm-toast-msg').textContent = msg;
   wrap.appendChild(t);
-  setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 250); }, 4000);
+
+  const bar = t.querySelector('.sm-toast-progress');
+  bar.style.animationDuration = SM_TOAST_DURATION + 'ms';
+
+  let remaining = SM_TOAST_DURATION;
+  let startedAt = Date.now();
+  t._smTimer = setTimeout(() => smDismissToast(t), remaining);
+
+  t.addEventListener('mouseenter', () => {
+    clearTimeout(t._smTimer);
+    remaining -= (Date.now() - startedAt);
+  });
+  t.addEventListener('mouseleave', () => {
+    startedAt = Date.now();
+    t._smTimer = setTimeout(() => smDismissToast(t), Math.max(remaining, 300));
+  });
+
+  t.querySelector('.sm-toast-close').addEventListener('click', () => smDismissToast(t));
 }
 window.smToast = smToast;
 
