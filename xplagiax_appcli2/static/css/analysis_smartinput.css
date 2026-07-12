@@ -370,6 +370,7 @@
 .text-editor {
     width: 100%;
     min-height: 250px;
+    max-height: 289px;
     padding: 20px;
     border: none;
     background: transparent;
