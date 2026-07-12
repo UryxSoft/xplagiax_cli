@@ -5,7 +5,7 @@
 @keyframes xpaHistIn{from{opacity:0;transform:translateY(16px) scale(.975)}to{opacity:1;transform:none}}
 @keyframes xpaHistItemIn{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
 @keyframes xpaSkel{0%{background-position:200% 0}100%{background-position:-200% 0}}
-@media(prefers-reduced-motion:reduce){.xpa-hist-modal,.xpa-h-list,.xpa-h-detail-panel,.xpa-h-item{animation:none!important;transition:none!important}.xpa-h-sc-fill{transition:none!important}}
+@media(prefers-reduced-motion:reduce){.xpa-hist-modal,.xpa-h-list,.xpa-h-detail-panel,.xpa-h-item,.xpa-h-recent{animation:none!important;transition:none!important}.xpa-h-sc-fill{transition:none!important}}
 
 /* ━━ OVERLAY — mobile first: bottom sheet ━━━━━━━━━━━━━━━━━━━━━━ */
 .xpa-hist-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,17,34,.52);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:0}
@@ -22,7 +22,7 @@
 .xpa-h-title{display:none;font-size:clamp(.82rem,1.8vw,.9rem);font-weight:700;color:#0f172a;letter-spacing:-.015em;white-space:nowrap}
 .xpa-h-count{display:none;align-items:center;justify-content:center;background:#f1f5f9;color:#64748b;font-size:.67rem;font-weight:700;border-radius:20px;padding:2px 8px;min-width:22px;letter-spacing:0}
 .xpa-h-hdr-right{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 0;flex:1;min-width:0}
-.xpa-h-search{display:flex;align-items:center;gap:7px;background:#f8fafc;border:1.5px solid #e8edf5;border-radius:10px;padding:0 10px;height:38px;flex:1;min-width:0;transition:border-color .15s,box-shadow .15s}
+.xpa-h-search{position:relative;display:flex;align-items:center;gap:7px;background:#f8fafc;border:1.5px solid #e8edf5;border-radius:10px;padding:0 10px;height:38px;flex:1;min-width:0;transition:border-color .15s,box-shadow .15s}
 .xpa-h-search:focus-within{border-color:#064CDB;box-shadow:0 0 0 3px rgba(6,76,219,.1);background:#fff}
 .xpa-h-search svg{color:#94a3b8;flex-shrink:0}
 .xpa-h-search input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:clamp(.82rem,2vw,.88rem);color:#0f172a}
@@ -30,6 +30,18 @@
 .xpa-h-search-clr{background:none;border:none;color:#94a3b8;cursor:pointer;padding:4px;display:none;align-items:center;justify-content:center;border-radius:6px;min-width:28px;min-height:28px;transition:color .1s}
 .xpa-h-search-clr:hover{color:#374151}
 .xpa-h-search input:not(:placeholder-shown)~.xpa-h-search-clr{display:inline-flex}
+
+/* ━━ RECENT SEARCHES / TIPS DROPDOWN ━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.xpa-h-recent{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #e8edf5;border-radius:12px;box-shadow:0 12px 32px rgba(6,76,219,.12),0 4px 12px rgba(0,0,0,.06);padding:6px;z-index:30;max-height:260px;overflow-y:auto}
+.xpa-h-recent.show{display:block;animation:xpaHistItemIn .15s ease both}
+.xpa-h-recent-hdr{display:flex;align-items:center;justify-content:space-between;padding:6px 8px 4px;font-size:.63rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em}
+.xpa-h-recent-clr{background:none;border:none;color:#064CDB;font-size:.63rem;font-weight:700;cursor:pointer;padding:2px 4px;text-transform:none;letter-spacing:0}
+.xpa-h-recent-clr:hover{text-decoration:underline}
+.xpa-h-recent-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 8px;border-radius:8px;border:none;background:none;font-size:.78rem;color:#374151;cursor:pointer;transition:background .1s}
+.xpa-h-recent-item svg{color:#94a3b8;flex-shrink:0}
+.xpa-h-recent-item:hover{background:#f1f5f9}
+.xpa-h-recent-tip{display:flex;align-items:center;gap:7px;padding:6px 8px;font-size:.72rem;color:#64748b;line-height:1.4}
+.xpa-h-recent-tip code{background:#f1f5f9;color:#064CDB;padding:1px 5px;border-radius:5px;font-size:.68rem;font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;flex-shrink:0}
 .xpa-h-close{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;width:44px;height:44px;border-radius:10px;border:1.5px solid transparent;background:none;color:#64748b;cursor:pointer;transition:background .15s,color .15s,border-color .15s,transform .15s;flex-shrink:0}
 .xpa-h-close svg{transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
 .xpa-h-close:hover{background:#fef2f2;color:#dc2626;border-color:#fecaca}
@@ -212,6 +224,7 @@
                     <button class="xpa-h-search-clr" id="histSearchClr" type="button" aria-label="Clear search" tabindex="-1">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
+                    <div class="xpa-h-recent" id="histRecentSearches"></div>
                 </div>
                 <button class="xpa-h-close" id="histCloseBtn" type="button" aria-label="Close history">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -340,6 +353,82 @@
         if (!pattern) return escaped;
         return escaped.replace(new RegExp('(' + pattern + ')', 'gi'), '<mark class="xpa-h-hl">$1</mark>');
     }
+    // Search operators: "ai>50", "cit<80", "sim>=70", "before:7d", "after:2w".
+    // Everything else falls through as a plain (fuzzy) text token.
+    const _SCORE_FIELD = { ai: 'aiPct', sim: 'overall', overall: 'overall', finderx: 'overall', cit: 'cit', citations: 'cit' };
+    function _parseQuery(raw) {
+        const q = String(raw || '').toLowerCase().trim();
+        const tokens = q ? q.split(/\s+/).filter(Boolean) : [];
+        const filters = [];
+        const textTokens = [];
+        const scoreRe = /^(ai|sim|overall|finderx|cit|citations)(>=|<=|>|<|=)(\d{1,3})$/;
+        const dateRe  = /^(before|after):(\d+)(d|w|m)?$/;
+        tokens.forEach(tok => {
+            let m = tok.match(scoreRe);
+            if (m) {
+                const field = _SCORE_FIELD[m[1]];
+                const op = m[2];
+                const val = parseFloat(m[3]);
+                filters.push(e => {
+                    const v = e[field];
+                    if (v == null) return false;
+                    if (op === '>')  return v > val;
+                    if (op === '<')  return v < val;
+                    if (op === '>=') return v >= val;
+                    if (op === '<=') return v <= val;
+                    return v === val;
+                });
+                return;
+            }
+            m = tok.match(dateRe);
+            if (m) {
+                const dir = m[1];
+                const n = parseInt(m[2], 10);
+                const unit = m[3] || 'd';
+                const days = unit === 'w' ? n * 7 : unit === 'm' ? n * 30 : n;
+                const cutoff = Date.now() - days * 86400000;
+                filters.push(e => dir === 'before' ? e.ts < cutoff : e.ts > cutoff);
+                return;
+            }
+            textTokens.push(tok);
+        });
+        return { filters, textTokens };
+    }
+    // Small Levenshtein distance for typo-tolerant matching (short strings only).
+    function _levenshtein(a, b) {
+        if (a === b) return 0;
+        const al = a.length, bl = b.length;
+        if (!al) return bl;
+        if (!bl) return al;
+        let prev = Array.from({ length: bl + 1 }, (_, i) => i);
+        for (let i = 1; i <= al; i++) {
+            const cur = [i];
+            for (let j = 1; j <= bl; j++) {
+                cur[j] = a[i - 1] === b[j - 1] ? prev[j - 1] : 1 + Math.min(prev[j - 1], prev[j], cur[j - 1]);
+            }
+            prev = cur;
+        }
+        return prev[bl];
+    }
+    function _fuzzyTolerance(len) {
+        if (len <= 3) return 0;
+        if (len <= 6) return 1;
+        return 2;
+    }
+    // Exact substring match first (fast path); falls back to a bounded
+    // edit-distance check against individual haystack words so common typos
+    // ("analsis") still surface the right entries.
+    function _tokenMatches(token, haystack, words) {
+        if (haystack.includes(token)) return true;
+        const tol = _fuzzyTolerance(token.length);
+        if (!tol) return false;
+        for (let i = 0; i < words.length; i++) {
+            const w = words[i];
+            if (Math.abs(w.length - token.length) > tol) continue;
+            if (_levenshtein(token, w) <= tol) return true;
+        }
+        return false;
+    }
 
     class HistoryModalCtrl {
         constructor() {
@@ -390,8 +479,30 @@
             if (search) {
                 let searchDebounce;
                 search.addEventListener('input', () => {
+                    this._hideRecentSearches();
                     clearTimeout(searchDebounce);
                     searchDebounce = setTimeout(() => this._renderList(search.value), 120);
+                });
+                search.addEventListener('focus', () => {
+                    if (!search.value.trim()) this._showRecentSearches();
+                });
+                search.addEventListener('blur', () => {
+                    if (search.value.trim().length >= 2) this._saveRecentSearch(search.value);
+                    setTimeout(() => this._hideRecentSearches(), 120);
+                });
+            }
+            const recentBox = document.getElementById('histRecentSearches');
+            if (recentBox) {
+                // Prevent the input's blur from firing before the click is handled.
+                recentBox.addEventListener('mousedown', e => e.preventDefault());
+                recentBox.addEventListener('click', e => {
+                    if (e.target.closest('#histRecentClrAll')) { this._clearRecentSearches(); return; }
+                    const item = e.target.closest('.xpa-h-recent-item');
+                    if (!item || !search) return;
+                    search.value = item.dataset.q || '';
+                    this._hideRecentSearches();
+                    this._renderList(search.value);
+                    search.focus();
                 });
             }
 
@@ -412,7 +523,11 @@
                 if (modal.style.display !== 'flex') return;
                 const active = document.querySelector('.xpa-h-item.active');
                 if (e.key === '/' && document.activeElement !== search) { e.preventDefault(); if (search) search.focus(); return; }
-                if (e.key === 'Enter' && !e.shiftKey && active) { e.preventDefault(); this._openEntry(active.dataset.id); }
+                if (e.key === 'Enter' && !e.shiftKey && active) {
+                    e.preventDefault();
+                    if (document.activeElement === search && search.value.trim().length >= 2) this._saveRecentSearch(search.value);
+                    this._openEntry(active.dataset.id);
+                }
                 if (e.key === 'D' && (e.metaKey || e.ctrlKey) && e.shiftKey && active) { e.preventDefault(); this._deleteEntry(active.dataset.id); }
                 if (e.key === 'ArrowDown') { e.preventDefault(); this._nav(1); }
                 if (e.key === 'ArrowUp')   { e.preventDefault(); this._nav(-1); }
@@ -426,6 +541,7 @@
             if (!modal) return;
             const search = document.getElementById('histSearchInput');
             if (search) search.value = '';
+            this._hideRecentSearches();
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
 
@@ -476,17 +592,20 @@
         _renderList(filter) {
             const listEl = document.getElementById('histListEl');
             if (!listEl) return;
-            const q = String(filter || '').toLowerCase().trim();
-            // Tokenized AND-match: each space-separated word must appear somewhere
-            // in the entry (title/preview/date/scores), in any order — so "thesis
-            // draft" also matches "draft of my thesis".
-            const qTokens = q ? q.split(/\s+/).filter(Boolean) : [];
+            // Score/date operators ("ai>50", "cit<80", "before:7d") are pulled out
+            // as their own predicates; the rest is fuzzy/typo-tolerant AND text search.
+            const { filters: opFilters, textTokens } = _parseQuery(filter);
             const all = this._items || [];
             let items = all;
             if (this._filter === 'ai')        items = items.filter(e => e.aiPct != null);
             if (this._filter === 'finderx')   items = items.filter(e => e.overall != null);
             if (this._filter === 'citations') items = items.filter(e => e.cit != null);
-            if (qTokens.length) items = items.filter(e => { const h = _haystack(e); return qTokens.every(t => h.includes(t)); });
+            if (opFilters.length) items = items.filter(e => opFilters.every(f => f(e)));
+            if (textTokens.length) items = items.filter(e => {
+                const h = _haystack(e);
+                const words = h.split(/\s+/).filter(Boolean);
+                return textTokens.every(t => _tokenMatches(t, h, words));
+            });
 
             this._setCount(all.length);
 
@@ -518,7 +637,7 @@
                     html += `<div class="xpa-h-item" data-id="${e.id}" style="--risk-c:${rc};animation-delay:${delay}ms" role="option" tabindex="0" aria-label="${_esc(e.title)}">
                         <div class="xpa-h-item-r1">
                             <span class="xpa-h-dot"></span>
-                            <span class="xpa-h-ititle">${_highlight(e.title, qTokens)}</span>
+                            <span class="xpa-h-ititle">${_highlight(e.title, textTokens)}</span>
                             <span class="xpa-h-itime">${_rel(e.ts)}</span>
                         </div>
                         <div class="xpa-h-item-r2">
@@ -728,6 +847,52 @@
                     ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>`
                     : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/></svg>`;
             }
+        }
+
+        // Recent searches persist in localStorage (client-side convenience only,
+        // not synced/per-user) so they survive across modal opens/page loads.
+        _getRecentSearches() {
+            try {
+                const arr = JSON.parse(localStorage.getItem('xpaHistRecentSearches') || '[]');
+                return Array.isArray(arr) ? arr : [];
+            } catch (_) { return []; }
+        }
+        _saveRecentSearch(q) {
+            q = String(q || '').trim();
+            if (q.length < 2) return;
+            try {
+                let arr = this._getRecentSearches().filter(x => x.toLowerCase() !== q.toLowerCase());
+                arr.unshift(q);
+                localStorage.setItem('xpaHistRecentSearches', JSON.stringify(arr.slice(0, 8)));
+            } catch (_) {}
+        }
+        _clearRecentSearches() {
+            try { localStorage.removeItem('xpaHistRecentSearches'); } catch (_) {}
+            this._renderRecentSearches();
+        }
+        _renderRecentSearches() {
+            const box = document.getElementById('histRecentSearches');
+            if (!box) return;
+            const items = this._getRecentSearches();
+            if (!items.length) {
+                box.innerHTML = `<div class="xpa-h-recent-hdr">Search tips</div>
+                    <div class="xpa-h-recent-tip"><code>ai&gt;50</code> AI score above 50%</div>
+                    <div class="xpa-h-recent-tip"><code>cit&lt;80</code> citation score below 80</div>
+                    <div class="xpa-h-recent-tip"><code>before:7d</code> analyzed over 7 days ago</div>`;
+                return;
+            }
+            box.innerHTML = `<div class="xpa-h-recent-hdr">Recent searches<button type="button" class="xpa-h-recent-clr" id="histRecentClrAll">Clear</button></div>` +
+                items.map(q => `<button type="button" class="xpa-h-recent-item" data-q="${_esc(q)}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                    <span>${_esc(q)}</span>
+                </button>`).join('');
+        }
+        _showRecentSearches() {
+            this._renderRecentSearches();
+            document.getElementById('histRecentSearches')?.classList.add('show');
+        }
+        _hideRecentSearches() {
+            document.getElementById('histRecentSearches')?.classList.remove('show');
         }
 
         _syncFooter(sel) {

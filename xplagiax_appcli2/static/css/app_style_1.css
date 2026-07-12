@@ -1076,7 +1076,7 @@ body {
   background: rgba(0, 0, 0, .48);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  z-index: 7000;
+  z-index: 9500;
   opacity: 0;
   pointer-events: none;
   transition: opacity .3s ease;
@@ -1101,7 +1101,7 @@ body {
   border-top-left-radius: 22px;
   border-bottom-left-radius: 22px;
   box-shadow: -24px 0 72px rgba(0, 0, 0, .45);
-  z-index: 7100;
+  z-index: 9600;
   transform: translateX(110%);
   transition: transform .38s cubic-bezier(.34, 1.18, .64, 1);
   display: flex;
