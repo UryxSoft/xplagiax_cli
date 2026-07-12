@@ -847,6 +847,11 @@ body.xp-file-preview .mode-switch-container {
 /* ── FinderX Segment Blocks ──────────────────────────────────────── */
 .seg-reason{display:flex;align-items:flex-start;gap:5px;margin-top:7px;font-size:0.74rem;color:#64748b;line-height:1.45}
 .seg-reason svg{flex-shrink:0;margin-top:2px;color:#94a3b8}
+/* Long-segment clamp: keep the card compact; full text via "Show more". */
+.seg-clamp{display:-webkit-box;-webkit-line-clamp:6;line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+.seg-clamp.seg-expanded{display:block;-webkit-line-clamp:unset;line-clamp:unset;overflow:visible}
+.seg-clamp-btn{margin-top:6px;padding:0;background:none;border:none;cursor:pointer;font-size:.72rem;font-weight:700;color:#064CDB;letter-spacing:.01em}
+.seg-clamp-btn:hover{text-decoration:underline}
 .seg-metrics{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;padding:7px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e8edf5}
 .seg-metric{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:52px}
 .seg-metric-val{font-size:.82rem;font-weight:800;letter-spacing:-.03em;line-height:1}
@@ -3204,7 +3209,7 @@ body.xp-file-preview .mode-switch-container {
 
             const submitData = await response.json();
             // Cache hit: el backend devuelve el reporte completo sin job que pollear.
-            if (submitData.done && submitData.result) return submitData.result;
+            if (submitData.done && submitData.result) return this._normalizeFinderxResult(submitData.result);
             const jobId = submitData.job_id;
             if (!jobId) throw new Error('FinderX did not return a job id.');
 
@@ -3222,6 +3227,30 @@ body.xp-file-preview .mode-switch-container {
             );
             const result = report && report.result ? report.result : null;
             if (!result) throw new Error('Unexpected response from FinderX service.');
+            return this._normalizeFinderxResult(result);
+        }
+
+        // El modo full de FinderX separa las fuentes en academic_matches e
+        // internet_matches (web: Wikipedia, blogs, noticias vía SearXNG). Todo
+        // el render de este archivo consume academic_matches, así que aquí —
+        // el ÚNICO punto de entrada del resultado — se fusionan ambas listas
+        // (dedup por URL/título) para que las fuentes web aparezcan en el
+        // panel, en la atribución de segmentos y en los contadores.
+        _normalizeFinderxResult(result) {
+            if (!result || typeof result !== 'object') return result;
+            const internet = Array.isArray(result.internet_matches) ? result.internet_matches : [];
+            if (internet.length) {
+                const academic = Array.isArray(result.academic_matches) ? result.academic_matches : [];
+                const keyOf = m => (m && (m.url || m.doi)) || ((m && m.title ? String(m.title).toLowerCase().trim() : ''));
+                const seen = new Set(academic.map(keyOf).filter(Boolean));
+                const extra = internet.filter(m => {
+                    const k = keyOf(m);
+                    if (!k || seen.has(k)) return false;
+                    seen.add(k);
+                    return true;
+                });
+                result.academic_matches = academic.concat(extra);
+            }
             return result;
         }
 
@@ -3692,6 +3721,21 @@ body.xp-file-preview .mode-switch-container {
             </div>`;
         }
 
+        // Wrap a segment's (already-escaped) text so long paragraphs are
+        // clamped to a few lines with a "Show more/less" toggle, instead of
+        // stretching the card. Since FinderX now sends the FULL segment
+        // (text_full), some paragraphs are long; this keeps the layout compact
+        // without truncating the data. Short segments render plainly (no toggle).
+        _segClampHtml(escaped, rawLen) {
+            const CLAMP_AT = 320;   // ~6 lines; below this a toggle is pointless
+            if (!rawLen || rawLen <= CLAMP_AT) return `"${escaped}"`;
+            return `<span class="seg-clamp">"${escaped}"</span>`
+                 + `<button type="button" class="seg-clamp-btn" `
+                 + `onclick="var s=this.previousElementSibling;`
+                 + `var e=s.classList.toggle('seg-expanded');`
+                 + `this.textContent=e?'Show less':'Show more';">Show more</button>`;
+        }
+
         // ─── New segment block for /api/v1/academic-check structure ─────────────
         _buildSegmentBlockHtml(seg, opts) {
             opts = opts || {};
@@ -3709,7 +3753,11 @@ body.xp-file-preview .mode-switch-container {
             const isPlag      = decision === 'plagiarism' || decision === 'paraphrase';
             const idx         = seg.segment_index != null ? seg.segment_index : '';
             const charRange   = (seg.char_start != null && seg.char_end != null) ? `chars ${seg.char_start}–${seg.char_end}` : '';
-            const preview     = this._escapeHtml(seg.text_preview || '');
+            // Display the FULL segment (FinderX ≥ schema v3 sends text_full,
+            // untruncated). text_preview stays the fallback for older/cached
+            // reports and remains the highlight-anchor field (see _highlight*).
+            const rawText     = seg.text_full || seg.text_preview || '';
+            const preview     = this._escapeHtml(rawText);
             const confColorMap = { high: '#dc2626', medium: '#d97706', low: '#f59e0b', none: '#94a3b8' };
             const confColor    = confColorMap[confidence] || '#94a3b8';
             const metric = (val, lbl, col, tip) => `<div class="seg-metric"><span class="seg-metric-val" style="color:${col}">${val}</span><span class="seg-metric-lbl"${tip ? ` data-tip="${tip}"` : ''}>${lbl}</span></div>`;
@@ -3739,7 +3787,7 @@ body.xp-file-preview .mode-switch-container {
                             <div class="confidence-bar"><div class="confidence-fill" style="width:${matchScore}%;background:#059669"></div></div>
                         </div>
                     </div>
-                    <div class="block-content" style="color:#475569">"${preview}"</div>
+                    <div class="block-content" style="color:#475569">${this._segClampHtml(preview, rawText.length)}</div>
                     ${reason ? `<div class="seg-reason"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>${this._escapeHtml(reason)}</div>` : ''}
                     <div class="seg-metrics">
                         ${metric(ngramPct + '%', 'Literal', ngramPct >= 25 ? '#d97706' : '#94a3b8', METRIC_TIP['Literal'])}
@@ -3778,7 +3826,7 @@ body.xp-file-preview .mode-switch-container {
             const cmpHtml = `<div class="plag-cmp-wrap">
                 <div class="plag-cmp-col" style="border-left:3px solid ${color}">
                     <div class="plag-cmp-h" style="color:${color}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Your text</div>
-                    <div class="plag-cmp-t">"${preview}"</div>
+                    <div class="plag-cmp-t">${this._segClampHtml(preview, rawText.length)}</div>
                 </div>
                 ${srcSnippet ? `<div class="plag-cmp-col" style="border-left:3px solid #94a3b8">
                     <div class="plag-cmp-h" style="color:#64748b"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Source excerpt</div>
@@ -4209,11 +4257,36 @@ body.xp-file-preview .mode-switch-container {
             const scores = (source && source.scores) || {};
             const overall = source ? Math.round(num(scores.overall)) : 0;
             const exact = source ? Math.round(num(scores.exact)) : 0;
-            const originalPct = source ? Math.max(0, 100 - overall) : 0;
             const summary = (source && source.segment_summary) || {};
             const segs = (source && Array.isArray(source.segment_matches)) ? source.segment_matches : [];
             const flaggedN = source ? (num(summary.segments_flagged) || segs.filter(x => ['plagiarism', 'paraphrase'].includes(String(x.decision || '').toLowerCase())).length) : 0;
             const plagFlagged = flaggedN > 0;
+
+            // ── Originality = segments WITHOUT a confirmed match / total ──────────
+            // Regla funcional: un segmento sin coincidencia en ninguna fuente ni
+            // provider cuenta como ORIGINAL. Se calcula desde segment_summary
+            // (verdad por segmento), NO como 100 - scores.overall (un score de
+            // documento que sobre-reporta similitud cuando un solo chunk matchea).
+            const analyzedN = source ? (num(summary.segments_analyzed) || segs.length) : 0;
+            let originalPct;
+            if (source && analyzedN > 0) {
+                const originalN = (summary.segments_original != null)
+                    ? num(summary.segments_original)
+                    : (summary.originality_ratio != null
+                        ? Math.round(num(summary.originality_ratio) * analyzedN)
+                        : segs.filter(x => String(x.decision || '').toLowerCase() === 'original').length);
+                originalPct = Math.round((originalN / analyzedN) * 100);
+                if (typeof console !== 'undefined' && console.debug) {
+                    console.debug('[Overview] originality', { analyzedN, originalN, flaggedN, originalPct, overall });
+                }
+            } else {
+                // Sin cobertura por segmentos (reporte viejo/caché sin
+                // segment_summary): aproximar con 100 - overall y avisarlo.
+                originalPct = source ? Math.max(0, 100 - overall) : 0;
+                if (source && typeof console !== 'undefined' && console.debug) {
+                    console.debug('[Overview] originality fallback (no segment_summary)', { overall, originalPct });
+                }
+            }
 
             // Citas: MISMO score que muestra el tab "Citations & References".
             const citScore = citation ? Math.round(num(citation.citation_quality_score)) : 0;
@@ -4229,6 +4302,9 @@ body.xp-file-preview .mode-switch-container {
             const metrics = [];
             if (ai)       metrics.push({ color: '#ef4444', name: 'AI',         sub: 'Generated', value: aiPct });
             if (ai)       metrics.push({ color: '#10b981', name: 'Human',      sub: 'Written',   value: humanPct });
+            // Originalidad basada en segmentos — se muestra SIEMPRE que corra
+            // FinderX (antes solo aparecía cuando no había ningún análisis).
+            if (source)   metrics.push({ color: '#a78bfa', name: 'Original',   sub: 'Unique',    value: originalPct });
             if (source)   metrics.push({ color: '#f59e0b', name: 'Similarity', sub: 'Sources',   value: overall });
             if (citation) metrics.push({ color: '#064CDB', name: 'Citations',  sub: 'Quality',   value: citScore });
             if (!metrics.length) metrics.push({ color: '#a78bfa', name: 'Original', sub: 'Unique', value: originalPct });
@@ -4517,9 +4593,18 @@ body.xp-file-preview .mode-switch-container {
                 <div class="score-item"><span data-tip="Share of all analyzed segments that were flagged as plagiarism or paraphrase.">Flagged ratio</span><span>${(ratio * 100).toFixed(1)}%</span></div>
             </div>` : '';
 
-            const noteHtml = (!hasFlag && (overall >= 25 || exact >= 25)) ? `<div class="plag-note">
+            // Nota explicativa cuando el score global es alto pero ningún segmento
+            // fue confirmado. Dos casos DISTINTOS que antes se mezclaban:
+            //  - exact alto  → SÍ hubo coincidencia literal (n-gramas) con alguna
+            //    fuente, solo que demasiado localizada/corta para confirmar un
+            //    segmento completo. Decir "not copied text" aquí era falso.
+            //  - solo overall/semántico alto → solapamiento temático real.
+            const noteHtml = (!hasFlag && exact >= 50) ? `<div class="plag-note">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 22h16a2 2 0 0 0 1.73-4Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                <span>The <b>${exact}% exact</b> score means part of this text matches a source nearly <b>word-for-word</b>, but the match was too short or localized to confirm any full segment as plagiarism. Review the sources listed below before treating this document as original.</span>
+            </div>` : (!hasFlag && (overall >= 25 || exact >= 25)) ? `<div class="plag-note">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                <span>The <b>${overall}% overall</b> score reflects thematic overlap with the academic sources listed below (shared topic &amp; vocabulary), not copied text. No citation is required unless your work was derived from them.</span>
+                <span>The <b>${overall}% overall</b> score reflects thematic overlap with the sources listed below (shared topic &amp; vocabulary), not copied text. No citation is required unless your work was derived from them.</span>
             </div>` : '';
 
             // Resolve a source excerpt for each flagged segment from academic_matches (by DOI or title).
@@ -5491,7 +5576,21 @@ body.xp-file-preview .mode-switch-container {
                 const overall = Math.round(sc.overall || 0);
                 const ca = source.citation_analysis || {};
                 const matches = (source.academic_matches || []).length;
-                segments.push({ key: 'original', value: Math.max(0, 100 - overall) });
+                // Originality from segment_summary (segments without a match),
+                // not 100 - overall. See _buildMtOverview for the rationale.
+                const sum = source.segment_summary || {};
+                const segArr = Array.isArray(source.segment_matches) ? source.segment_matches : [];
+                const analyzedN = Number(sum.segments_analyzed) || segArr.length;
+                let originalPct;
+                if (analyzedN > 0) {
+                    const originalN = (sum.segments_original != null)
+                        ? Number(sum.segments_original)
+                        : segArr.filter(x => String(x.decision || '').toLowerCase() === 'original').length;
+                    originalPct = Math.round((originalN / analyzedN) * 100);
+                } else {
+                    originalPct = Math.max(0, 100 - overall);
+                }
+                segments.push({ key: 'original', value: originalPct });
                 segments.push({ key: 'sim', value: overall });
                 segments.push({ key: 'ref', value: Math.round(ca.citation_coverage || 0) });
                 if (!ai) { centerValue = overall; centerCaption = 'Similarity'; }

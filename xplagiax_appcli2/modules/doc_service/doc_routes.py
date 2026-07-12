@@ -3970,12 +3970,17 @@ def finderx_check():
 
     try:
         submit = session_pool.post(
-            # FinderX ≥2.0: el tab "Plagiarism checker" usa el modo académico
-            # (/api/v1/academic-check: OpenAlex, Semantic Scholar, arXiv…) — es el
-            # contrato nuevo con segment_matches/segment_summary. /api/v1/analyze
-            # (modo full con internet) sigue existiendo pero no es lo que este
-            # panel presenta.
-            f'{FINDERX_SERVICE_BASE}/api/v1/academic-check',
+            # FinderX ≥2.0: el tab "Plagiarism checker" usa el modo FULL
+            # (/api/v1/analyze = internet + académico). Antes usaba
+            # /academic-check, pero ese modo no puede detectar copias de la web
+            # (Wikipedia, blogs, noticias): solo consulta corpus académicos y el
+            # provider MediaWiki con recall limitado — un copy-paste de
+            # Wikipedia salía como "original". El modo full agrega búsqueda web
+            # real (SearXNG) y si SearXNG no está desplegado degrada solo a
+            # académico (mismo comportamiento anterior, sin romper nada). El
+            # contrato de respuesta (segment_matches/segment_summary/scores) es
+            # idéntico en ambos modos; se suma internet_matches.
+            f'{FINDERX_SERVICE_BASE}/api/v1/analyze',
             headers=headers,
             # 500k cap (was 50k): FinderX distributes an adaptive, capped chunk
             # budget (max_chunks_cap=60) across the WHOLE document, so a thesis is
