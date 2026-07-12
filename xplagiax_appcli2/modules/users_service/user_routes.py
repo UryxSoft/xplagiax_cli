@@ -979,6 +979,60 @@ def set_document_retention():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@x_users.route('/api/preferences/auto-archive', methods=['GET'])
+@login_required
+def get_auto_archive_preference():
+    """API: Devuelve la configuración de Auto-Archive del usuario."""
+    try:
+        preference = UserPreference.query.filter_by(user_id=current_user.id).first()
+        if not preference:
+            preference = UserPreference(user_id=current_user.id)
+            db.session.add(preference)
+            db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'auto_archive_enabled': bool(preference.auto_archive_enabled),
+            'archive_after_days': preference.archive_after_days or 15,
+            'delete_after_archive_days': preference.delete_after_archive_days or 15
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@x_users.route('/api/preferences/auto-archive', methods=['POST'])
+@login_required
+def set_auto_archive_preference():
+    """API: Guarda la configuración de Auto-Archive del usuario."""
+    try:
+        data = request.get_json(silent=True) or {}
+        enabled = bool(data.get('enabled', False))
+        archive_after_days = max(1, int(data.get('archive_after_days', 15) or 15))
+        delete_after_archive_days = max(1, int(data.get('delete_after_archive_days', 15) or 15))
+
+        preference = UserPreference.query.filter_by(user_id=current_user.id).first()
+        if not preference:
+            preference = UserPreference(user_id=current_user.id)
+            db.session.add(preference)
+
+        preference.auto_archive_enabled = enabled
+        preference.archive_after_days = archive_after_days
+        preference.delete_after_archive_days = delete_after_archive_days
+        preference.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'auto_archive_enabled': enabled,
+            'archive_after_days': archive_after_days,
+            'delete_after_archive_days': delete_after_archive_days
+        })
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': 'Invalid day values'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @x_users.route('/storage_info')
 @login_required
 def get_storage_info():

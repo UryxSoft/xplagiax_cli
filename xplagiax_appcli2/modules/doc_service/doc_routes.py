@@ -3294,12 +3294,17 @@ def remove_share(share_id):
 def get_item_history(item_type, item_id):
     """Get rename/change history for an item"""
     from modules.models.model import ItemHistory
-    
+
+    if item_type == 'file':
+        owned = File.query.filter_by(id=item_id, user_id=current_user.id).first()
+        if not owned:
+            return jsonify({'error': 'File not found'}), 404
+
     history = ItemHistory.query.filter_by(
         item_type=item_type,
         item_id=item_id
     ).order_by(ItemHistory.created_at.desc()).limit(20).all()
-    
+
     return jsonify({
         'history': [h.to_dict() for h in history]
     })
@@ -3826,6 +3831,18 @@ def analyze_text():
     if not text or len(text.split()) < 10:
         return jsonify({'error': 'Please enter at least 10 words to analyze.'}), 400
 
+    # Server-side gate (defense in depth): the client already checks/counts via
+    # /x_analysiscounter/api/analysis/perform before calling this endpoint, but
+    # this endpoint must not trust that — a direct call bypassing the UI must
+    # still be rejected. Read-only check, does NOT increment (counting happens
+    # exactly once, in the counter endpoint).
+    if not current_user.can_perform_analysis():
+        return jsonify({
+            'error': 'Daily analysis limit reached',
+            'limit_reached': True,
+            'stats': current_user.get_analysis_stats()
+        }), 403
+
     plugins = data.get('plugins') or AI_DEFAULT_PLUGINS
     submit_url, _ = _ai_async_urls()
     headers = {'Content-Type': 'application/json', 'X-API-Key': AI_TEXT_SERVICE_API_KEY}
@@ -3940,6 +3957,14 @@ def finderx_check():
     if not text or len(text.split()) < 10:
         return jsonify({'error': 'Please enter at least 10 words to analyze.'}), 400
 
+    # Server-side gate (defense in depth) — see analyze_text() above for rationale.
+    if not current_user.can_perform_analysis():
+        return jsonify({
+            'error': 'Daily analysis limit reached',
+            'limit_reached': True,
+            'stats': current_user.get_analysis_stats()
+        }), 403
+
     priority = data.get('priority') or 'default'
     headers = {'Content-Type': 'application/json', 'X-API-Key': FINDERX_SERVICE_API_KEY}
 
@@ -4051,6 +4076,14 @@ def citation_validation():
     text = (data.get('text') or '').strip()
     if not text or len(text.split()) < 10:
         return jsonify({'error': 'Please enter at least 10 words to analyze.'}), 400
+
+    # Server-side gate (defense in depth) — see analyze_text() above for rationale.
+    if not current_user.can_perform_analysis():
+        return jsonify({
+            'error': 'Daily analysis limit reached',
+            'limit_reached': True,
+            'stats': current_user.get_analysis_stats()
+        }), 403
 
     headers = {'Content-Type': 'application/json', 'X-API-Key': FINDERX_SERVICE_API_KEY}
     try:

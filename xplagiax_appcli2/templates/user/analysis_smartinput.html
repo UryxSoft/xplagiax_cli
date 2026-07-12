@@ -3079,6 +3079,19 @@ body.xp-file-preview .mode-switch-container {
                 return;
             }
 
+            // Enforce the per-account daily analysis limit (id="miniProgress")
+            // before running ANY analysis type — document, plain text, or any
+            // combination of types. This is the single convergence point for
+            // both handleFileAnalysis() and the text-mode shortcuts, so one
+            // check here covers every entry point.
+            if (typeof checkAndPerformAnalysis === 'function') {
+                const usage = await checkAndPerformAnalysis();
+                if (!usage || !usage.success) {
+                    this.showError((usage && usage.error) || 'Daily analysis limit reached.');
+                    return;
+                }
+            }
+
             const aiBtn = document.querySelector('.button.aixplagiax');
             if (aiBtn) { aiBtn.classList.add('analyzing'); aiBtn.disabled = true; }
             showCustomLoadingOnDiv('inputWrapper');

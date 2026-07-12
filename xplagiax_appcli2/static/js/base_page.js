@@ -333,7 +333,182 @@ function _updateOcCount() {
   if (n === 0) _renderArchivedOc([]);
 }
 
+// ── Auto-Archive offcanvas helpers (independent from the manual Archive panel above) ──
+function _fmtCountdown(deleteAtIso) {
+  if (!deleteAtIso) return '';
+  var ms = new Date(deleteAtIso) - new Date();
+  if (ms <= 0) return 'Deleting soon';
+  var days = Math.floor(ms / 86400000);
+  if (days >= 1) return days + 'd left';
+  var hours = Math.floor(ms / 3600000);
+  if (hours >= 1) return hours + 'h left';
+  return Math.max(1, Math.floor(ms / 60000)) + 'm left';
+}
+
+function _autoArcItemHtml(f) {
+  var countdown = _fmtCountdown(f.auto_archive_delete_at);
+  var ms = f.auto_archive_delete_at ? (new Date(f.auto_archive_delete_at) - new Date()) : null;
+  var urgentClass = (ms !== null && ms <= 172800000) ? ' urgent' : ''; // <= 2 days
+  var iconColor = _fileIcon(f.mime_type);
+  var size = _fmtBytes(f.size);
+  return `
+    <div class="xp-arc-item xp-arc-item--stack" data-id="${f.id}">
+      <div class="xp-arc-top">
+        <div class="xp-arc-icon" style="background:${iconColor}18;" onclick="_toggleAutoArchiveDetails(${f.id}, this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+            <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+          </svg>
+        </div>
+        <div class="xp-arc-meta" onclick="_toggleAutoArchiveDetails(${f.id}, this)">
+          <div class="xp-arc-name" title="${f.name}">${f.name}</div>
+          <div class="xp-arc-info">${size}</div>
+        </div>
+        ${countdown ? `<span class="xp-arc-expiry${urgentClass}">${countdown}</span>` : ''}
+        <div class="xp-arc-actions">
+          <button class="xp-arc-btn xp-arc-btn--restore" title="Restore" onclick="restoreAutoArchivedFile(${f.id}, this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+            </svg>
+          </button>
+          <a class="xp-arc-btn xp-arc-btn--download" title="Download" href="/x_buck/api/files/${f.id}/download">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </a>
+          <button class="xp-arc-btn xp-arc-btn--trash" title="Delete now" onclick="deleteNowAutoArchivedFile(${f.id}, this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="xp-arc-details" id="autoArcDetails${f.id}" style="display:none;"></div>
+    </div>`;
+}
+
+function _toggleAutoArchiveDetails(id, rowEl) {
+  var box = document.getElementById('autoArcDetails' + id);
+  if (!box) return;
+  var isOpen = box.style.display !== 'none';
+  if (isOpen) { box.style.display = 'none'; return; }
+
+  box.style.display = 'block';
+  if (box.dataset.loaded === '1') return;
+  box.innerHTML = '<div class="xp-arc-details-loading">Loading details…</div>';
+
+  fetch('/x_doc/history/file/' + id)
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      var rows = (data && data.history) || [];
+      if (rows.length === 0) {
+        box.innerHTML = '<div class="xp-arc-details-empty">No history yet.</div>';
+        return;
+      }
+      box.innerHTML = rows.map(function(h) {
+        return '<div class="xp-arc-details-row"><span class="xp-arc-details-action">' + h.action + '</span>' +
+          '<span class="xp-arc-details-date">' + (h.date || '') + '</span></div>';
+      }).join('');
+      box.dataset.loaded = '1';
+    })
+    .catch(function() { box.innerHTML = '<div class="xp-arc-details-empty">Could not load details.</div>'; });
+}
+
+function _renderAutoArchiveOc(files) {
+  var body = document.getElementById('autoArchiveOcBody');
+  var count = document.getElementById('autoArchiveOcCount');
+  if (!body) return;
+
+  if (!files || files.length === 0) {
+    body.innerHTML = `
+      <div class="xp-oc-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        <span>No auto-archived files</span>
+      </div>`;
+    if (count) count.textContent = '0 files';
+    return;
+  }
+  body.innerHTML = files.map(_autoArcItemHtml).join('');
+  if (count) count.textContent = files.length + ' file' + (files.length !== 1 ? 's' : '');
+}
+
+function openAutoArchiveOc() {
+  var overlay = document.getElementById('autoArchiveOcOverlay');
+  var oc = document.getElementById('autoArchiveOc');
+  var body = document.getElementById('autoArchiveOcBody');
+  if (!oc) return;
+
+  overlay && overlay.classList.add('open');
+  oc.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  if (body) body.innerHTML = '<div class="xp-oc-loading"><div class="xp-oc-spinner"></div><span>Loading…</span></div>';
+
+  fetch('/x_doc/auto-archive/files')
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) { if (data) _renderAutoArchiveOc(data.files); })
+    .catch(function() {
+      if (body) body.innerHTML = '<div class="xp-oc-empty"><span>Error loading files</span></div>';
+    });
+}
+
+function closeAutoArchiveOc() {
+  var overlay = document.getElementById('autoArchiveOcOverlay');
+  var oc = document.getElementById('autoArchiveOc');
+  overlay && overlay.classList.remove('open');
+  oc && oc.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function restoreAutoArchivedFile(id, btn) {
+  if (btn) btn.disabled = true;
+  fetch('/x_doc/auto-archive/files/' + id + '/restore', { method: 'POST' })
+    .then(function(r) {
+      if (r.ok) {
+        var item = document.querySelector('#autoArchiveOcBody .xp-arc-item[data-id="' + id + '"]');
+        if (item) {
+          item.style.transition = 'opacity .25s, transform .25s';
+          item.style.opacity = '0';
+          item.style.transform = 'translateX(20px)';
+          setTimeout(function() { item.remove(); _updateAutoArchiveOcCount(); }, 260);
+        }
+        if (window.refreshSidebarCounts) window.refreshSidebarCounts();
+        if (window._listCacheClear) window._listCacheClear('native');
+      } else { if (btn) btn.disabled = false; }
+    }).catch(function() { if (btn) btn.disabled = false; });
+}
+
+function deleteNowAutoArchivedFile(id, btn) {
+  if (!confirm('Permanently delete this document? This cannot be undone.')) return;
+  if (btn) btn.disabled = true;
+  fetch('/x_doc/auto-archive/files/' + id + '/delete-now', { method: 'POST' })
+    .then(function(r) {
+      if (r.ok) {
+        var item = document.querySelector('#autoArchiveOcBody .xp-arc-item[data-id="' + id + '"]');
+        if (item) {
+          item.style.transition = 'opacity .25s, transform .25s';
+          item.style.opacity = '0';
+          item.style.transform = 'translateX(-20px)';
+          setTimeout(function() { item.remove(); _updateAutoArchiveOcCount(); }, 260);
+        }
+        if (window.refreshSidebarCounts) window.refreshSidebarCounts();
+      } else { if (btn) btn.disabled = false; }
+    }).catch(function() { if (btn) btn.disabled = false; });
+}
+
+function _updateAutoArchiveOcCount() {
+  var items = document.querySelectorAll('#autoArchiveOcBody .xp-arc-item');
+  var count = document.getElementById('autoArchiveOcCount');
+  var n = items.length;
+  if (count) count.textContent = n + ' file' + (n !== 1 ? 's' : '');
+  if (n === 0) _renderAutoArchiveOc([]);
+}
+
+window.openAutoArchiveOc = openAutoArchiveOc;
+window.closeAutoArchiveOc = closeAutoArchiveOc;
+
 // Close offcanvases on Escape
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') { closeTrashOc(); closeArchivedOc(); }
+  if (e.key === 'Escape') { closeTrashOc(); closeArchivedOc(); closeAutoArchiveOc(); }
 });

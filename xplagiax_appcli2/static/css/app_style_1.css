@@ -1341,6 +1341,72 @@ body {
   background: rgba(251, 191, 36, .12);
 }
 
+/* Auto-Archive panel — stacked item (top row + collapsible details below),
+   modifier only, does not affect the manual Archive/Trash panels' .xp-arc-item. */
+.xp-arc-item--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.xp-arc-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.xp-arc-item--stack .xp-arc-icon,
+.xp-arc-item--stack .xp-arc-meta {
+  cursor: pointer;
+}
+
+.xp-arc-btn--download {
+  background: rgba(59, 130, 246, .12);
+  color: #60a5fa;
+  text-decoration: none;
+}
+
+.xp-arc-btn--download:hover {
+  background: rgba(59, 130, 246, .22);
+}
+
+.xp-arc-details {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid rgba(255, 255, 255, .06);
+}
+
+.xp-arc-details-loading,
+.xp-arc-details-empty {
+  font-size: 11px;
+  color: rgba(255, 255, 255, .4);
+}
+
+.xp-arc-details-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+}
+
+.xp-arc-details-row:last-child {
+  border-bottom: none;
+}
+
+.xp-arc-details-action {
+  color: rgba(255, 255, 255, .75);
+  text-transform: capitalize;
+}
+
+.xp-arc-details-date {
+  color: rgba(255, 255, 255, .4);
+  flex-shrink: 0;
+}
+
 .xp-arc-icon--folder svg {
   color: #fbbf24;
 }

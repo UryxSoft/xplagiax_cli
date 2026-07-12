@@ -522,6 +522,9 @@ class UserPreference(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True, index=True)
     show_welcome_modal = db.Column(db.Boolean, default=True, index=True)
     delete_after_analysis = db.Column(db.Boolean, default=False)
+    auto_archive_enabled = db.Column(db.Boolean, default=False)
+    archive_after_days = db.Column(db.Integer, default=15)
+    delete_after_archive_days = db.Column(db.Integer, default=15)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -909,10 +912,16 @@ class File(db.Model):
     tags = db.Column(db.JSON, nullable=True) # Direct tags for quick access
     version = db.Column(db.Integer, default=1)
     description = db.Column(db.Text, nullable=True)
-    
+
+    # Auto-Archive lifecycle (independent of status/expires_at/is_trash above,
+    # which belong to the manual archive/trash flow).
+    archive_cycle_reset_at = db.Column(db.DateTime, nullable=True)
+    auto_archived_at = db.Column(db.DateTime, nullable=True)
+    auto_archive_delete_at = db.Column(db.DateTime, nullable=True)
+
     # Relationship to tags through FileTag
     file_tags = db.relationship('FileTag', backref='file', lazy=True, cascade='all, delete-orphan')
-    def __init__(self, filename, original_filename, mime_type, size, user_id, minio_url, folder_id=None, status='Borrador', is_trash=False, is_locked=False, is_evidence=False, expires_at=None, tags=None, version=1, description=None):
+    def __init__(self, filename, original_filename, mime_type, size, user_id, minio_url, folder_id=None, status='Borrador', is_trash=False, is_locked=False, is_evidence=False, expires_at=None, tags=None, version=1, description=None, archive_cycle_reset_at=None, auto_archived_at=None, auto_archive_delete_at=None):
         self.filename = filename
         self.original_filename = original_filename
         self.mime_type = mime_type
@@ -928,7 +937,10 @@ class File(db.Model):
         self.tags = tags
         self.version = version
         self.description = description
-        
+        self.archive_cycle_reset_at = archive_cycle_reset_at
+        self.auto_archived_at = auto_archived_at
+        self.auto_archive_delete_at = auto_archive_delete_at
+
 # This Python class defines a model for a language entity with attributes such as language name,
 # language code, user ID, and creation date.
 class Lenguage(db.Model):

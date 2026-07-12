@@ -827,6 +827,41 @@
   </aside>
   <!-- ══ END ARCHIVED OFFCANVAS ════════════════════════════════════════ -->
 
+  <!-- ══ AUTO-ARCHIVE OFFCANVAS (global, all screens) ═══════════════════ -->
+  <div class="xp-oc-overlay" id="autoArchiveOcOverlay" onclick="closeAutoArchiveOc()"></div>
+  <aside class="xp-oc" id="autoArchiveOc" aria-label="Auto-archived files">
+
+    <div class="xp-oc-head">
+      <div class="xp-oc-head-left">
+        <div class="xp-oc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+        </div>
+        <div>
+          <div class="xp-oc-title">Auto-Archived</div>
+          <div class="xp-oc-subtitle" id="autoArchiveOcSubtitle">Retention policy in progress</div>
+        </div>
+      </div>
+      <button class="xp-oc-close" onclick="closeAutoArchiveOc()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="xp-oc-body" id="autoArchiveOcBody">
+      <div class="xp-oc-loading" id="autoArchiveOcLoading">
+        <div class="xp-oc-spinner"></div>
+        <span>Loading auto-archived files…</span>
+      </div>
+    </div>
+
+    <div class="xp-oc-foot">
+      <span class="xp-oc-count" id="autoArchiveOcCount">0 files</span>
+    </div>
+  </aside>
+  <!-- ══ END AUTO-ARCHIVE OFFCANVAS ═══════════════════════════════════ -->
+
   <!-- Account modal controller -->
   <script>
     (function () {

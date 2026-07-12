@@ -104,6 +104,7 @@ from modules.image_service.ai_image_routes import x_image
 from modules.integration_service.routes_integrations import x_integ
 #from services.sourcex_service.routes_integrations import x_integ
 from modules.doc_service.routes_analysis_counter import x_analysiscounter
+from modules.doc_service.routes_auto_archive import x_autoarchive
 
 #from services.aitestprotext_service.optimized_routes_v6 import x_aitestpro
 #from modules.aitestproimg_service.routes_img import enhanced_img
@@ -122,6 +123,7 @@ app.register_blueprint(x_doc, url_prefix='/x_doc')
 app.register_blueprint(x_image, url_prefix='/x_image')
 app.register_blueprint(x_integ, url_prefix='/x_integ')
 app.register_blueprint(x_analysiscounter,url_prefix='/x_analysiscounter')
+app.register_blueprint(x_autoarchive, url_prefix='/x_doc/auto-archive')
 #app.register_blueprint(enhanced_img, url_prefix='/enhanced_img')
 app.register_blueprint(x_cleanup, url_prefix='/x_cleanup')
 app.register_blueprint(x_system_status, url_prefix='/x_system_status')  # Public - No auth required
@@ -132,13 +134,21 @@ app.register_blueprint(x_system_status, url_prefix='/x_system_status')  # Public
 # Configurar scheduler para reset diario
 def setup_scheduler():
     from modules.doc_service.routes_analysis_counter import reset_all_daily_analysis
-    
+    from modules.doc_service.routes_auto_archive import run_auto_archive_sweep
+
     scheduler = BackgroundScheduler()
     scheduler.add_job(
         func=reset_all_daily_analysis,
         trigger=CronTrigger(hour=0, minute=0),  # Medianoche UTC
         id='reset_analysis_daily',
         name='Reset daily analysis counters',
+        replace_existing=True
+    )
+    scheduler.add_job(
+        func=run_auto_archive_sweep,
+        trigger=CronTrigger(hour=0, minute=30),  # Medianoche UTC + 30min
+        id='auto_archive_sweep_daily',
+        name='Auto-archive lifecycle sweep',
         replace_existing=True
     )
     scheduler.start()
@@ -183,6 +193,30 @@ with app.app_context():
             db.session.commit()
     except Exception:
         db.session.rollback()
+
+    # Añadir columnas solo si no existen (idempotente) — Auto-Archive
+    # (Settings > Automation Rules) y columnas de ciclo de vida en files.
+    for _table, _col, _ddl in [
+        ('user_preferences', 'auto_archive_enabled', "TINYINT(1) NOT NULL DEFAULT 0"),
+        ('user_preferences', 'archive_after_days', "INT NOT NULL DEFAULT 15"),
+        ('user_preferences', 'delete_after_archive_days', "INT NOT NULL DEFAULT 15"),
+        ('files', 'archive_cycle_reset_at', "DATETIME NULL DEFAULT NULL"),
+        ('files', 'auto_archived_at', "DATETIME NULL DEFAULT NULL"),
+        ('files', 'auto_archive_delete_at', "DATETIME NULL DEFAULT NULL"),
+    ]:
+        try:
+            col_exists = db.session.execute(db.text(
+                "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t AND COLUMN_NAME = :c"
+            ), {'t': _table, 'c': _col}).scalar()
+            if not col_exists:
+                db.session.execute(db.text(
+                    f"ALTER TABLE {_table} ADD COLUMN {_col} {_ddl}"
+                ))
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     init_cleanup_system()
     _run_scheduler = (
         os.environ.get('WERKZEUG_RUN_MAIN') == 'true'

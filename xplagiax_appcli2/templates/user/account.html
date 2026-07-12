@@ -822,11 +822,132 @@
           <div class="sm-card-body">
             <div class="sm-row">
               <div class="sm-row-left">
-                <div class="sm-row-label">Enhanced Detection Mode</div>
-                <div class="sm-row-desc">Use deeper semantic analysis for higher accuracy (uses 2× quota).</div>
+                <div class="sm-row-label">Full Analysis <span class="sm-badge" style="background:rgba(167,139,250,.15);color:#a78bfa;border:1px solid rgba(167,139,250,.3);margin-left:6px;">Master</span></div>
+                <div class="sm-row-desc">Complete pipeline: detection → stylometric → hallucination → reasoning → perplexity → segment → citation → author/discourse/semantic → late fusion verdict → forensic report. Enabling this disables all individual plugins below.</div>
               </div>
-              <label class="sm-switch" aria-label="Enhanced detection">
-                <input type="checkbox" onchange="smToast('AI mode updated.','success')">
+              <label class="sm-switch" aria-label="Full analysis">
+                <input type="checkbox" id="pluginFullAnalysis" onchange="smTogglePluginMode(this)">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row sm-plugin-row" data-plugin="perplexity_check">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Perplexity Check</div>
+                <div class="sm-row-desc">Text predictability analysis via n-gram proxy (Tier 1, CPU) + optional GPT-2 (Tier 2, GPU).</div>
+              </div>
+              <label class="sm-switch" aria-label="Perplexity check">
+                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row sm-plugin-row" data-plugin="stylometric_analysis">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Stylometric Analysis</div>
+                <div class="sm-row-desc">Detailed analysis of writing style: sentence structure, vocabulary richness, and burstiness.</div>
+              </div>
+              <label class="sm-switch" aria-label="Stylometric analysis">
+                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row sm-plugin-row" data-plugin="hallucination_check">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Hallucination Check</div>
+                <div class="sm-row-desc">Detects AI fabrication risk: internal inconsistencies and factual drift.</div>
+              </div>
+              <label class="sm-switch" aria-label="Hallucination check">
+                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row sm-plugin-row" data-plugin="reasoning_check">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Reasoning Check</div>
+                <div class="sm-row-desc">Detects reasoning-model signals (o1, DeepSeek-R1): CoT markers and causal density.</div>
+              </div>
+              <label class="sm-switch" aria-label="Reasoning check">
+                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row sm-plugin-row" data-plugin="citation_check">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Citation Check</div>
+                <div class="sm-row-desc">Verifies citations against CrossRef, Semantic Scholar, and OpenAlex. Detects fabricated references.</div>
+              </div>
+              <label class="sm-switch" aria-label="Citation check">
+                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row sm-plugin-row" data-plugin="watermark_detection">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Watermark Detection</div>
+                <div class="sm-row-desc">Detects statistical watermarks embedded in text by AI models.</div>
+              </div>
+              <label class="sm-switch" aria-label="Watermark detection">
+                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row sm-plugin-row" data-plugin="zone_classifier">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Zone Classifier</div>
+                <div class="sm-row-desc">Classifies text zones (direct quotes, paraphrases, original content). Detects citation style (APA/MLA/IEEE/Chicago/Vancouver/Harvard), coverage, and consistency. No network calls.</div>
+              </div>
+              <label class="sm-switch" aria-label="Zone classifier">
+                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row sm-plugin-row" data-plugin="author_signature">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Author Signature</div>
+                <div class="sm-row-desc">Intra-document authorship consistency. Splits the text into chunks and measures style dispersion — flags sections spliced from a different author/AI. Localization aid, not a verdict.</div>
+              </div>
+              <label class="sm-switch" aria-label="Author signature">
+                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row sm-plugin-row" data-plugin="discourse_structure">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Discourse Structure</div>
+                <div class="sm-row-desc">Argumentative-structure uniformity (model-agnostic). Detects templated discourse: even paragraphs, formal connectives, enumeration/closing scaffolding. Survives paraphrasing.</div>
+              </div>
+              <label class="sm-switch" aria-label="Discourse structure">
+                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row sm-plugin-row" data-plugin="semantic_consistency">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Semantic Consistency</div>
+                <div class="sm-row-desc">Internal-contradiction detection (model-agnostic). Flags sentences that contradict each other (negation flips, numeric mismatches; optional NLI).</div>
+              </div>
+              <label class="sm-switch" aria-label="Semantic consistency">
+                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <span class="sm-switch-track"></span>
+              </label>
+            </div>
+            <div class="sm-divider"></div>
+            <div class="sm-row sm-plugin-row" data-plugin="forensic_report">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Forensic Report</div>
+                <div class="sm-row-desc">Generates a full HTML forensic report via ForensicReportGenerator. Requires full_analysis pipeline.</div>
+              </div>
+              <label class="sm-switch" aria-label="Forensic report">
+                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
@@ -840,31 +961,6 @@
                 <input type="checkbox" checked onchange="smToast('Auto-analysis setting saved.','success')">
                 <span class="sm-switch-track"></span>
               </label>
-            </div>
-            <div class="sm-divider"></div>
-            <div class="sm-row">
-              <div class="sm-row-left">
-                <div class="sm-row-label">Detection Sensitivity</div>
-                <div class="sm-row-desc">Threshold for AI classification confidence.</div>
-              </div>
-              <select class="sm-select" style="width:160px" onchange="smToast('Sensitivity updated.','success')">
-                <option>Low (60%)</option>
-                <option selected>Medium (75%)</option>
-                <option>High (90%)</option>
-              </select>
-            </div>
-            <div class="sm-divider"></div>
-            <div class="sm-row">
-              <div class="sm-row-left">
-                <div class="sm-row-label">Report Language</div>
-                <div class="sm-row-desc">Language for generated analysis reports.</div>
-              </div>
-              <select class="sm-select" style="width:160px" onchange="smToast('Language saved.','success')">
-                <option selected>English</option>
-                <option>Spanish</option>
-                <option>French</option>
-                <option>Portuguese</option>
-              </select>
             </div>
           </div>
         </div>
@@ -881,24 +977,44 @@
           <div class="sm-card-body">
             <div class="sm-row">
               <div class="sm-row-left">
-                <div class="sm-row-label">Auto-Archive after 30 days</div>
-                <div class="sm-row-desc">Move analyzed documents to archive automatically.</div>
+                <div class="sm-row-label">Auto-Archive</div>
+                <div class="sm-row-desc">Move documents to Archived after N days, then permanently delete them after M more days.</div>
               </div>
               <label class="sm-switch" aria-label="Auto-archive">
-                <input type="checkbox" checked onchange="smToast('Automation rule saved.','success')">
+                <input type="checkbox" id="autoArchiveSwitch" onchange="smSetAutoArchive(this)">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
-            <div class="sm-divider"></div>
-            <div class="sm-row">
+            <div class="sm-row" id="autoArchiveDaysRow" style="display:none">
               <div class="sm-row-left">
-                <div class="sm-row-label">Smart Flagging</div>
-                <div class="sm-row-desc">Automatically flag documents with AI percentage &gt; 50%.</div>
+                <div class="sm-row-label">Archive after</div>
+                <div class="sm-row-desc">Days of inactivity before a document is archived.</div>
               </div>
-              <label class="sm-switch" aria-label="Smart flagging">
-                <input type="checkbox" checked onchange="smToast('Smart flagging saved.','success')">
-                <span class="sm-switch-track"></span>
-              </label>
+              <select class="sm-select" id="archiveAfterDaysSelect" style="width:130px" onchange="smSetAutoArchiveDays()">
+                <option value="7">7 days</option>
+                <option value="15" selected>15 days</option>
+                <option value="30">30 days</option>
+                <option value="60">60 days</option>
+              </select>
+            </div>
+            <div class="sm-row" id="autoDeleteDaysRow" style="display:none">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Delete after archiving</div>
+                <div class="sm-row-desc">Days an archived document is kept before permanent deletion.</div>
+              </div>
+              <select class="sm-select" id="deleteAfterArchiveDaysSelect" style="width:130px" onchange="smSetAutoArchiveDays()">
+                <option value="7">7 days</option>
+                <option value="15" selected>15 days</option>
+                <option value="30">30 days</option>
+                <option value="60">60 days</option>
+              </select>
+            </div>
+            <div class="sm-row" id="autoArchiveViewRow" style="display:none">
+              <div class="sm-row-left">
+                <div class="sm-row-label">Archived documents</div>
+                <div class="sm-row-desc">View, restore, download or permanently delete archived documents.</div>
+              </div>
+              <button class="sm-btn sm-btn-ghost" onclick="smOpenAutoArchivePanel()">View archived</button>
             </div>
           </div>
         </div>
@@ -1370,6 +1486,7 @@ document.addEventListener('DOMContentLoaded', () => {
   secLoadSessions();
   secLoadChart();
   smLoadDocumentRetention();
+  smLoadAutoArchive();
 });
 
 /* ───── Privacy: Document Retention ──────────────────────── */
@@ -1405,6 +1522,116 @@ async function smSetDocumentRetention(el) {
     smToast('Connection error. Please try again.', 'error');
   } finally {
     el.disabled = false;
+  }
+}
+
+/* ───── AI Detection Settings: plugin toggles ────────────────
+   Selecting "Full Analysis" runs the complete pipeline and disables
+   (unchecks + locks) every individual plugin below it. */
+function smTogglePluginMode(el) {
+  const enabled = el.checked;
+  document.querySelectorAll('.sm-plugin-row input[type="checkbox"]').forEach((cb) => {
+    if (enabled) cb.checked = false;
+    cb.disabled = enabled;
+  });
+  smToast(enabled ? 'Full Analysis enabled — individual plugins disabled.' : 'Full Analysis disabled.', 'success');
+}
+
+/* ───── Automation Rules: Auto-Archive ───────────────────────
+   Independent of Document Retention above — moves documents through
+   Active -> Archived -> Permanently Deleted on a per-user schedule
+   (see modules/doc_service/routes_auto_archive.py). */
+function _toggleAutoArchiveRows(show) {
+  const daysRow = document.getElementById('autoArchiveDaysRow');
+  const deleteRow = document.getElementById('autoDeleteDaysRow');
+  const viewRow = document.getElementById('autoArchiveViewRow');
+  if (daysRow) daysRow.style.display = show ? '' : 'none';
+  if (deleteRow) deleteRow.style.display = show ? '' : 'none';
+  if (viewRow) viewRow.style.display = show ? '' : 'none';
+}
+
+async function smLoadAutoArchive() {
+  const sw = document.getElementById('autoArchiveSwitch');
+  if (!sw) return;
+  try {
+    const res = await fetch('/api/preferences/auto-archive', { credentials: 'include' });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      sw.checked = !!data.auto_archive_enabled;
+      const archiveSel = document.getElementById('archiveAfterDaysSelect');
+      const deleteSel = document.getElementById('deleteAfterArchiveDaysSelect');
+      if (archiveSel) archiveSel.value = String(data.archive_after_days || 15);
+      if (deleteSel) deleteSel.value = String(data.delete_after_archive_days || 15);
+      _toggleAutoArchiveRows(sw.checked);
+    }
+  } catch (_) { /* deja el switch en su estado por defecto (off) si falla */ }
+}
+
+async function smSetAutoArchive(el) {
+  const enabled = el.checked;
+  el.disabled = true;
+  try {
+    const archiveSel = document.getElementById('archiveAfterDaysSelect');
+    const deleteSel = document.getElementById('deleteAfterArchiveDaysSelect');
+    const res = await fetch('/api/preferences/auto-archive', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enabled,
+        archive_after_days: archiveSel ? parseInt(archiveSel.value, 10) : 15,
+        delete_after_archive_days: deleteSel ? parseInt(deleteSel.value, 10) : 15
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      _toggleAutoArchiveRows(enabled);
+      smToast(enabled ? 'Auto-Archive enabled.' : 'Auto-Archive disabled.', 'success');
+    } else {
+      el.checked = !enabled;
+      smToast(data.error || 'Could not save automation rule.', 'error');
+    }
+  } catch (_) {
+    el.checked = !enabled;
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    el.disabled = false;
+  }
+}
+
+async function smSetAutoArchiveDays() {
+  const sw = document.getElementById('autoArchiveSwitch');
+  const archiveSel = document.getElementById('archiveAfterDaysSelect');
+  const deleteSel = document.getElementById('deleteAfterArchiveDaysSelect');
+  if (!sw || !sw.checked) return;
+  try {
+    const res = await fetch('/api/preferences/auto-archive', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        enabled: true,
+        archive_after_days: archiveSel ? parseInt(archiveSel.value, 10) : 15,
+        delete_after_archive_days: deleteSel ? parseInt(deleteSel.value, 10) : 15
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      smToast('Automation rule saved.', 'success');
+    } else {
+      smToast(data.error || 'Could not save automation rule.', 'error');
+    }
+  } catch (_) {
+    smToast('Connection error. Please try again.', 'error');
+  }
+}
+
+function smOpenAutoArchivePanel() {
+  const target = (window.top || window);
+  if (target && typeof target.openAutoArchiveOc === 'function') {
+    target.openAutoArchiveOc();
+  } else {
+    smToast('Open the dashboard to view archived documents.', 'info');
   }
 }
 
