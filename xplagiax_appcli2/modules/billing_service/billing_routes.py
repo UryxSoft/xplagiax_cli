@@ -827,6 +827,57 @@ def paypal_subscription_confirm():
         return jsonify({'error': 'Error verificando suscripción con PayPal'}), 500
 
 
+def cancel_subscription_immediately(user):
+    """Cancela la suscripción de `user` DE INMEDIATO (no al final del periodo).
+    Usado por Delete Account — al borrar la cuenta no debe seguir cobrándose
+    una suscripción de una cuenta que ya no existe. A diferencia de la ruta
+    /cancel-subscription (cancel_at_period_end=True, graceful), esta llama
+    stripe.Subscription.delete(...) directamente. Best-effort: un fallo aquí
+    se registra pero NUNCA debe bloquear el borrado de la cuenta — un hipo del
+    proveedor de pago no puede impedir que alguien ejerza su derecho a borrar
+    sus datos. Devuelve (ok: bool, message: str).
+    """
+    if not user.subscription_id:
+        return True, 'No active subscription.'
+
+    try:
+        if user.subscription_provider == 'stripe':
+            stripe.Subscription.delete(user.subscription_id)
+        elif user.subscription_provider == 'paypal':
+            client_id = current_app.config.get('PAYPAL_CLIENT_ID')
+            client_secret = current_app.config.get('PAYPAL_CLIENT_SECRET')
+            mode = current_app.config.get('PAYPAL_MODE', 'sandbox')
+            base_url = "https://api-m.paypal.com" if mode == 'live' else "https://api-m.sandbox.paypal.com"
+            auth_response = requests.post(
+                f"{base_url}/v1/oauth2/token",
+                auth=(client_id, client_secret),
+                data={"grant_type": "client_credentials"},
+                timeout=10,
+            )
+            if not auth_response.ok:
+                return False, 'PayPal authentication failed.'
+            access_token = auth_response.json()['access_token']
+            cancel_response = requests.post(
+                f"{base_url}/v1/billing/subscriptions/{user.subscription_id}/cancel",
+                headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+                json={"reason": "Account deleted"},
+                timeout=10,
+            )
+            if cancel_response.status_code != 204:
+                return False, f'PayPal cancellation returned {cancel_response.status_code}.'
+        else:
+            return True, 'Unknown subscription provider — nothing to cancel.'
+
+        user.subscription_status = 'canceled'
+        db.session.add(user)
+        db.session.commit()
+        return True, 'Subscription canceled immediately.'
+
+    except Exception as exc:
+        current_app.logger.exception("cancel_subscription_immediately failed for user=%s", user.id)
+        return False, str(exc)
+
+
 @billing_bp.route('/cancel-subscription', methods=['POST'])
 @login_required
 def cancel_subscription():

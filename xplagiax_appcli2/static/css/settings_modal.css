@@ -710,6 +710,70 @@
 .sm-btn-danger-solid .sm-danger-modal-spin { border-color: rgba(255,255,255,.35); border-top-color: #fff; display: none; }
 .sm-btn-danger-solid.loading .sm-danger-modal-spin { display: inline-block; }
 
+/* ── Delete Account modal — extends sm-danger-modal ─────────────── */
+.sm-danger-modal-wide { max-width: 460px; }
+.sm-dc-field { margin-bottom: 16px; }
+.sm-dc-field label {
+  display: block; font-size: 11.5px; font-weight: 700; color: var(--sm-t2);
+  margin-bottom: 6px; text-transform: uppercase; letter-spacing: .03em;
+}
+.sm-dc-field input {
+  width: 100%; box-sizing: border-box;
+  padding: 10px 12px; border: 1px solid var(--sm-border); border-radius: var(--sm-radius-sm);
+  background: var(--sm-bg); color: var(--sm-t1); font-size: 13.5px; outline: none;
+  transition: border-color .15s var(--sm-ease), box-shadow .15s var(--sm-ease);
+}
+.sm-dc-field input:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.12); }
+.sm-dc-field input.invalid { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.16); }
+.sm-dc-blocked {
+  display: flex; align-items: flex-start; gap: 9px;
+  background: rgba(217,119,6,.08); border: 1px solid rgba(217,119,6,.25);
+  border-radius: var(--sm-radius-sm); padding: 11px 13px;
+  font-size: 12.5px; line-height: 1.55; color: #92400e; margin-bottom: 16px;
+}
+.sm-dc-blocked svg { width: 16px; height: 16px; stroke: #d97706; flex-shrink: 0; margin-top: 1px; }
+.sm-dc-eligibility-checking {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--sm-t3); margin-bottom: 16px;
+}
+
+.sm-dc-checklist { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+.sm-dc-row { opacity: .45; transition: opacity .25s var(--sm-ease); }
+.sm-dc-row.active, .sm-dc-row.done { opacity: 1; }
+.sm-dc-row-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.sm-dc-row-label { font-size: 12.5px; font-weight: 600; color: var(--sm-t2); }
+.sm-dc-row.done .sm-dc-row-label { color: var(--sm-t1); }
+.sm-dc-row-check {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  background: transparent; transition: background .2s var(--sm-ease);
+}
+.sm-dc-row-check svg {
+  width: 11px; height: 11px; stroke: #fff; fill: none;
+  stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+  opacity: 0; transform: scale(.4); transition: none;
+}
+.sm-dc-row.done .sm-dc-row-check { background: #16a34a; }
+.sm-dc-row.done .sm-dc-row-check svg { opacity: 1; transform: scale(1); animation: sm-dc-check-pop .32s var(--sm-bounce); }
+@keyframes sm-dc-check-pop { from { opacity: 0; transform: scale(.3) rotate(-15deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+
+.sm-dc-row-bar {
+  height: 7px; border-radius: 20px; background: var(--sm-border); overflow: hidden; position: relative;
+}
+.sm-dc-row-fill {
+  height: 100%; width: 0%; border-radius: 20px; position: relative; overflow: hidden;
+  background: linear-gradient(90deg,#dc2626,#f43f5e);
+  transition: width .5s var(--sm-ease);
+}
+.sm-dc-row.active .sm-dc-row-fill { width: 100%; }
+.sm-dc-row.done .sm-dc-row-fill { width: 100%; background: linear-gradient(90deg,#16a34a,#22c55e); }
+.sm-dc-row.active .sm-dc-row-fill::after {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(255,255,255,.28) 6px, rgba(255,255,255,.28) 12px);
+  animation: sm-dc-stripes 1s linear infinite;
+}
+@keyframes sm-dc-stripes { 0% { background-position: 0 0; } 100% { background-position: 24px 0; } }
+
 /* ── Color theme picker ──────────────────────────────────────── */
 .sm-theme-grid { display: flex; gap: 10px; flex-wrap: wrap; padding: clamp(12px,3vw,14px) clamp(14px,4vw,20px); }
 .sm-theme-swatch {

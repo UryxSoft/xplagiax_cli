@@ -1509,3 +1509,185 @@ def signout_all_sessions():
      .update({'session_token': None}, synchronize_session=False))
     db.session.commit()
     return jsonify({'success': True})
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Delete Account — borrado total e irreversible de la identidad del usuario.
+# Superset de "Delete All Documents" (reutiliza purge_all_user_documents):
+# además borra la fila `users` compartida con marktrack, todo lo que la
+# referencia en ambas apps, y cierra la sesión actual. appcli2 borra su
+# propio lado y la fila `users` (última, después de que marktrack confirme
+# éxito); marktrack borra su propio lado vía llamada interna. Ver plan
+# aprobado: bloquea si el usuario posee workspaces/sesiones de entrega con
+# otros participantes — nunca destruye silenciosamente el acceso de terceros.
+# ════════════════════════════════════════════════════════════════════════════
+
+def _owned_sessions_with_participants(user_id):
+    """appcli2 tiene su propio equivalente a los Workspace de marktrack:
+    SubmissionSession, creadas por un profesor, con StudentSubmission/
+    SessionParticipant de OTRAS personas. Mismo criterio de bloqueo que
+    marktrack — no borrar en cascada el trabajo entregado por estudiantes."""
+    from modules.models.model import SubmissionSession, StudentSubmission, SessionParticipant
+    blocking = []
+    sessions = SubmissionSession.query.filter_by(professor_id=user_id).all()
+    for s in sessions:
+        has_submissions = StudentSubmission.query.filter_by(session_id=s.id).first() is not None
+        has_invited = SessionParticipant.query.filter_by(
+            session_id=s.id, invitation_sent=True
+        ).first() is not None
+        if has_submissions or has_invited:
+            blocking.append(s.name)
+    return blocking
+
+
+def _check_delete_account_eligibility(user_id):
+    """Combina el bloqueo local (SubmissionSession) con el de marktrack
+    (Workspace). Falla CERRADO: si marktrack no responde, no se puede
+    verificar que es seguro borrar -> no se permite continuar."""
+    from modules.doc_service.doc_routes import MARKTRACK_SERVICE_BASE, MARKTRACK_INTERNAL_KEY, session_pool
+
+    reasons = []
+
+    local_blocking = _owned_sessions_with_participants(user_id)
+    if local_blocking:
+        names = ', '.join(f'"{n}"' for n in local_blocking)
+        reasons.append(f'You own {len(local_blocking)} submission session(s) with student '
+                        f'work or invited participants ({names}). Close or transfer them first.')
+
+    try:
+        resp = session_pool.post(
+            f'{MARKTRACK_SERVICE_BASE}/api/internal/account/can-delete',
+            headers={'Content-Type': 'application/json', 'X-Internal-Key': MARKTRACK_INTERNAL_KEY},
+            json={'user_id': user_id},
+            timeout=(5, 15),
+        )
+        if not resp.ok:
+            return False, 'Could not verify your workspaces right now. Please try again shortly.'
+        data = resp.json()
+        if not data.get('can_delete', False):
+            reasons.append(data.get('reason') or 'You have collaborative workspace data that would be affected.')
+    except requests.exceptions.RequestException:
+        return False, 'Could not reach the workspace service to verify your account. Please try again shortly.'
+
+    if reasons:
+        return False, ' '.join(reasons)
+    return True, None
+
+
+@auth_bp.route('/delete-account/eligibility', methods=['GET'])
+@login_required
+def delete_account_eligibility():
+    """Se llama al abrir el modal, antes de pedir la contraseña — para que un
+    usuario bloqueado vea el motivo de inmediato. Incluye has_password para que
+    el front sepa si pedir contraseña o el email de confirmación (cuentas OAuth)."""
+    can_delete, reason = _check_delete_account_eligibility(current_user.id)
+    return jsonify({
+        'can_delete': can_delete,
+        'reason': reason,
+        'has_password': bool(current_user._password_hash),
+    }), 200
+
+
+@auth_bp.route('/delete-account', methods=['POST'])
+@login_required
+@limiter.limit("3 per 15 minutes")
+def delete_account():
+    """Borra la cuenta por completo, en appcli2 Y marktrack. Irreversible.
+    Requiere la contraseña actual (o el email si la cuenta es solo-OAuth)
+    como confirmación — más fuerte que el confirm de 2 botones que usan el
+    resto de acciones destructivas de esta app, dado que aquí se destruye la
+    identidad completa, no solo datos.
+    """
+    from modules.doc_service.doc_routes import (
+        purge_all_user_documents, MARKTRACK_SERVICE_BASE, MARKTRACK_INTERNAL_KEY, session_pool
+    )
+    from modules.billing_service.billing_routes import cancel_subscription_immediately
+    from modules.models.model import (
+        Users, UserPreference, UserAnalysisUsage, UserModelPreference,
+        UserAddonSubscription, SubmissionSession, StudentSubmission,
+        ActivityLog, LoginHistory, ItemShare,
+    )
+    from modules.cleanup_service.routes_cleanup import CleanupTask, CleanupHistory
+
+    user_id = current_user.id
+    user = current_user
+
+    # 1) Re-verificar elegibilidad (el estado pudo cambiar desde el preflight).
+    can_delete, reason = _check_delete_account_eligibility(user_id)
+    if not can_delete:
+        return jsonify({'error': reason}), 409
+
+    # 2) Re-verificar contraseña/email — nunca confiar en la validación del cliente.
+    data = request.get_json(silent=True) or {}
+    if user._password_hash:
+        password = data.get('password') or ''
+        if not password or not bcrypt.checkpw(password.encode('utf-8'), user._password_hash.encode('utf-8')):
+            return jsonify({'error': 'Incorrect password.'}), 401
+    else:
+        confirm_email = (data.get('confirm_email') or '').strip().lower()
+        if confirm_email != (user.email or '').strip().lower():
+            return jsonify({'error': 'Email confirmation does not match your account.'}), 401
+
+    # 3) Cancelar suscripción de inmediato — best-effort, nunca bloquea el borrado.
+    billing_ok, billing_msg = cancel_subscription_immediately(user)
+
+    # 4) marktrack borra su lado PRIMERO. Si falla aquí, abortar todo — no dejar
+    #    la cuenta a medio borrar (documentos fuera pero login vivo, o viceversa).
+    try:
+        mt_resp = session_pool.post(
+            f'{MARKTRACK_SERVICE_BASE}/api/internal/account/delete-all',
+            headers={'Content-Type': 'application/json', 'X-Internal-Key': MARKTRACK_INTERNAL_KEY},
+            json={'user_id': user_id},
+            timeout=(5, 60),
+        )
+        if not mt_resp.ok:
+            current_app.logger.error('delete_account: marktrack delete-all failed user=%s status=%s body=%s',
+                                      user_id, mt_resp.status_code, mt_resp.text[:300])
+            return jsonify({'error': 'Could not delete your workspace data. Please try again.'}), 502
+        mt_data = mt_resp.json()
+    except requests.exceptions.RequestException as exc:
+        current_app.logger.error('delete_account: marktrack unreachable user=%s: %s', user_id, exc)
+        return jsonify({'error': 'Could not reach the workspace service. Please try again.'}), 502
+
+    # 5) appcli2: documentos (reutiliza Delete All Documents) + resto de tablas
+    #    + la fila `users` — todo en una transacción.
+    try:
+        appcli2_stats = purge_all_user_documents(user_id)
+
+        UserPreference.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        UserAnalysisUsage.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        UserModelPreference.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        UserAddonSubscription.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        ActivityLog.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        LoginHistory.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        CleanupHistory.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        CleanupTask.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+        # Shares de items ajenos otorgados A este usuario (no cubierto por
+        # purge_all_user_documents, que solo limpia lo que el usuario POSEE).
+        ItemShare.query.filter_by(shared_with_id=user_id).delete(synchronize_session=False)
+
+        # SubmissionSession ya confirmadas sin participantes en el paso 1 —
+        # cascada ORM (participants/submissions) requiere delete por objeto.
+        for s in SubmissionSession.query.filter_by(professor_id=user_id).all():
+            db.session.delete(s)
+
+        db.session.delete(user)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('delete_account: appcli2-side deletion failed for user=%s', user_id)
+        return jsonify({'error': 'Could not complete account deletion. Please try again.'}), 500
+
+    current_app.logger.info('delete_account: user=%s appcli2=%s marktrack=%s billing_ok=%s',
+                             user_id, appcli2_stats, mt_data, billing_ok)
+
+    # 6) Cerrar la sesión actual — la fila ya no existe, pero limpiar la cookie
+    #    ahora evita depender de que la PRÓXIMA request falle para notarlo.
+    logout_user()
+    session.clear()
+
+    return jsonify({
+        'success': True,
+        'deleted': {**appcli2_stats, 'marktrack_documents': mt_data.get('deleted_count', 0)},
+        'billing': billing_msg,
+    }), 200

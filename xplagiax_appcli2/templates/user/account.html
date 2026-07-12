@@ -742,7 +742,7 @@
               <div class="sm-row-label">Delete Account</div>
               <div class="sm-row-desc">Permanently delete your account and all data. This cannot be undone.</div>
             </div>
-            <button class="sm-btn sm-btn-danger" onclick="smToast('Please contact support to delete your account.','info')">Delete Account</button>
+            <button class="sm-btn sm-btn-danger" onclick="smOpenDeleteAccountModal()">Delete Account</button>
           </div>
         </div>
 
@@ -979,6 +979,56 @@
       <button class="sm-btn sm-btn-danger-solid" id="deleteAllConfirmBtn" onclick="smConfirmDeleteAll()">
         <span class="sm-danger-modal-spin"></span>
         <span>Delete Everything</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete Account — confirmation modal ──────────────────────── -->
+<div class="sm-danger-modal-overlay" id="deleteAccountOverlay" role="dialog" aria-modal="true" aria-labelledby="deleteAccountTitle">
+  <div class="sm-danger-modal sm-danger-modal-wide">
+    <div class="sm-danger-modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <h3 id="deleteAccountTitle">Delete Account</h3>
+    <p class="sm-danger-modal-desc">
+      This will permanently delete your account, profile, documents, analyses,
+      plagiarism results, AI detection reports, citations, references, replay
+      history, collaborative workspace data, sessions and every associated file.
+    </p>
+    <div class="sm-danger-modal-warn">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>This action cannot be undone.</span>
+    </div>
+
+    <div class="sm-dc-eligibility-checking" id="deleteAccountChecking">
+      <span class="sm-danger-modal-spin" style="display:inline-block"></span>
+      <span>Checking your account…</span>
+    </div>
+
+    <div class="sm-dc-blocked" id="deleteAccountBlocked" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span id="deleteAccountBlockedReason"></span>
+    </div>
+
+    <div id="deleteAccountForm" style="display:none">
+      <div class="sm-dc-field" id="deleteAccountPasswordField">
+        <label for="deleteAccountPassword">Current password</label>
+        <input type="password" id="deleteAccountPassword" autocomplete="current-password" placeholder="Enter your password">
+      </div>
+      <div class="sm-dc-field" id="deleteAccountEmailField" style="display:none">
+        <label for="deleteAccountEmail">Type your account email to confirm</label>
+        <input type="email" id="deleteAccountEmail" autocomplete="off" placeholder="you@example.com">
+      </div>
+    </div>
+
+    <div class="sm-dc-checklist" id="deleteAccountChecklist" style="display:none"></div>
+
+    <div class="sm-danger-modal-actions" id="deleteAccountActions">
+      <button class="sm-btn sm-btn-ghost" id="deleteAccountCancelBtn" onclick="smCloseDeleteAccountModal()">Cancel</button>
+      <button class="sm-btn sm-btn-danger-solid" id="deleteAccountConfirmBtn" onclick="smConfirmDeleteAccount()" disabled>
+        <span class="sm-danger-modal-spin"></span>
+        <span>Delete My Account</span>
       </button>
     </div>
   </div>
@@ -1456,6 +1506,172 @@ async function smConfirmDeleteAll() {
 function smCloseDeleteAllModalForce() {
   const overlay = document.getElementById('deleteAllOverlay');
   if (overlay) overlay.classList.remove('open');
+}
+
+/* ───── Danger zone: Delete Account ───────────────────────────
+   Superset of Delete All Documents: also destroys the account/login itself.
+   Requires re-entering the password (or email, for OAuth-only accounts) —
+   a stronger gate than the two-button confirms used elsewhere in this app,
+   since this destroys identity, not just data. On success there is no
+   account left to show a toast in, so it navigates straight to /login,
+   escaping the settings iframe the same way smConnect() already does. ──── */
+let _deleteAccountInFlight = false;
+let _deleteAccountHasPassword = true;
+
+const DELETE_ACCOUNT_STEPS = [
+  'Verifying your identity',
+  'Canceling active subscription',
+  'Deleting documents & analyses',
+  'Deleting collaborative workspace data',
+  'Removing physical files & storage',
+  'Clearing caches & embeddings',
+  'Revoking sessions & access',
+  'Finalizing account deletion'
+];
+
+function _buildDeleteAccountChecklist() {
+  const wrap = document.getElementById('deleteAccountChecklist');
+  wrap.innerHTML = DELETE_ACCOUNT_STEPS.map((label, i) => `
+    <div class="sm-dc-row" data-step="${i}">
+      <div class="sm-dc-row-top">
+        <span class="sm-dc-row-label">${label}</span>
+        <span class="sm-dc-row-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+      </div>
+      <div class="sm-dc-row-bar"><div class="sm-dc-row-fill"></div></div>
+    </div>`).join('');
+}
+
+let _deleteAccountStepTimer = null;
+
+function _deleteAccountAdvance(rows, i) {
+  if (i > 0) rows[i - 1].classList.remove('active');
+  if (i > 0) rows[i - 1].classList.add('done');
+  if (i < rows.length) rows[i].classList.add('active');
+}
+
+function _deleteAccountStartChecklist() {
+  const rows = Array.from(document.querySelectorAll('#deleteAccountChecklist .sm-dc-row'));
+  let i = 0;
+  _deleteAccountAdvance(rows, i);
+  _deleteAccountStepTimer = setInterval(() => {
+    i++;
+    if (i >= rows.length) { clearInterval(_deleteAccountStepTimer); _deleteAccountStepTimer = null; return; }
+    _deleteAccountAdvance(rows, i);
+  }, 900);
+}
+
+function _deleteAccountFinishChecklist() {
+  if (_deleteAccountStepTimer) { clearInterval(_deleteAccountStepTimer); _deleteAccountStepTimer = null; }
+  document.querySelectorAll('#deleteAccountChecklist .sm-dc-row').forEach(r => {
+    r.classList.remove('active');
+    r.classList.add('done');
+  });
+}
+
+async function smOpenDeleteAccountModal() {
+  const overlay = document.getElementById('deleteAccountOverlay');
+  if (overlay) overlay.classList.add('open');
+
+  document.getElementById('deleteAccountChecking').style.display = 'flex';
+  document.getElementById('deleteAccountBlocked').style.display = 'none';
+  document.getElementById('deleteAccountForm').style.display = 'none';
+  document.getElementById('deleteAccountChecklist').style.display = 'none';
+  document.getElementById('deleteAccountPassword').value = '';
+  document.getElementById('deleteAccountEmail').value = '';
+  const confirmBtn = document.getElementById('deleteAccountConfirmBtn');
+  confirmBtn.disabled = true;
+
+  try {
+    const res = await fetch('/auth_bp/delete-account/eligibility', { credentials: 'include' });
+    const data = await res.json();
+    document.getElementById('deleteAccountChecking').style.display = 'none';
+
+    if (!res.ok || !data.can_delete) {
+      document.getElementById('deleteAccountBlockedReason').textContent =
+        data.reason || 'Your account cannot be deleted right now. Please try again later.';
+      document.getElementById('deleteAccountBlocked').style.display = 'flex';
+      return;
+    }
+
+    _deleteAccountHasPassword = data.has_password !== false;
+    document.getElementById('deleteAccountPasswordField').style.display = _deleteAccountHasPassword ? 'block' : 'none';
+    document.getElementById('deleteAccountEmailField').style.display = _deleteAccountHasPassword ? 'none' : 'block';
+    document.getElementById('deleteAccountForm').style.display = 'block';
+    confirmBtn.disabled = false;
+  } catch (_) {
+    document.getElementById('deleteAccountChecking').style.display = 'none';
+    document.getElementById('deleteAccountBlockedReason').textContent =
+      'Could not verify your account. Please try again later.';
+    document.getElementById('deleteAccountBlocked').style.display = 'flex';
+  }
+}
+
+function smCloseDeleteAccountModal() {
+  if (_deleteAccountInFlight) return;
+  const overlay = document.getElementById('deleteAccountOverlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+async function smConfirmDeleteAccount() {
+  if (_deleteAccountInFlight) return;
+
+  const passwordEl = document.getElementById('deleteAccountPassword');
+  const emailEl = document.getElementById('deleteAccountEmail');
+  const body = {};
+  if (_deleteAccountHasPassword) {
+    if (!passwordEl.value) { passwordEl.classList.add('invalid'); passwordEl.focus(); return; }
+    body.password = passwordEl.value;
+  } else {
+    if (!emailEl.value) { emailEl.classList.add('invalid'); emailEl.focus(); return; }
+    body.confirm_email = emailEl.value;
+  }
+  passwordEl.classList.remove('invalid');
+  emailEl.classList.remove('invalid');
+
+  _deleteAccountInFlight = true;
+  const confirmBtn = document.getElementById('deleteAccountConfirmBtn');
+  const cancelBtn = document.getElementById('deleteAccountCancelBtn');
+  confirmBtn.disabled = true;
+  cancelBtn.disabled = true;
+  confirmBtn.classList.add('loading');
+
+  document.getElementById('deleteAccountForm').style.display = 'none';
+  _buildDeleteAccountChecklist();
+  document.getElementById('deleteAccountChecklist').style.display = 'flex';
+  _deleteAccountStartChecklist();
+
+  try {
+    const res = await fetch('/auth_bp/delete-account', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    let data = {};
+    try { data = await res.json(); } catch (_) {}
+
+    if (res.ok && data.success) {
+      _deleteAccountFinishChecklist();
+      await new Promise(r => setTimeout(r, 500)); // deja ver el checklist completo
+      (window.top || window).location.href = '/login';
+      return; // no reset finally below — la página está navegando fuera
+    }
+
+    if (_deleteAccountStepTimer) { clearInterval(_deleteAccountStepTimer); _deleteAccountStepTimer = null; }
+    document.getElementById('deleteAccountChecklist').style.display = 'none';
+    document.getElementById('deleteAccountForm').style.display = 'block';
+    smToast(data.error || 'Could not delete your account. Please try again.', 'error');
+  } catch (_) {
+    if (_deleteAccountStepTimer) { clearInterval(_deleteAccountStepTimer); _deleteAccountStepTimer = null; }
+    document.getElementById('deleteAccountChecklist').style.display = 'none';
+    document.getElementById('deleteAccountForm').style.display = 'block';
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    _deleteAccountInFlight = false;
+    confirmBtn.disabled = false;
+    cancelBtn.disabled = false;
+    confirmBtn.classList.remove('loading');
+  }
 }
 
 /* ───── Security: password change ────────────────────────── */
