@@ -3940,9 +3940,6 @@ MARKTRACK_INTERNAL_KEY = (
     or os.environ.get('INTERNAL_SERVICE_KEY')
     or 'xpx-internal-4f8c2a9d6e1b7f3c5a8d2e9b4c7f1a6d'
 )
-# Polling: cada cuánto y por cuánto tiempo esperar a que el job termine.
-FINDERX_POLL_INTERVAL = float(os.environ.get('FINDERX_POLL_INTERVAL', '1.5'))
-FINDERX_POLL_TIMEOUT = float(os.environ.get('FINDERX_POLL_TIMEOUT', '180'))
 
 
 @x_doc.route('/finderx_check', methods=['POST'])
@@ -4070,12 +4067,24 @@ def finderx_report(job_id):
 @x_doc.route('/citation_validation', methods=['POST'])
 @login_required
 def citation_validation():
-    """Valida SOLO citas y referencias vía FinderX (:8000 /api/v1/citation-validation).
+    """Encola la validación de citas en FinderX (:8000) y devuelve job_id de inmediato.
 
+    NO bloquea el worker: el navegador consulta /x_doc/citation_validation_report/<job_id>.
     A diferencia de /finderx_check (búsqueda de fuentes/plagio), esto NO busca en el
     corpus académico: solo detecta y valida las citas/referencias del texto.
-    FinderX ≥2.0 encola la validación (202 + task_id) — este proxy hace el poll a
-    /api/v1/task/<id> y devuelve el reporte, así el front lo sigue viendo síncrono.
+
+    Antes este endpoint hacía el poll a /api/v1/task/<id> AQUÍ MISMO con
+    time.sleep() (hasta 175s) — con gunicorn --worker-class sync y solo
+    WEB_CONCURRENCY=3, una sola validación de citas podía secuestrar un worker
+    completo por minutos: si 2 caían en esa espera simultáneamente, no quedaba
+    capacidad para atender NINGUNA otra petición (incl. /finderx_check) →
+    gunicorn mataba el worker colgado a los --timeout 120 → nginx veía la
+    conexión cortada → 502 en peticiones que no tenían nada que ver. Sumado a
+    que nginx tenía proxy_read_timeout 60s en esta ruta, la propia validación
+    de citas también salía como 504 antes de que el backend terminara. Se
+    resuelve con el mismo patrón submit+poll que ya usa finderx_check/
+    finderx_report: cada petición HTTP es rápida (un solo proxy a FinderX), y
+    quien espera es el navegador, no un worker de gunicorn.
     """
     data = request.get_json(silent=True) or {}
     text = (data.get('text') or '').strip()
@@ -4092,7 +4101,7 @@ def citation_validation():
 
     headers = {'Content-Type': 'application/json', 'X-API-Key': FINDERX_SERVICE_API_KEY}
     try:
-        resp = session_pool.post(
+        submit = session_pool.post(
             f'{FINDERX_SERVICE_BASE}/api/v1/citation-validation',
             headers=headers,
             # enrich=True → parity with marktrack: adds ORCID (authors), ROR
@@ -4106,69 +4115,76 @@ def citation_validation():
             # orphaned. FinderX accepts up to 800k and reference validation cost
             # scales with the NUMBER of refs, not text length, so this is safe.
             json={'text': text[:500000], 'validate': True, 'enrich': True},
-            # 180s read: citation validation is synchronous and its cost scales
-            # with the NUMBER of references (network calls to CrossRef/ORCID/etc.),
-            # not text length. A thesis with 60+ refs under enrich can exceed 120s.
-            # Keep nginx proxy_read_timeout ≥ 180s on this route (see TIMEOUT CHAIN).
-            timeout=(5, 180),
+            # This call only ENQUEUES (validate=true always returns 202+task_id
+            # server-side, see finderx analyze.py:citation_validation) — it does
+            # not wait for the validation itself, so a short read timeout is enough.
+            timeout=(5, 20),
         )
     except requests.exceptions.RequestException as exc:
-        logger.error('FinderX citation-validation failed: %s', exc)
+        logger.error('FinderX citation submit failed: %s', exc)
         return jsonify({'error': 'Could not reach the FinderX service.'}), 502
-    if not resp.ok:
-        logger.error('FinderX citation-validation returned %s: %s', resp.status_code, resp.text[:300])
-        return jsonify({'error': f'FinderX service error ({resp.status_code}).'}), 502
+    if not submit.ok:
+        logger.error('FinderX citation submit returned %s: %s', submit.status_code, submit.text[:300])
+        return jsonify({'error': f'FinderX service error ({submit.status_code}).'}), 502
 
     try:
-        rd = resp.json()
+        sd = submit.json()
     except ValueError:
         return jsonify({'error': 'Invalid response from FinderX service.'}), 502
 
     # La API envuelve el resultado bajo 'data'.
-    result = rd.get('data', rd) if isinstance(rd, dict) else rd
+    inner = sd.get('data', sd) if isinstance(sd, dict) else sd
 
-    # FinderX ≥2.0: con validate=true la validación se ENCOLA (202 con task_id)
-    # y el reporte se recoge en GET /api/v1/task/<id>. Hacemos el poll aquí para
-    # conservar el contrato síncrono con el front (mismo tiempo de espera que
-    # tenía la versión síncrona: el read timeout de 180s de arriba).
-    task_id = result.get('task_id') if isinstance(result, dict) else None
-    if task_id and 'detected_style' not in result:
-        deadline = time.time() + 175
-        interval = max(FINDERX_POLL_INTERVAL, 1.5)
-        while True:
-            if time.time() >= deadline:
-                logger.error('FinderX citation task %s timed out', task_id)
-                return jsonify({'error': 'Citation validation timed out.'}), 504
-            time.sleep(interval)
-            try:
-                poll = session_pool.get(
-                    f'{FINDERX_SERVICE_BASE}/api/v1/task/{task_id}',
-                    headers=headers, timeout=(5, 25),
-                )
-            except requests.exceptions.RequestException as exc:
-                logger.error('FinderX citation task poll failed: %s', exc)
-                return jsonify({'error': 'Could not reach the FinderX service.'}), 502
-            if not poll.ok:
-                logger.error('FinderX citation task poll returned %s: %s',
-                             poll.status_code, poll.text[:300])
-                return jsonify({'error': f'FinderX service error ({poll.status_code}).'}), 502
-            try:
-                pd = poll.json()
-            except ValueError:
-                return jsonify({'error': 'Invalid response from FinderX service.'}), 502
-            inner = pd.get('data', pd) if isinstance(pd, dict) else {}
-            status = str(inner.get('status') or '').lower()
-            if status == 'completed':
-                result = inner.get('result') or {}
-                break
-            if status in ('failed', 'error', 'not_found'):
-                logger.error('FinderX citation task %s → %s: %s',
-                             task_id, status, str(inner.get('error'))[:300])
-                return jsonify({'error': 'Citation validation failed.'}), 502
+    # validate=false (offline) ya viene resuelto — sin task_id que pollear.
+    if isinstance(inner, dict) and 'detected_style' in inner:
+        return jsonify({'done': True, 'result': inner}), 200
 
-    logger.info('FinderX citation-validation OK → keys=%s',
-                list(result.keys()) if isinstance(result, dict) else None)
-    return jsonify({'result': result}), 200
+    job_id = (inner.get('task_id') or inner.get('job_id')
+              or inner.get('id') or inner.get('taskId')) if isinstance(inner, dict) else None
+    if not job_id:
+        logger.error('FinderX citation submit missing task_id: %s', str(sd)[:300])
+        return jsonify({'error': 'FinderX did not return a job id.'}), 502
+
+    # Token firmado sin estado, namespace propio ('cv') — no intercambiable con
+    # los job_id de /finderx_check ('fx') aunque ambos apunten a Redis de FinderX.
+    token = _sign_job('cv', job_id)
+    return jsonify({'done': False, 'job_id': token, 'status': inner.get('status')}), 202
+
+
+@x_doc.route('/citation_validation_report/<job_id>', methods=['GET'])
+@login_required
+def citation_validation_report(job_id):
+    """Proxy rápido del reporte de validación de citas (no bloquea el worker)."""
+    real_id = _unsign_job('cv', job_id)
+    if real_id is None:
+        return jsonify({'error': 'Job not found or access denied.'}), 403
+    job_id = real_id
+    headers = {'Content-Type': 'application/json', 'X-API-Key': FINDERX_SERVICE_API_KEY}
+    try:
+        poll = session_pool.get(
+            f'{FINDERX_SERVICE_BASE}/api/v1/task/{job_id}', headers=headers, timeout=(5, 25)
+        )
+    except requests.exceptions.RequestException as exc:
+        logger.error('FinderX citation report failed: %s', exc)
+        return jsonify({'error': 'Could not reach the FinderX service.'}), 502
+    if not poll.ok:
+        logger.error('FinderX citation report returned %s: %s', poll.status_code, poll.text[:300])
+        return jsonify({'error': f'FinderX service error ({poll.status_code}).'}), 502
+    try:
+        pd = poll.json()
+    except ValueError:
+        return jsonify({'error': 'Invalid response from FinderX service.'}), 502
+
+    inner = pd.get('data', pd) if isinstance(pd, dict) else {}
+    status = str(inner.get('status') or '').lower()
+    out = {
+        'status': status,
+        'result': inner.get('result') if status == 'completed' else None,
+        'error': inner.get('error') if status in ('failed', 'error', 'not_found') else None,
+    }
+    logger.info('FinderX citation report %s → status=%r has_result=%s',
+                job_id, status, bool(out['result']))
+    return jsonify(out), 200
 
 
 # ════════════════════════════════════════════════════════════════════════════

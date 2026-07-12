@@ -3254,7 +3254,13 @@ body.xp-file-preview .mode-switch-container {
             return result;
         }
 
-        // ─── Citations & References (FinderX /citation-validation, síncrono) ─────────
+        // ─── Citations & References (FinderX /citation-validation) ──────────────────
+        // Submits (async) and polls the report — same submit+poll shape as
+        // _fetchSourceResult/finderx_check. Used to block on a server-side
+        // time.sleep() poll loop (up to 175s) inside a single gunicorn sync
+        // worker, which under WEB_CONCURRENCY=3 could exhaust every worker and
+        // surface as unrelated 502s/504s elsewhere. Now every HTTP round-trip
+        // is fast; the browser does the waiting.
         async _fetchCitationResult(text) {
             const response = await fetch('/x_doc/citation_validation', {
                 method: 'POST',
@@ -3262,8 +3268,22 @@ body.xp-file-preview .mode-switch-container {
                 body: JSON.stringify({ text: text })
             });
             if (!response.ok) throw new Error(await this._errMsg(response));
-            const data = await response.json();
-            const result = (data && data.result) ? data.result : (data && data.data ? data.data : data);
+
+            const submitData = await response.json();
+            if (submitData.done && submitData.result) return submitData.result;
+            const jobId = submitData.job_id;
+            if (!jobId) throw new Error('Citation validation did not return a job id.');
+
+            const report = await this._pollJson(
+                `/x_doc/citation_validation_report/${encodeURIComponent(jobId)}`,
+                d => String(d.status).toLowerCase() === 'completed' && !!d.result,
+                d => ['failed', 'error', 'not_found'].includes(String(d.status).toLowerCase()),
+                // Cost scales with reference COUNT (ORCID/ROR/OpenCitations calls
+                // per resolved ref), not text length — a thesis with 60+ refs
+                // under enrich can run past 120s. Match the old server-side budget.
+                { interval: 2000, timeout: 180000 }
+            );
+            const result = report && report.result;
             if (!result || typeof result !== 'object') throw new Error('Unexpected response from citation service.');
             return result;
         }
@@ -3914,6 +3934,11 @@ body.xp-file-preview .mode-switch-container {
         _providerLogoHtml(provider) {
             let p = String(provider || '').toLowerCase().trim();
             if (!p) return '';
+            // SearXNG es un meta-buscador (agrega Google/Bing/DuckDuckGo/...), no
+            // una fuente individual — no tiene ni necesita logo propio. Sin este
+            // guard, cada match "internet" vía SearXNG intentaba cargar
+            // imgsource/searxng.png (inexistente) y lo registraba como 404.
+            if (p === 'searxng') return '';
             p = p.replace(/_[a-z]{2,3}$/, '');            // sufijo de idioma
             p = p.replace(/[^a-z0-9]/g, '');              // "semantic_scholar" → "semanticscholar"
             const alias = { archive: 'internetarchive', wayback: 'internetarchive',
@@ -4314,10 +4339,28 @@ body.xp-file-preview .mode-switch-container {
                 ${metrics.map((m, i) => this._mtRing(radii[i] || 14, m.color, m.value)).join('')}</svg>`;
             const legend = `<div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;">
                 ${metrics.map(m => this._mtLegendRow(m.color, m.name, m.sub, m.value)).join('')}</div>`;
+
+            // Distribution sequence: fixed category order (not sorted by value like the
+            // rings) so the same color always sits in the same slot across analyses —
+            // AI → Plagiarism → Citations → Human → Original.
+            const DIST_TIPS = {
+                AI: 'Share of the text that shows patterns typical of AI-generated writing.',
+                Plagiarism: 'Share of the text that matches other sources found on the web or in academic databases.',
+                Citations: 'Overall quality of how sources are cited and referenced in this document.',
+                Human: 'Share of the text that reads as naturally written by a person.',
+                Original: 'Share of the text with no confirmed match to another source.',
+            };
+            const distSegs = [
+                ai       ? { name: 'AI',         value: aiPct,       color: '#ef4444' } : null,
+                source   ? { name: 'Plagiarism', value: overall,     color: '#f59e0b' } : null,
+                citation ? { name: 'Citations',  value: citScore,    color: '#064CDB' } : null,
+                ai       ? { name: 'Human',      value: humanPct,    color: '#10b981' } : null,
+                source   ? { name: 'Original',   value: originalPct, color: '#a78bfa' } : null,
+            ].filter(Boolean);
+            if (!distSegs.length) distSegs.push({ name: 'Original', value: originalPct, color: '#a78bfa' });
             const dist = `<div style="height:12px;border-radius:6px;overflow:hidden;display:flex;gap:1px;background:transparent;">
-                <div title="Human: ${humanPct}%" style="flex:${humanPct} 1 0%;background:#10b981;min-width:2px;"></div>
-                <div title="AI: ${aiPct}%" style="flex:${aiPct} 1 0%;background:#ef4444;min-width:2px;"></div>
-                <div title="Similarity: ${overall}%" style="flex:${overall} 1 0%;background:#f59e0b;min-width:2px;"></div></div>`;
+                ${distSegs.map(s => `<div title="${s.name}: ${s.value}%" style="flex:${Math.max(s.value, 0)} 1 0%;background:${s.color};min-width:2px;"></div>`).join('')}</div>`;
+            const distLegend = distSegs.map(s => `<div data-tip="${DIST_TIPS[s.name] || ''}" style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:${s.color};"></span> ${s.name}</div>`).join('');
 
             const style = this._mtStyleScore(ai ? ai.stylometric : null);
             const refs = this._mtRefsScore(ai ? ai.citation : null);
@@ -4355,13 +4398,11 @@ body.xp-file-preview .mode-switch-container {
                     <div class="score-meter" style="height:8px;margin:0;"><div style="height:100%;width:${Math.max(8, riskPct)}%;background:${risk.c};transition:width .6s;"></div></div>
                 </div>
                 <div>
-                    <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:4px;"><span data-tip="Visual breakdown of how much of the text is human-written, AI-generated, or similar to other sources.">Integrity Distribution Sequence</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:4px;"><span data-tip="Visual breakdown of the document by category — AI, plagiarism, citations, human-written, and original content — in a fixed order so each color always represents the same category.">Integrity Distribution Sequence</span></div>
                     ${dist}
                 </div>
                 <div style="display:flex;gap:12px;font-size:10px;margin-top:12px;flex-wrap:wrap;color:#475569;">
-                    <div data-tip="Share of the text that reads as naturally written by a person." style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#10b981;"></span> Human</div>
-                    <div data-tip="Share of the text that shows patterns typical of AI-generated writing." style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#ef4444;"></span> AI</div>
-                    <div data-tip="Share of the text that matches other sources found on the web or in academic databases." style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#f59e0b;"></span> Similarity</div>
+                    ${distLegend}
                 </div>
             </div>
             <div class="alert-cards">${alertCards}</div>`;
