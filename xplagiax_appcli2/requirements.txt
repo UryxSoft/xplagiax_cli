@@ -64,3 +64,5 @@ reportlab==4.3.0
 numpy==2.3.2
 fast_langdetect==0.3.2
 joblib==1.4.2
+
+cryptography>=42.0

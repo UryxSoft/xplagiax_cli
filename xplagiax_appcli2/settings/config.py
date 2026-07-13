@@ -17,7 +17,12 @@ class Config:
     SECURITY_PASSWORD_SALT = os.environ.get(
         'SECURITY_PASSWORD_SALT', '146585145368132386173505678016728509634')
     REMEMBER_COOKIE_SAMESITE = "strict"
-    SESSION_COOKIE_SAMESITE = "strict"
+    # C-3: 'Lax' (no 'strict') es lo mínimo que permite que la cookie de sesión
+    # viaje en el callback OAuth (navegación GET cross-site top-level). Con
+    # 'strict' la cookie no se enviaba, el state no sobrevivía y por eso se
+    # habían desactivado los controles de seguridad del callback. app.py ya
+    # forzaba 'Lax' en runtime; aquí se alinea la fuente de verdad.
+    SESSION_COOKIE_SAMESITE = "Lax"
 
     # ── Base de datos (MySQL) ───────────────────────────────────────────────
     SQLALCHEMY_DATABASE_URI = os.environ.get(
@@ -110,34 +115,40 @@ class Config:
                           'epub', 'rtf', 'mobi', 'png', 'jpg', 'jpeg'}
 
     # ── OAuth proveedores de almacenamiento en nube ─────────────────────────
+    # C-2: los client_secret ya NO tienen default hardcodeado. Los secretos
+    # anteriores estaban commiteados en el repo (comprometidos) y DEBEN rotarse
+    # en cada consola de developer; se leen solo de variables de entorno. Sin
+    # la env var el provider queda deshabilitado (el callback responde 503).
+    # Los client_id no son secretos (viajan en la URL de autorización) pero
+    # también se parametrizan por entorno.
     OAUTH_CONFIG = {
         'onedrive': {
-            'client_id': os.environ.get('ONEDRIVE_CLIENT_ID', 'bdf2666a-3055-423c-a97c-ff98fd098f77'),
-            'client_secret': os.environ.get('ONEDRIVE_CLIENT_SECRET', '9aae517d-2322-496c-bbed-a00501aa379b'),
+            'client_id': os.environ.get('ONEDRIVE_CLIENT_ID', ''),
+            'client_secret': os.environ.get('ONEDRIVE_CLIENT_SECRET', ''),
             'authorization_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
             'token_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
             'scope': 'https://graph.microsoft.com/Files.ReadWrite offline_access',
             'api_base': 'https://graph.microsoft.com/v1.0'
         },
         'google_drive': {
-            'client_id': os.environ.get('GOOGLE_CLIENT_ID', '121671119534-92uo2m1vpju3m3msh74jcf389nqhif4r.apps.googleusercontent.com'),
-            'client_secret': os.environ.get('GOOGLE_CLIENT_SECRET', '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'),
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
+            'client_secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
             'authorization_url': 'https://accounts.google.com/o/oauth2/v2/auth',
             'token_url': 'https://oauth2.googleapis.com/token',
             'scope': 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata.readonly',
             'api_base': 'https://www.googleapis.com/drive/v3'
         },
         'dropbox': {
-            'client_id': os.environ.get('DROPBOX_CLIENT_ID', 'uksuctfs3bvxl9o'),
-            'client_secret': os.environ.get('DROPBOX_CLIENT_SECRET', 'ohsz9unjmmbi6t0'),
+            'client_id': os.environ.get('DROPBOX_CLIENT_ID', ''),
+            'client_secret': os.environ.get('DROPBOX_CLIENT_SECRET', ''),
             'authorization_url': 'https://www.dropbox.com/oauth2/authorize',
             'token_url': 'https://api.dropboxapi.com/oauth2/token',
             'scope': 'account_info.read files.metadata.read files.content.read files.content.write',
             'api_base': 'https://api.dropboxapi.com/2'
         },
         'box': {
-            'client_id': os.environ.get('BOX_CLIENT_ID', '2exf4vhqo7jozfhrxt3grl885ltm36c1'),
-            'client_secret': os.environ.get('BOX_CLIENT_SECRET', 'Jdgzvg5HExQAnupFNYzGXmdUQNrwrhsf'),
+            'client_id': os.environ.get('BOX_CLIENT_ID', ''),
+            'client_secret': os.environ.get('BOX_CLIENT_SECRET', ''),
             'authorization_url': 'https://account.box.com/api/oauth2/authorize',
             'token_url': 'https://api.box.com/oauth2/token',
             'scope': 'root_readwrite',

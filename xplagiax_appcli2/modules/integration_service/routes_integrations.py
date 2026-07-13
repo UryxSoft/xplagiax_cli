@@ -3,7 +3,9 @@ import json
 import requests
 import secrets
 import hashlib
+import hmac
 import base64
+from modules.integration_service.token_crypto import decrypt_tokens, encrypt_tokens
 from urllib.parse import urlencode, quote
 from datetime import datetime, timedelta
 from modules.models.model import Users
@@ -11,15 +13,10 @@ from settings.connections import db
 import os
 from functools import wraps
 from sqlalchemy.exc import SQLAlchemyError
-import ssl
-import urllib3
 from settings.config import Config
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from settings.config import DevelopmentConfig
-
-# Configurar SSL y requests para evitar problemas de handshake
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 x_integ = Blueprint('x_integ', __name__)
 
@@ -52,60 +49,22 @@ def create_requests_session():
 http_session = create_requests_session()
 
 def make_secure_request(method, url, **kwargs):
-    """Realizar petición HTTP con manejo mejorado de SSL"""
-    try:
-        # Método 1: Usar la sesión configurada
-        response = http_session.request(method, url, **kwargs)
-        return response
-    except requests.exceptions.SSLError as e:
-        print(f"SSL Error con método 1: {e}")
-        try:
-            # Método 2: Deshabilitar verificación SSL temporalmente
-            kwargs['verify'] = False
-            response = requests.request(method, url, **kwargs)
-            print("Warning: SSL verification disabled for this request")
-            return response
-        except Exception as e2:
-            print(f"Error con método 2: {e2}")
-            raise e
+    """
+    Realizar petición HTTP contra endpoints OAuth / providers.
 
-# Configuración OAuth para cada proveedor
-"""
-OAUTH_CONFIG = {
-    'onedrive': {
-        'client_id': 'bdf2666a-3055-423c-a97c-ff98fd098f77',
-        'client_secret': '9aae517d-2322-496c-bbed-a00501aa379b',
-        'authorization_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
-        'token_url': 'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-        'scope': 'https://graph.microsoft.com/Files.ReadWrite offline_access',
-        'api_base': 'https://graph.microsoft.com/v1.0'
-    },
-    'google_drive': {
-        'client_id': '121671119534-92uo2m1vpju3m3msh74jcf389nqhif4r.apps.googleusercontent.com',
-        'client_secret': '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',
-        'authorization_url': 'https://accounts.google.com/o/oauth2/v2/auth',
-        'token_url': 'https://oauth2.googleapis.com/token',
-        'scope': 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata.readonly',
-        'api_base': 'https://www.googleapis.com/drive/v3'
-    },
-    'dropbox': {
-        'client_id': 'uksuctfs3bvxl9o',
-        'client_secret': 'ohsz9unjmmbi6t0',
-        'authorization_url': 'https://www.dropbox.com/oauth2/authorize',
-        'token_url': 'https://api.dropboxapi.com/oauth2/token',
-        'scope': 'account_info.read files.metadata.read files.content.read files.content.write',
-        'api_base': 'https://api.dropboxapi.com/2'
-    },
-    'box': {
-        'client_id': '2exf4vhqo7jozfhrxt3grl885ltm36c1',
-        'client_secret': 'Jdgzvg5HExQAnupFNYzGXmdUQNrwrhsf',
-        'authorization_url': 'https://account.box.com/api/oauth2/authorize',
-        'token_url': 'https://api.box.com/oauth2/token',
-        'scope': 'root_readwrite',
-        'api_base': 'https://api.box.com/2.0'
-    }
-}
-"""
+    C-6: se ELIMINÓ el fallback que reintentaba con verify=False. Desactivar la
+    verificación TLS en llamadas OAuth abre la puerta a un MITM que intercepte
+    el intercambio code→token. Un fallo TLS ahora se propaga como error real.
+    Timeout por defecto para no colgar el worker de Flask.
+    """
+    kwargs.setdefault('timeout', 20)
+    return http_session.request(method, url, **kwargs)
+
+# La configuración OAuth vive en settings/config.py (Config.OAUTH_CONFIG),
+# con los secretos exclusivamente en variables de entorno (C-2). El bloque
+# de ejemplo con secretos en texto plano que había aquí fue eliminado.
+
+
 def login_required(f):
     """Decorador para verificar autenticación"""
     @wraps(f)
@@ -121,7 +80,9 @@ def get_user_tokens(user_id):
         user = db.session.query(Users).filter_by(id=user_id).first()
         
         if user and user.tokens:
-            return json.loads(user.tokens)
+            # C-5: los tokens se guardan cifrados; decrypt_tokens es
+            # retrocompatible con filas antiguas en texto plano.
+            return json.loads(decrypt_tokens(user.tokens))
         return {}
     except SQLAlchemyError as e:
         print(f"Error obteniendo tokens: {e}")
@@ -134,7 +95,8 @@ def save_user_tokens(user_id, tokens):
         user = db.session.query(Users).filter_by(id=user_id).first()
         
         if user:
-            user.tokens = json.dumps(tokens)
+            # C-5: cifrar en reposo antes de persistir.
+            user.tokens = encrypt_tokens(json.dumps(tokens))
             db.session.commit()
             return True
         else:
@@ -256,9 +218,12 @@ def connect_storage(provider):
     
     if provider == 'mega':
         return jsonify({'error': 'MEGA requiere credenciales directas'}), 400
-    
+
     config = OAUTH_CONFIG[provider]
-    
+    # C-2: sin client_secret configurado (env var) el provider está deshabilitado.
+    if not config.get('client_secret') or not config.get('client_id'):
+        return jsonify({'error': 'Proveedor no configurado en el servidor'}), 503
+
     # Generar state para seguridad
     state = secrets.token_urlsafe(32)
     session[f'{provider}_state'] = state
@@ -289,29 +254,30 @@ def oauth_callback(provider):
     if provider not in OAUTH_CONFIG:
         return jsonify({'error': 'Proveedor no soportado'}), 400
     
-    # Debug: Verificar valores de state
+    # C-1: validación de state OBLIGATORIA (anti-CSRF de OAuth). Con
+    # SESSION_COOKIE_SAMESITE=Lax (app.py) la cookie de sesión SÍ viaja en el
+    # callback (navegación GET top-level), así que el state guardado en
+    # connect_storage está disponible aquí. Comparación en tiempo constante.
     received_state = request.args.get('state')
     session_state = session.get(f'{provider}_state')
-    
-    print(f"DEBUG - Received state: {received_state}")
-    print(f"DEBUG - Session state: {session_state}")
-    print(f"DEBUG - Session keys: {list(session.keys())}")
-    
-    # Verificar state (recomendado para seguridad)
-    # Temporalmente deshabilitado para debugging
-    # if not received_state or received_state != session_state:
-    #     return jsonify({
-    #         'error': 'Estado OAuth inválido',
-    #         'received_state': received_state,
-    #         'session_state': session_state
-    #     }), 400
-    
+    if (not received_state or not session_state
+            or not hmac.compare_digest(received_state, session_state)):
+        return jsonify({'error': 'Estado OAuth inválido'}), 400
+
+    # C-4: exigir una sesión de usuario real. Antes se forzaba user_id=1, lo que
+    # mezclaba los tokens del que se conectaba con el usuario 1 (IDOR / fuga de
+    # credenciales entre cuentas).
+    if 'user_id' not in session:
+        return jsonify({'error': 'Sesión no válida, inicie sesión de nuevo'}), 401
+
     # Obtener código de autorización
     code = request.args.get('code')
     if not code:
         return jsonify({'error': 'Código de autorización no recibido'}), 400
-    
+
     config = OAUTH_CONFIG[provider]
+    if not config.get('client_secret'):
+        return jsonify({'error': 'Proveedor no configurado en el servidor'}), 503
     
     # Intercambiar código por tokens
     token_data = {
@@ -323,21 +289,13 @@ def oauth_callback(provider):
     }
     
     try:
-        print(f"DEBUG - Making token request to: {config['token_url']}")
-        print(f"DEBUG - Token data: {token_data}")
-        
-        # Usar función con manejo mejorado de SSL
+        # M-4: no se registran token_data (lleva client_secret) ni los tokens
+        # recibidos — quedaban en los logs en texto plano.
         response = make_secure_request('POST', config['token_url'], data=token_data)
         response.raise_for_status()
         tokens = response.json()
-        
-        print(f"DEBUG - Received tokens: {tokens}")
-        
-        # Para pruebas, crear un user_id temporal si no existe en session
-        if 'user_id' not in session:
-            session['user_id'] = 1  # ID temporal para pruebas
-        
-        # Obtener tokens existentes del usuario
+
+        # Obtener tokens existentes del usuario (sesión ya validada arriba)
         user_tokens = get_user_tokens(session['user_id'])
         
         # Agregar nuevos tokens
