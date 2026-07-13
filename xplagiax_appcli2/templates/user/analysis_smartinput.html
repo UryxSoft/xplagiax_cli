@@ -4158,7 +4158,7 @@ body.xp-file-preview .mode-switch-container {
                 this._streamFragments(fragments, result.academic_matches);
             });
 
-            document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
+            document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode(true));
             this._initSplitResizer();
         }
 
@@ -4312,6 +4312,13 @@ body.xp-file-preview .mode-switch-container {
                     console.debug('[Overview] originality fallback (no segment_summary)', { overall, originalPct });
                 }
             }
+            // "Similarity" is the complement of "Original" (same segment-based
+            // partition, just the other slice) — NOT the raw scores.overall.
+            // Showing both side by side previously mixed two different metrics
+            // (e.g. Original 8% from segments + Similarity 100% from the
+            // document-level blended score) which don't sum to 100% and read as
+            // contradictory. `overall` stays available below for risk level.
+            const similarityPct = source ? Math.max(0, 100 - originalPct) : 0;
 
             // Citas: MISMO score que muestra el tab "Citations & References".
             const citScore = citation ? Math.round(num(citation.citation_quality_score)) : 0;
@@ -4330,7 +4337,7 @@ body.xp-file-preview .mode-switch-container {
             // Originalidad basada en segmentos — se muestra SIEMPRE que corra
             // FinderX (antes solo aparecía cuando no había ningún análisis).
             if (source)   metrics.push({ color: '#a78bfa', name: 'Original',   sub: 'Unique',    value: originalPct });
-            if (source)   metrics.push({ color: '#f59e0b', name: 'Similarity', sub: 'Sources',   value: overall });
+            if (source)   metrics.push({ color: '#f59e0b', name: 'Similarity', sub: 'Sources',   value: similarityPct });
             if (citation) metrics.push({ color: '#064CDB', name: 'Citations',  sub: 'Quality',   value: citScore });
             if (!metrics.length) metrics.push({ color: '#a78bfa', name: 'Original', sub: 'Unique', value: originalPct });
             metrics.sort((a, b) => b.value - a.value);
@@ -5304,7 +5311,7 @@ body.xp-file-preview .mode-switch-container {
                 }
             });
 
-            document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
+            document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode(true));
             this._initSplitResizer();
 
             // Guardar en el historial (texto + resultados) — salvo si venimos de reabrir
@@ -5434,7 +5441,7 @@ body.xp-file-preview .mode-switch-container {
                 this._streamFragments(fragments, sourceResult.academic_matches);
             });
 
-            document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
+            document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode(true));
             this._initSplitResizer();
         }
         // ─── End FinderX ───────────────────────────────────────────────────────────
@@ -5631,12 +5638,17 @@ body.xp-file-preview .mode-switch-container {
                 } else {
                     originalPct = Math.max(0, 100 - overall);
                 }
+                // Similarity = complement of Original (same segment-based
+                // partition), not the raw document-level `overall` — see
+                // _buildMtOverview for why mixing the two reads as
+                // contradictory (e.g. Original 8% + Similarity 100%).
+                const similarityPct = Math.max(0, 100 - originalPct);
                 segments.push({ key: 'original', value: originalPct });
-                segments.push({ key: 'sim', value: overall });
+                segments.push({ key: 'sim', value: similarityPct });
                 segments.push({ key: 'ref', value: Math.round(ca.citation_coverage || 0) });
-                if (!ai) { centerValue = overall; centerCaption = 'Similarity'; }
+                if (!ai) { centerValue = similarityPct; centerCaption = 'Similarity'; }
                 stats.push({ label: 'Sources', value: matches });
-                stats.push({ label: 'Similarity %', value: overall });
+                stats.push({ label: 'Similarity %', value: similarityPct });
             }
 
             const card = this._buildIntegrityCard({
@@ -6253,7 +6265,7 @@ body.xp-file-preview .mode-switch-container {
                 this._streamBlocks(result.blocks);
             });
 
-            document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode());
+            document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode(true));
             this._initSplitResizer();
         }
 
@@ -6298,11 +6310,15 @@ body.xp-file-preview .mode-switch-container {
             });
         }
 
-        _exitSplitMode() {
+        // thenReset: true only for the "New Analysis" button — the other callers
+        // (reopening a history entry from split view) exit split mode just to
+        // immediately repopulate it with different content, so they must NOT
+        // clear the input underneath them.
+        _exitSplitMode(thenReset) {
             const overlay = document.getElementById('aiAnalysisSplitView')
                 || document.getElementById('finderxSplitView')
                 || document.querySelector('.ai-split-view');
-            if (!overlay) return;
+            if (!overlay) { if (thenReset) this.resetToEmpty(); return; }
             if (typeof this._splitResizerCleanup === 'function') this._splitResizerCleanup();
             document.body.classList.remove('xp-split-active');
             overlay.classList.remove('visible');
@@ -6321,6 +6337,8 @@ body.xp-file-preview .mode-switch-container {
                 if (optionsPanel) optionsPanel.style.display = '';
                 if (statusMessage) statusMessage.style.display = '';
                 if (metricsEl) metricsEl.style.display = '';
+
+                if (thenReset) this.resetToEmpty();
             }, 300);
         }
 

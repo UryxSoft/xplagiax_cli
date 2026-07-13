@@ -10,9 +10,11 @@ class GoogleOAuth:
     """Servicio simplificado para manejar autenticación con Google OAuth 2.0"""
     
     def __init__(self):
-        # Configuración OAuth - considera mover a variables de entorno
-        self.client_id = os.getenv('GOOGLE_CLIENT_ID', "121671119534-92uo2m1vpju3m3msh74jcf389nqhif4r.apps.googleusercontent.com")
-        self.client_secret = os.getenv('GOOGLE_CLIENT_SECRET', "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")
+        # C-2: mismo cliente OAuth de Google que Google Drive (storage). El
+        # secreto se lee SOLO de variable de entorno — el valor hardcodeado
+        # estaba comprometido y debe rotarse en Google Cloud Console.
+        self.client_id = os.getenv('GOOGLE_CLIENT_ID', '')
+        self.client_secret = os.getenv('GOOGLE_CLIENT_SECRET', '')
         self.redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', "http://127.0.0.1:5000/auth_bp/google/callbackx")
         
         # URLs de Google OAuth

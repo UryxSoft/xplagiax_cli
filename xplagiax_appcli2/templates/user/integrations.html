@@ -31,16 +31,12 @@
                         <i class="bi bi-box"></i>
                         <span class="connection-status"></span>
                     </div>
-                    <div class="storage-icon" data-provider="pcloud" title="Connect pCloud">
-                        <i class="bi bi-cloud"></i>
-                        <span class="connection-status"></span>
-                    </div>
-                    <div class="storage-icon" data-provider="mega" title="Connect MEGA">
-                        <i class="bi bi-shield-lock"></i>
-                        <span class="connection-status"></span>
-                    </div>
-                    <div class="storage-icon" data-provider="yandex" title="Connect Yandex Disk">
-                        <i class="bi bi-globe"></i>
+                    <!-- M-1: alineado con los proveedores realmente soportados por el
+                         backend (google_drive, dropbox, box, onedrive). Se agregó
+                         OneDrive y se quitaron pcloud/mega/yandex, que NO tienen flujo
+                         OAuth implementado y solo confundían al usuario. -->
+                    <div class="storage-icon" data-provider="onedrive" title="Connect OneDrive">
+                        <i class="bi bi-microsoft"></i>
                         <span class="connection-status"></span>
                     </div>
                 </div>

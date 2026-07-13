@@ -5,9 +5,9 @@ import secrets
 import hashlib
 import hmac
 import base64
-from modules.integration_service.token_crypto import decrypt_tokens, encrypt_tokens
+from modules.integration_service.token_repository import TokenRepository
 from urllib.parse import urlencode, quote
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from modules.models.model import Users
 from settings.connections import db
 import os
@@ -21,6 +21,51 @@ from settings.config import DevelopmentConfig
 x_integ = Blueprint('x_integ', __name__)
 
 OAUTH_CONFIG = DevelopmentConfig.OAUTH_CONFIG
+
+# ── Fase 2: comportamiento OAuth específico por proveedor ────────────────────
+# A-2/A-3: parámetros extra en la URL de autorización que aseguran que el
+# proveedor devuelva un refresh_token de larga vida. Antes se enviaba
+# `access_type=offline` a TODOS (parámetro específico de Google), lo que no
+# hacía nada en Dropbox/Box/OneDrive:
+#   * Google  → access_type=offline + prompt=consent (garantiza refresh_token
+#               incluso en reconexiones).
+#   * Dropbox → token_access_type=offline (sin esto Dropbox solo entrega un
+#               token de 4h SIN refresh → "conectado" que deja de funcionar).
+#   * OneDrive→ el refresh se habilita con el scope `offline_access` (ya está
+#               en OAUTH_CONFIG); no requiere parámetro adicional.
+#   * Box     → emite refresh_token por defecto; sin parámetro extra.
+_PROVIDER_AUTH_PARAMS = {
+    'google_drive': {'access_type': 'offline', 'prompt': 'consent'},
+    'dropbox': {'token_access_type': 'offline'},
+}
+
+# A-1 (PKCE): sondar `code_challenge`/`code_verifier` (S256) mitiga la
+# interceptación del `code`. Solo se activa donde el proveedor soporta PKCE
+# JUNTO con client_secret (cliente confidencial): Google y Microsoft lo hacen
+# sin conflicto. En Dropbox/Box el flujo con client_secret NO usa PKCE (Dropbox
+# lo trata como alternativo al secret), así que se deja en False para no romper
+# el flujo confidencial. Override por entorno: OAUTH_PKCE_<PROVIDER>=true/false.
+_PROVIDER_USE_PKCE = {
+    'google_drive': True,
+    'onedrive': True,
+    'dropbox': False,
+    'box': False,
+}
+
+
+def _use_pkce(provider):
+    env = os.environ.get(f'OAUTH_PKCE_{provider.upper()}')
+    if env is not None:
+        return env.strip().lower() in ('1', 'true', 'yes', 'on')
+    return _PROVIDER_USE_PKCE.get(provider, False)
+
+
+def _pkce_pair():
+    """(code_verifier, code_challenge) con método S256 (RFC 7636)."""
+    verifier = secrets.token_urlsafe(64)  # 43-128 chars urlsafe
+    digest = hashlib.sha256(verifier.encode('ascii')).digest()
+    challenge = base64.urlsafe_b64encode(digest).decode('ascii').rstrip('=')
+    return verifier, challenge
 
 # Configurar adaptador HTTP con reintentos y configuración SSL mejorada
 def create_requests_session():
@@ -74,38 +119,16 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Fase 3: la persistencia real vive en TokenRepository (cifrado + expiración en
+# un solo lugar testeable). Estas funciones se conservan como fachadas finas
+# para no tocar los ~40 sitios que ya las llaman.
 def get_user_tokens(user_id):
-    """Obtener tokens del usuario desde la base de datos"""
-    try:
-        user = db.session.query(Users).filter_by(id=user_id).first()
-        
-        if user and user.tokens:
-            # C-5: los tokens se guardan cifrados; decrypt_tokens es
-            # retrocompatible con filas antiguas en texto plano.
-            return json.loads(decrypt_tokens(user.tokens))
-        return {}
-    except SQLAlchemyError as e:
-        print(f"Error obteniendo tokens: {e}")
-        db.session.rollback()
-        return {}
+    """Obtener tokens del usuario (delegado a TokenRepository)."""
+    return TokenRepository(user_id).all()
 
 def save_user_tokens(user_id, tokens):
-    """Guardar tokens del usuario en la base de datos"""
-    try:
-        user = db.session.query(Users).filter_by(id=user_id).first()
-        
-        if user:
-            # C-5: cifrar en reposo antes de persistir.
-            user.tokens = encrypt_tokens(json.dumps(tokens))
-            db.session.commit()
-            return True
-        else:
-            print(f"Usuario con ID {user_id} no encontrado")
-            return False
-    except SQLAlchemyError as e:
-        print(f"Error guardando tokens: {e}")
-        db.session.rollback()
-        return False
+    """Guardar tokens del usuario (delegado a TokenRepository)."""
+    return TokenRepository(user_id).replace(tokens)
 
 def create_user(username, email):
     """Crear un nuevo usuario"""
@@ -228,23 +251,32 @@ def connect_storage(provider):
     state = secrets.token_urlsafe(32)
     session[f'{provider}_state'] = state
     session[f'{provider}_provider'] = provider
-    
-    # Parámetros OAuth
+
+    # Parámetros OAuth base
     params = {
         'client_id': config['client_id'],
         'response_type': 'code',
         'redirect_uri': url_for('x_integ.oauth_callback', provider=provider, _external=True),
         'state': state,
-        'access_type': 'offline'  # Para refresh token
     }
-    
+
+    # A-2/A-3: parámetros específicos por proveedor para obtener refresh_token.
+    params.update(_PROVIDER_AUTH_PARAMS.get(provider, {}))
+
     # Agregar scope si existe
     if 'scope' in config:
         params['scope'] = config['scope']
-    
+
+    # A-1: PKCE (S256) donde el proveedor lo soporta con cliente confidencial.
+    if _use_pkce(provider):
+        verifier, challenge = _pkce_pair()
+        session[f'{provider}_verifier'] = verifier
+        params['code_challenge'] = challenge
+        params['code_challenge_method'] = 'S256'
+
     # URL de autorización
     auth_url = f"{config['authorization_url']}?{urlencode(params)}"
-    
+
     return redirect(auth_url)
 
 @x_integ.route('/storage/callback/<provider>')
@@ -287,7 +319,12 @@ def oauth_callback(provider):
         'client_id': config['client_id'],
         'client_secret': config['client_secret']
     }
-    
+
+    # A-1: adjuntar el code_verifier de PKCE si se usó en connect_storage.
+    verifier = session.pop(f'{provider}_verifier', None)
+    if _use_pkce(provider) and verifier:
+        token_data['code_verifier'] = verifier
+
     try:
         # M-4: no se registran token_data (lleva client_secret) ni los tokens
         # recibidos — quedaban en los logs en texto plano.
@@ -297,13 +334,15 @@ def oauth_callback(provider):
 
         # Obtener tokens existentes del usuario (sesión ya validada arriba)
         user_tokens = get_user_tokens(session['user_id'])
-        
-        # Agregar nuevos tokens
+
+        # A-4: timestamps en UTC aware (antes datetime.now() naive/local, frágil
+        # ante despliegues en UTC o cambios de zona horaria).
+        now_utc = datetime.now(timezone.utc)
         user_tokens[provider] = {
             'access_token': tokens['access_token'],
             'refresh_token': tokens.get('refresh_token'),
-            'expires_at': (datetime.now() + timedelta(seconds=tokens.get('expires_in', 3600))).isoformat(),
-            'connected_at': datetime.now().isoformat()
+            'expires_at': (now_utc + timedelta(seconds=tokens.get('expires_in', 3600))).isoformat(),
+            'connected_at': now_utc.isoformat()
         }
         
         # Guardar en base de datos
@@ -1276,12 +1315,8 @@ def move_cloud_file(provider):
         return jsonify({'error': str(e)}), 500
 
 def is_token_expired(token_info):
-    """Verificar si un token ha expirado"""
-    if 'expires_at' not in token_info:
-        return False
-    
-    expires_at = datetime.fromisoformat(token_info['expires_at'])
-    return datetime.now() >= expires_at
+    """Verificar si un token ha expirado (delegado a TokenRepository, A-4)."""
+    return TokenRepository.is_expired(token_info)
 
 def refresh_access_token(user_id, provider):
     """Renovar access token usando refresh token"""
@@ -1307,13 +1342,16 @@ def refresh_access_token(user_id, provider):
         response.raise_for_status()
         tokens = response.json()
         
-        # Actualizar tokens
+        # Actualizar tokens (A-4: expiración en UTC)
         user_tokens[provider]['access_token'] = tokens['access_token']
         user_tokens[provider]['expires_at'] = (
-            datetime.now() + timedelta(seconds=tokens.get('expires_in', 3600))
+            datetime.now(timezone.utc) + timedelta(seconds=tokens.get('expires_in', 3600))
         ).isoformat()
-        
-        if 'refresh_token' in tokens:
+
+        # Rotación de refresh token: algunos proveedores (p.ej. con rotation
+        # activa) devuelven uno nuevo; Google normalmente NO lo reenvía y hay
+        # que conservar el existente. Solo se sobrescribe si viene uno nuevo.
+        if tokens.get('refresh_token'):
             user_tokens[provider]['refresh_token'] = tokens['refresh_token']
         
         return save_user_tokens(user_id, user_tokens)
@@ -2364,30 +2402,16 @@ def _extract_text_preview(content, filename, max_chars):
     return text[:max_chars] if len(text) > max_chars else text
 
 
-@x_integ.route('/documents')
-@login_required
-def document_manager():
-    """Renderizar página del gestor de documentos"""
-    return render_template('document_manager.html')
-
-@x_integ.route('/x_buck/api/documents')
-@login_required
-def get_native_documents():
-    """Obtener documentos nativos del sistema"""
-    # Aquí va tu lógica existente para obtener documentos nativos
-    # Por ahora retorno un ejemplo
-    documents = [
-        {
-            'id': 1,
-            'title': 'Documento nativo 1.pdf',
-            'size': 1024000,
-            'last_modified': '2024-01-15T10:30:00',
-            'url': '/download/1',
-            'rena': 'documento1.pdf'
-        }
-    ]
-    
-    return jsonify({'documents': documents})
+# NOTA (Fase 3 — corrección de diseño de la pantalla "documents"):
+# Se eliminaron dos rutas rotas/duplicadas que vivían aquí:
+#   * document_manager()  → GET /x_integ/documents renderizaba
+#     'document_manager.html', una plantilla que NO existe → 500
+#     TemplateNotFound. La pantalla real es x_users.documents() en
+#     modules/users_service/user_routes.py (render de clean_html.html).
+#   * get_native_documents() → GET /x_integ/x_buck/api/documents devolvía un
+#     documento HARDCODEADO de ejemplo (datos falsos) en una ruta confusa que
+#     duplicaba la API real x_buck.list_documents() (/x_buck/api/documents).
+# Ninguna de las dos estaba referenciada por el frontend (verificado).
 
 # Rutas adicionales para gestión de usuarios
 @x_integ.route('/users', methods=['POST'])
