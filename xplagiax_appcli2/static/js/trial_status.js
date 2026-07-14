@@ -1,10 +1,14 @@
 class TrialStatusValidator {
     constructor() {
-        this.progressBar = document.getElementById('progressBar');
-        this.trialText = document.getElementById('trialText');
+        this.progressBar  = document.getElementById('progressBar');
+        this.trialText    = document.getElementById('trialText');
         this.unlockButton = document.getElementById('unlockButton');
-        this.trialIcon = document.getElementById('trialIcon');
+        this.trialIcon    = document.getElementById('trialIcon');
         this.trialMessage = document.getElementById('trialMessage');
+
+        // Bail out silently if the trial-status widget is not present on this page.
+        if (!this.progressBar || !this.trialText) return;
+
         this.init();
     }
     
@@ -70,8 +74,8 @@ class TrialStatusValidator {
             displayText = `${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''} left`;
         }
         
-        this.trialText.textContent = displayText;
-        this.progressBar.style.width = `${Math.max(5, percentage)}%`;
+        if (this.trialText)    this.trialText.textContent = displayText;
+        if (this.progressBar)  this.progressBar.style.width = `${Math.max(5, percentage)}%`;
         
         // Cambiar colores según tiempo restante
         this.updateProgressBarStyle(daysLeft, totalTrialDays);
@@ -80,6 +84,7 @@ class TrialStatusValidator {
     }
     
     updateProgressBarStyle(daysLeft, totalDays = 5) {
+        if (!this.progressBar) return;
         // Remover todas las clases anteriores
         this.progressBar.classList.remove(
             'progress-excellent', 'progress-good', 'progress-warning', 
@@ -108,6 +113,7 @@ class TrialStatusValidator {
     }
     
     updateTrialIcon(daysLeft) {
+        if (!this.trialIcon) return;
         this.trialIcon.classList.remove(
             'fa-hourglass-half', 'fa-hourglass-end', 'fa-exclamation-triangle', 
             'fa-times-circle', 'fa-clock', 'fa-bolt'
@@ -144,6 +150,7 @@ class TrialStatusValidator {
     }
     
     showTrialMessage(daysLeft) {
+        if (!this.trialMessage) return;
         this.trialMessage.style.display = 'block';
         
         if (daysLeft <= 0) {
@@ -180,39 +187,48 @@ class TrialStatusValidator {
     }
     
     showExpiredTrial() {
-        this.trialText.textContent = 'Trial expired';
-        this.progressBar.style.width = '100%';
-        this.progressBar.classList.remove('progress-active', 'progress-warning', 'progress-danger');
-        this.progressBar.classList.add('progress-expired');
-        
-        this.trialIcon.classList.remove('fa-hourglass-half');
-        this.trialIcon.classList.add('fa-times-circle');
-        this.trialIcon.style.color = '#e74c3c';
-        
-        this.unlockButton.disabled = false;
-        this.unlockButton.innerHTML = '<i class="fas fa-crown"></i> Upgrade Now';
-        this.unlockButton.style.background = 'linear-gradient(45deg, #e74c3c, #c0392b)';
-        
-        this.trialMessage.style.display = 'block';
-        this.trialMessage.className = 'trial-expired-message';
-        this.trialMessage.innerHTML = `
-            <i class="fas fa-times-circle"></i>
-            <strong>Trial expired!</strong> Your trial period has ended.
-            Upgrade your plan now to continue using the service.
-        `;
+        if (this.trialText)    this.trialText.textContent = 'Trial expired';
+        if (this.progressBar) {
+            this.progressBar.style.width = '100%';
+            this.progressBar.classList.remove('progress-active', 'progress-warning', 'progress-danger');
+            this.progressBar.classList.add('progress-expired');
+        }
+        if (this.trialIcon) {
+            this.trialIcon.classList.remove('fa-hourglass-half');
+            this.trialIcon.classList.add('fa-times-circle');
+            this.trialIcon.style.color = '#e74c3c';
+        }
+        if (this.unlockButton) {
+            this.unlockButton.disabled = false;
+            this.unlockButton.innerHTML = '<i class="fas fa-crown"></i> Upgrade Now';
+            this.unlockButton.style.background = 'linear-gradient(45deg, #e74c3c, #c0392b)';
+        }
+        if (this.trialMessage) {
+            this.trialMessage.style.display = 'block';
+            this.trialMessage.className = 'trial-expired-message';
+            this.trialMessage.innerHTML = `
+                <i class="fas fa-times-circle"></i>
+                <strong>Trial expired!</strong> Your trial period has ended.
+                Upgrade your plan now to continue using the service.
+            `;
+        }
     }
     
     showNoTrialStatus() {
-        this.trialText.textContent = 'No trial active';
-        this.progressBar.style.width = '100%';
-        this.progressBar.classList.add('progress-expired');
-        this.unlockButton.innerHTML = '<i class="fas fa-rocket"></i> Start Trial';
+        if (this.trialText)    this.trialText.textContent = 'No trial active';
+        if (this.progressBar) {
+            this.progressBar.style.width = '100%';
+            this.progressBar.classList.add('progress-expired');
+        }
+        if (this.unlockButton) this.unlockButton.innerHTML = '<i class="fas fa-rocket"></i> Start Trial';
     }
     
     showErrorStatus() {
-        this.trialText.textContent = 'Error loading status';
-        this.progressBar.style.width = '100%';
-        this.progressBar.classList.add('progress-expired');
+        if (this.trialText)    this.trialText.textContent = 'Error loading status';
+        if (this.progressBar) {
+            this.progressBar.style.width = '100%';
+            this.progressBar.classList.add('progress-expired');
+        }
     }
     
     startCountdown() {
@@ -225,6 +241,7 @@ class TrialStatusValidator {
     }
     
     setupUnlockButton() {
+        if (!this.unlockButton) return;
         this.unlockButton.addEventListener('click', () => {
             // Aquí puedes redirigir a la página de planes o abrir un modal
             this.handleUnlockClick();

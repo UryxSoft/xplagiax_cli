@@ -921,47 +921,77 @@ def cloud_delete_public_link(provider, access_token, file_id):
     return {'success': False, 'error': 'Provider not supported'}
 
 
+# Fase 4: caché corto del listado de documentos por (usuario, proveedor).
+# Cada refresco de la UI reejecutaba TODA la paginación contra el proveedor
+# (segundos + rate limit). Se cachea el resultado filtrado 60s en Redis (DB 11
+# de appcli2). `?refresh=1` lo salta (para forzar tras subir/borrar). Si Redis
+# no está disponible, degrada a consultar el proveedor (sin romper nada).
+_FILES_CACHE_TTL = int(os.environ.get('STORAGE_FILES_CACHE_TTL', '60'))
+
+
+def _files_cache_key(user_id, provider):
+    return f"appcli2:storage_files:{user_id}:{provider}"
+
+
+def _files_cache_get(user_id, provider):
+    try:
+        from settings.redisconnect import redis_client
+        raw = redis_client.get(_files_cache_key(user_id, provider))
+        return json.loads(raw) if raw else None
+    except Exception:
+        return None
+
+
+def _files_cache_set(user_id, provider, files):
+    try:
+        from settings.redisconnect import redis_client
+        redis_client.setex(
+            _files_cache_key(user_id, provider), _FILES_CACHE_TTL, json.dumps(files)
+        )
+    except Exception:
+        pass
+
+
 @x_integ.route('/storage/files/<provider>')
 @login_required
 def get_storage_files(provider):
     """Obtener archivos de un proveedor específico"""
     if 'user_id' not in session:
         return jsonify({'error': 'Usuario no autenticado'}), 401
-        
-    user_tokens = get_user_tokens(session['user_id'])
-    
+
+    user_id = session['user_id']
+
+    # Fast path: servir del caché salvo que se pida refresh explícito.
+    if request.args.get('refresh') not in ('1', 'true', 'yes'):
+        cached = _files_cache_get(user_id, provider)
+        if cached is not None:
+            return jsonify({'files': cached, 'cached': True})
+
+    user_tokens = get_user_tokens(user_id)
+
     if provider not in user_tokens:
         return jsonify({'error': 'Proveedor no conectado'}), 404
-    
+
     token_info = user_tokens[provider]
-    
+
     # Verificar si el token ha expirado
     if is_token_expired(token_info):
         # Intentar renovar token
-        if not refresh_access_token(session['user_id'], provider):
+        if not refresh_access_token(user_id, provider):
             return jsonify({'error': 'Token expirado, re-autenticación requerida'}), 401
-        
+
         # Obtener tokens actualizados
-        user_tokens = get_user_tokens(session['user_id'])
+        user_tokens = get_user_tokens(user_id)
         token_info = user_tokens[provider]
-    
+
     try:
         all_files = fetch_files_from_provider(provider, token_info['access_token'])
-        print(f"DEBUG - Total files from {provider}: {len(all_files)}")
-        
-        # Log some file info for debugging
-        for f in all_files[:5]:  # First 5 files
-            print(f"DEBUG - File: {f.get('name')} | Type: {f.get('type')}")
-        
         # Filtrar solo documentos
         document_files = filter_documents_by_provider(all_files, provider)
-        print(f"DEBUG - Filtered document files: {len(document_files)}")
-
+        _files_cache_set(user_id, provider, document_files)
         return jsonify({'files': document_files})
     except Exception as e:
         print(f"Error obteniendo archivos de {provider}: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({'error': 'Error obteniendo archivos'}), 500
 
 @x_integ.route('/storage/folder/<provider>')
@@ -1907,8 +1937,22 @@ def fetch_folder_content(provider, access_token, folder_id=None):
     
     return {'folders': folders, 'files': files}
 
+# Fase 4 (M-5): tope de archivos traídos por proveedor. El listado se paginaba
+# SIN LÍMITE (Google Drive `while True`, Dropbox `while has_more`), trayendo a
+# memoria y serializando miles de archivos en una cuenta grande — bloqueando el
+# thread de Flask y devolviendo una respuesta enorme. Se acota a un máximo
+# configurable; la UI ya lista los más recientes primero (orderBy modifiedTime).
+_MAX_PROVIDER_FILES = int(os.environ.get('STORAGE_MAX_FILES', '500'))
+# Tope de páginas como segundo cinturón de seguridad ante paginación patológica.
+_MAX_PROVIDER_PAGES = int(os.environ.get('STORAGE_MAX_PAGES', '20'))
+
+
 def fetch_files_from_provider(provider, access_token):
-    """Obtener archivos específicos de cada proveedor - busca en TODAS las carpetas"""
+    """Obtener archivos específicos de cada proveedor - busca en TODAS las carpetas.
+
+    M-5: acotado a _MAX_PROVIDER_FILES / _MAX_PROVIDER_PAGES para no traer una
+    cuenta entera a memoria. Devuelve el mismo shape que antes (lista de dicts).
+    """
     headers = {'Authorization': f'Bearer {access_token}'}
     
     if provider == 'google_drive':
@@ -1934,7 +1978,8 @@ def fetch_files_from_provider(provider, access_token):
         url = f"{OAUTH_CONFIG[provider]['api_base']}/files"
         all_files = []
         page_token = None
-        
+        pages = 0
+
         while True:
             params = {
                 'q': query,
@@ -1944,11 +1989,11 @@ def fetch_files_from_provider(provider, access_token):
             }
             if page_token:
                 params['pageToken'] = page_token
-            
+
             response = make_secure_request('GET', url, headers=headers, params=params)
             response.raise_for_status()
             data = response.json()
-            
+
             for file in data.get('files', []):
                 all_files.append({
                     'id': file['id'],
@@ -1959,13 +2004,14 @@ def fetch_files_from_provider(provider, access_token):
                     'download_url': file.get('webViewLink'),
                     'provider': 'google_drive'
                 })
-            
+
             page_token = data.get('nextPageToken')
-            if not page_token:
+            pages += 1
+            # M-5: cortar en el tope de archivos o de páginas.
+            if not page_token or len(all_files) >= _MAX_PROVIDER_FILES or pages >= _MAX_PROVIDER_PAGES:
                 break
-        
-        print(f"DEBUG - Google Drive total documents found: {len(all_files)}")
-        return all_files
+
+        return all_files[:_MAX_PROVIDER_FILES]
     
     elif provider == 'dropbox':
         # Dropbox requiere headers específicos
@@ -1985,52 +2031,44 @@ def fetch_files_from_provider(provider, access_token):
             "limit": 2000  # Máximo permitido por Dropbox
         }
         
-        print(f"Dropbox request payload: {json.dumps(payload)}")  # Debug
-        
         try:
             response = make_secure_request('POST', url, headers=headers, data=json.dumps(payload))
-            print(f"Dropbox response status: {response.status_code}")  # Debug
-            
             response.raise_for_status()
             data = response.json()
-            
-            print(f"Dropbox response data: {json.dumps(data, indent=2)}")  # Debug
-            
+            # M-4/Fase 4: se quitaron los print() que volcaban el listado
+            # COMPLETO y una línea por archivo — coste real de CPU/logs (y fuga
+            # de nombres de archivo a los logs) en cuentas con miles de ítems.
+
             files = []
-            entries = data.get('entries', [])
-            
-            for entry in entries:
-                print(f"Processing entry: {entry.get('name')} - Tag: {entry.get('.tag')}")  # Debug
-                
+            for entry in data.get('entries', []):
                 # Verificar que sea un archivo (no carpeta)
                 if entry.get('.tag') == 'file':
-                    file_info = {
+                    files.append({
                         'id': entry.get('id', ''),
                         'name': entry.get('name', ''),
                         'size': entry.get('size', 0),
                         'modified': entry.get('server_modified', ''),
-                        'type': 'file',  # Dropbox no proporciona MIME type en list_folder
+                        'type': 'file',  # Dropbox no da MIME type en list_folder
                         'path': entry.get('path_display', ''),
                         'provider': 'dropbox'
-                    }
-                    files.append(file_info)
-                    print(f"Added file: {file_info['name']}")  # Debug
-            
-            # Manejo de paginación si hay más archivos
+                    })
+
+            # Paginación acotada (M-5).
             has_more = data.get('has_more', False)
             cursor = data.get('cursor', '')
-            
-            while has_more:
+            pages = 1
+
+            while has_more and len(files) < _MAX_PROVIDER_FILES and pages < _MAX_PROVIDER_PAGES:
                 continue_url = f"{OAUTH_CONFIG[provider]['api_base']}/files/list_folder/continue"
                 continue_payload = {"cursor": cursor}
-                
+
                 response = make_secure_request('POST', continue_url, headers=headers, data=json.dumps(continue_payload))
                 response.raise_for_status()
                 data = response.json()
-                
+
                 for entry in data.get('entries', []):
                     if entry.get('.tag') == 'file':
-                        file_info = {
+                        files.append({
                             'id': entry.get('id', ''),
                             'name': entry.get('name', ''),
                             'size': entry.get('size', 0),
@@ -2038,18 +2076,16 @@ def fetch_files_from_provider(provider, access_token):
                             'type': 'file',
                             'path': entry.get('path_display', ''),
                             'provider': 'dropbox'
-                        }
-                        files.append(file_info)
-                
+                        })
+
                 has_more = data.get('has_more', False)
                 cursor = data.get('cursor', '')
-            
-            print(f"Total Dropbox files found: {len(files)}")  # Debug
-            return files
-            
+                pages += 1
+
+            return files[:_MAX_PROVIDER_FILES]
+
         except Exception as e:
-            print(f"Error detallado en Dropbox: {e}")
-            print(f"Response content: {getattr(response, 'text', 'No response text')}")
+            print(f"Error en Dropbox list_folder: {e}")
             raise
     
     elif provider == 'box':

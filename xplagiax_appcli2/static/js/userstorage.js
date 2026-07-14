@@ -23,12 +23,18 @@ function loadStorageInfo() {
         .then(data => {
             // Guardar datos para uso posterior
             storageData = data;
-            
-            // Actualizar indicadores de almacenamiento
-            document.getElementById('storage-used').textContent = `${data.used_storage_mb.toFixed(2)} MB`;
-            document.getElementById('storage-total').textContent = `${data.total_storage_mb.toFixed(2)} MB`;
-            document.getElementById('storage-remaining').textContent = `${data.remaining_storage_mb.toFixed(2)} MB`;
-            //document.getElementById('current-plan').textContent = data.user_type ? data.user_type : 'Plan no asignado';
+
+            // Helper: safely convert a value to a fixed-decimal string
+            const toFixed = (val, dec = 2) => (Number(val) || 0).toFixed(dec);
+
+            // Actualizar indicadores de almacenamiento (con guards de null)
+            const elUsed      = document.getElementById('storage-used');
+            const elTotal     = document.getElementById('storage-total');
+            const elRemaining = document.getElementById('storage-remaining');
+            if (elUsed)      elUsed.textContent      = `${toFixed(data.used_storage_mb)} MB`;
+            if (elTotal)     elTotal.textContent      = `${toFixed(data.total_storage_mb)} MB`;
+            if (elRemaining) elRemaining.textContent  = `${toFixed(data.remaining_storage_mb)} MB`;
+
             const planElement = document.getElementById('current-plan');
 
             let icon = '';
@@ -54,37 +60,41 @@ function loadStorageInfo() {
                     icon = '';
             }
 
-
             // Actualizar el plan
-            planElement.innerHTML = data.user_type 
-                ? `${data.user_type} ${icon}` 
-                : 'Plan no asignado';
+            if (planElement) {
+                planElement.innerHTML = data.user_type
+                    ? `${data.user_type} ${icon}`
+                    : 'Plan no asignado';
+            }
 
             // Actualizar barra de progreso personalizada
             const progressBar = document.getElementById('settin-storage-progress');
-            const percentage = data.storage_usage_percentage.toFixed(1);
+            if (progressBar) {
+                const percentage = toFixed(data.storage_usage_percentage, 1);
 
-            // Actualizar el ancho y texto
-            progressBar.style.width = `${percentage}%`;
-            progressBar.textContent = `${percentage}% Used`;
+                // Actualizar el ancho y texto
+                progressBar.style.width = `${percentage}%`;
+                progressBar.textContent = `${percentage}% Used`;
 
-            // Limpiar clases anteriores de color
-            progressBar.className = 'settings-progress-bar';
+                // Limpiar clases anteriores de color
+                progressBar.className = 'settings-progress-bar';
 
-            // Asignar color según el porcentaje de uso
-            if (percentage < 50) {
-                progressBar.classList.add('progress-success');
-            } else if (percentage >= 50 && percentage < 80) {
-                progressBar.classList.add('progress-warning');  
-            } else if (percentage >= 80 && percentage < 90) {
-                progressBar.classList.add('progress-danger-light');
-            } else if (percentage >= 90) {
-                progressBar.classList.add('progress-danger');
+                // Asignar color según el porcentaje de uso
+                const pct = parseFloat(percentage);
+                if (pct < 50) {
+                    progressBar.classList.add('progress-success');
+                } else if (pct >= 50 && pct < 80) {
+                    progressBar.classList.add('progress-warning');
+                } else if (pct >= 80 && pct < 90) {
+                    progressBar.classList.add('progress-danger-light');
+                } else if (pct >= 90) {
+                    progressBar.classList.add('progress-danger');
+                }
+
+                // Agregar animación si se desea
+                progressBar.classList.add('progress-animated');
             }
 
-            // Agregar animación si se desea
-            progressBar.classList.add('progress-animated');
-            
             // Mostrar complementos activos
             displayActiveAddons(data.current_addons);
             
@@ -94,8 +104,12 @@ function loadStorageInfo() {
             // Mostrar complementos disponibles
             displayAvailableAddons(data.available_addons);
         })
-   
+        .catch(error => {
+            console.warn('Storage info not available on this page:', error.message);
+        });
 }
+
+
 
 
 // Función para mostrar complementos activos

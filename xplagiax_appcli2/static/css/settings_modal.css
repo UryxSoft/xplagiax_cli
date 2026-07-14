@@ -629,6 +629,46 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
+/* ── KV entries with app icon ────────────────────────────────── */
+.sm-kv--with-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: clamp(10px,2.5vw,14px) 12px;
+}
+.sm-kv-icon {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, #007AFF 0%, #0051D5 100%);
+  border-radius: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 6px 18px rgba(0, 122, 255, 0.30), 0 2px 8px rgba(0, 0, 0, 0.10);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease;
+}
+.sm-kv-icon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.18) 0%, transparent 60%);
+  border-radius: inherit;
+}
+.sm-kv-icon .icon-svg {
+  color: #fff;
+  position: relative;
+  z-index: 1;
+}
+.sm-kv--with-icon:hover .sm-kv-icon {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 10px 28px rgba(0, 122, 255, 0.38), 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+
 /* ── Divider ─────────────────────────────────────────────────── */
 .sm-divider { height: 1px; background: var(--sm-border); margin: 0 clamp(14px,4vw,20px); }
 
