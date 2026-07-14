@@ -964,8 +964,16 @@ body.xp-file-preview .mode-switch-container {
             <span>Auto-saved</span>
         </div>
 
-        <!-- INSERTAR EL SWITCH AQUÍ -->
-        <div class="mode-switch-container">
+        <!-- INSERTAR EL SWITCH Y BOTON DE REGRESO AQUÍ -->
+        <div class="mode-switch-container" style="display: flex; align-items: center; gap: 15px; justify-content: flex-end;">
+            <!-- Botón de regreso -->
+            <button class="back-to-drop-btn" id="backToDropBtn" title="Back to drop zone" style="position: relative; top: 0; left: 0;">
+                <svg class="back-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5" />
+                    <path d="M12 19l-7-7 7-7" />
+                </svg>
+            </button>
             <div class="mode-switch" id="modeSwitch">
                 <input type="checkbox" id="modeSwitchToggle" class="mode-switch-input">
                 <label for="modeSwitchToggle" class="mode-switch-label">
@@ -1014,18 +1022,7 @@ body.xp-file-preview .mode-switch-container {
             <!-- Text input mode -->
             <div class="text-mode-content" id="textModeContent">
 
-                <div class="text-mode-header-wrap" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-                    <!-- Botón de regreso -->
-                    <button class="back-to-drop-btn" id="backToDropBtn" title="Back to drop zone" style="position: relative; top: 0; left: 0;">
-                        <svg class="back-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2">
-                            <path d="M19 12H5" />
-                            <path d="M12 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-
-                </div>
-
+                <!-- El text-mode-header-wrap fue eliminado para ahorrar espacio, el botón de regreso ahora está en mode-switch-container -->
                 <div class="row">
                     <div id="main-col" class="col-7">
                         <div class="text-editor-container">
