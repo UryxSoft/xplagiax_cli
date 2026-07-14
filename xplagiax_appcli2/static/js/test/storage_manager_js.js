@@ -119,11 +119,6 @@ class StorageManager {
     }
 
     async connectStorage(provider) {
-        if (provider === 'mega') {
-            this.showError('MEGA connection requires manual setup. Please contact support.');
-            return;
-        }
-
         try {
             this.showConnectionLoading(provider);
 
@@ -877,9 +872,6 @@ class StorageManager {
             dropbox:      { color: '#0061FF', glow: 'rgba(0,97,255,0.20)',    google: false },
             box:          { color: '#0061D5', glow: 'rgba(0,97,213,0.20)',    google: false },
             onedrive:     { color: '#0078D4', glow: 'rgba(0,120,212,0.22)',   google: false },
-            pcloud:       { color: '#20c4cb', glow: 'rgba(32,196,203,0.20)',  google: false },
-            mega:         { color: '#d9272e', glow: 'rgba(217,39,46,0.20)',   google: false },
-            yandex:       { color: '#ffcc00', glow: 'rgba(255,204,0,0.20)',   google: false },
         };
         return map[provider] || { color: '#1621ff', glow: 'rgba(22,33,255,0.20)', google: false };
     }
@@ -1002,9 +994,7 @@ class StorageManager {
             'google_drive': 'Google Drive',
             'dropbox': 'Dropbox',
             'box': 'Box',
-            'pcloud': 'pCloud',
-            'mega': 'MEGA',
-            'yandex': 'Yandex Disk',
+            'onedrive': 'OneDrive',
             'native': 'My Documents'
         };
         return names[provider] || provider.charAt(0).toUpperCase() + provider.slice(1);
@@ -1015,9 +1005,7 @@ class StorageManager {
             'google_drive': 'bi bi-google',
             'dropbox': 'bi bi-dropbox',
             'box': 'bi bi-box',
-            'pcloud': 'bi bi-cloud',
-            'mega': 'bi bi-shield-lock',
-            'yandex': 'bi bi-globe',
+            'onedrive': 'bi bi-microsoft',
             'native': 'bi bi-hdd'
         };
         return icons[provider] || 'bi bi-folder';
@@ -1028,9 +1016,7 @@ class StorageManager {
             'google_drive': '/static/img/svg/google-drive.svg',
             'dropbox': '/static/img/svg/dropbox.svg',
             'box': '/static/img/svg/box.svg',
-            'pcloud': '/static/img/svg/pcloud.svg',
-            'mega': '/static/img/svg/mega.svg',
-            'yandex': '/static/img/svg/yandex.svg',
+            'onedrive': '/static/img/svg/onedrive.png',
             'native': ''
         };
         return icons[provider] || '';

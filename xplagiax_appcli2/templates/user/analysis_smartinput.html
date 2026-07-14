@@ -4736,6 +4736,7 @@ body.xp-file-preview .mode-switch-container {
             };
             let urlReclassified = 0;
             refs.forEach(r => {
+                if (r.needs_review) return; // atypical entries stay out of the valid count
                 const vv = r.validation || (r.validation = {});
                 const stt = String(vv.status || '').toLowerCase();
                 if (stt === 'valid' || stt === 'partial' || stt === 'valid_url') return;
@@ -4795,6 +4796,29 @@ body.xp-file-preview .mode-switch-container {
                 ${chip('Orphan refs', num(c.orphan_references), num(c.orphan_references) > 0 ? '#d97706' : '', 'Bibliography entries that are never cited anywhere in the text.')}
             </div>`;
 
+            // ── Section & type breakdown (section-aware detector, additive) ──
+            const typeLabels = {
+                book: 'Books', article: 'Articles', chapter: 'Chapters', review: 'Reviews',
+                note: 'Notes', legal: 'Legal', web: 'Web', av_media: 'Media',
+                thesis: 'Theses', preprint: 'Preprints', dataset: 'Datasets', other: 'Other',
+                unclassified_reference: 'Unclassified', needs_manual_review: 'Needs review',
+            };
+            const byType = (c.references_by_type && typeof c.references_by_type === 'object') ? c.references_by_type : null;
+            const typeChips = byType ? Object.keys(byType).filter(k => num(byType[k]) > 0).map(k =>
+                chip(typeLabels[k] || esc(String(k).replace(/_/g, ' ')), num(byType[k]),
+                     k === 'needs_manual_review' ? '#d97706' : '',
+                     k === 'needs_manual_review'
+                        ? 'Entries detected as references but with an atypical format — review manually. They are reported, never silently dropped.'
+                        : 'References classified as ' + (typeLabels[k] || k) + ' from their bibliography section and entry-level signals.')
+            ).join('') : '';
+            const typesHtml = typeChips ? `<div class="xcite-sec-h"><span>Reference types</span></div>
+            <div class="score-breakdown" style="margin-bottom:14px">${typeChips}</div>` : '';
+            const secs = Array.isArray(c.sections) ? c.sections : [];
+            const sectionsHtml = secs.length ? `<div class="xcite-sec-h"><span>Bibliography sections</span><span class="xcite-count">${secs.length}</span></div>
+            <div class="score-breakdown" style="margin-bottom:14px">${secs.map(s =>
+                chip(esc(s.name), num(s.entries), '', 'Entries detected under the ' + esc(s.name) + ' heading (' + esc(s.type || '') + ').')
+            ).join('')}</div>` : '';
+
             const cr = c.coverage_report || {}, doi = cr.doi_stats || {};
             const coverage = (cr.citation_coverage_score != null || cr.citation_integrity_index != null || doi.found_in_text != null) ? `<div class="score-breakdown" style="margin-bottom:14px">
                 ${chip('Coverage (CCS)', Math.round(num(cr.citation_coverage_score)) + '%', '', 'Citation Coverage Score — percentage of the text’s claims that have a supporting citation nearby.')}
@@ -4804,9 +4828,10 @@ body.xp-file-preview .mode-switch-container {
             </div>` : '';
 
             const stMap = {
-                valid:     { col: '#047857', bg: 'rgba(16,185,129,0.12)', label: 'Verified' },
-                partial:   { col: '#b45309', bg: 'rgba(245,158,11,0.14)', label: 'Partial' },
-                valid_url: { col: '#047857', bg: 'rgba(16,185,129,0.12)', label: 'Valid (URL)' },
+                valid:        { col: '#047857', bg: 'rgba(16,185,129,0.12)', label: 'Verified' },
+                partial:      { col: '#b45309', bg: 'rgba(245,158,11,0.14)', label: 'Partial' },
+                valid_url:    { col: '#047857', bg: 'rgba(16,185,129,0.12)', label: 'Valid (URL)' },
+                unverifiable: { col: '#475569', bg: 'rgba(100,116,139,0.12)', label: 'Not verifiable' },
             };
             const refStatus = st => stMap[String(st || '').toLowerCase()] || { col: '#dc2626', bg: 'rgba(239,68,68,0.12)', label: st ? esc(String(st).replace(/_/g, ' ')) : 'Unverified' };
 
@@ -4835,15 +4860,26 @@ body.xp-file-preview .mode-switch-container {
                 const confCol = conf != null ? (conf >= 70 ? '#059669' : conf >= 40 ? '#d97706' : '#dc2626') : '#94a3b8';
                 const orcidAuthors = (r.author_validation || []).filter(a => a && a.orcid);
                 const disc = (v.discrepancies || []).filter(Boolean);
+                // Section-aware badges (additive fields; absent on old reports).
+                const typeBadge = r.entry_type
+                    ? `<span class="xcite-status" style="background:rgba(100,116,139,0.10);color:#475569" data-tip="Reference type inferred from its bibliography section and entry-level signals.">${esc(typeLabels[r.entry_type] || String(r.entry_type).replace(/_/g, ' '))}</span>` : '';
+                const reviewBadge = r.needs_review
+                    ? `<span class="xcite-status" style="background:rgba(245,158,11,0.14);color:#b45309" data-tip="Detected as a reference but its format is atypical — review manually.">Needs review</span>` : '';
+                const secBadge = r.section ? `<span class="xcite-metabits">§ ${esc(r.section)}</span>` : '';
+                const kids = Array.isArray(r.children) ? r.children : [];
+                const kidsHtml = kids.length ? `<div style="margin-top:6px;padding-left:12px;border-left:2px solid #e2e8f0">${kids.map(k =>
+                    `<div class="xcite-metabits" style="display:block;margin-top:3px">↳ ${esc(String(k.raw_text || '').slice(0, 200))}</div>`).join('')}</div>` : '';
                 return `<div class="xcite-item${cIdx != null ? ' clk' : ''}"${cIdx != null ? ` data-cite-focus="${cIdx}" tabindex="0" role="button" aria-label="Highlight this citation in the text"` : ''}>
                     <span class="xcite-num">${i + 1}</span>
                     <div class="xcite-body">
                         <div class="xcite-title-line">${authors ? `<strong style="color:#0f172a">${authors}</strong>` : ''}${r.year ? ` <span style="color:#64748b">(${esc(String(r.year))})</span>` : ''}${(authors || r.year) ? ' — ' : ''}${titleHtml}</div>
                         <div class="xcite-meta">
                             <span class="xcite-status" style="background:${st.bg};color:${st.col}">${esc(st.label)}</span>
+                            ${typeBadge}${reviewBadge}${secBadge}
                             ${conf != null ? `<span class="xcite-conf"><span class="xcite-conf-bar"><span style="width:${conf}%;background:${confCol}"></span></span>${conf}%</span>` : ''}
                             ${metaBits ? `<span class="xcite-metabits">${metaBits}</span>` : ''}
                         </div>
+                        ${kidsHtml}
                         ${orcidAuthors.length ? `<div class="xcite-meta" style="margin-top:7px">
                             <span class="xcite-metabits" style="text-transform:uppercase;letter-spacing:.05em;font-size:.58rem">ORCID</span>
                             ${orcidAuthors.map(a => `<a href="https://orcid.org/${esc(a.orcid)}" target="_blank" rel="noopener" class="xcite-orcid" title="${esc(a.institution || '')}" onclick="event.stopPropagation()">${a.verified ? '✔ ' : ''}${esc(a.name || a.orcid)}</a>`).join('')}
@@ -5096,7 +5132,7 @@ body.xp-file-preview .mode-switch-container {
                    <div class="xcite-list">${citeItems}</div>`
                 : '';
 
-            return `<h2 style="margin-bottom:14px;">Citations, References &amp; Bibliography</h2>${qHero}${summary}${coverage}${refsHtml}${biblioHtml}${citesHtml}`;
+            return `<h2 style="margin-bottom:14px;">Citations, References &amp; Bibliography</h2>${qHero}${summary}${sectionsHtml}${typesHtml}${coverage}${refsHtml}${biblioHtml}${citesHtml}`;
         }
 
         _wireMtTabs(overlay) {

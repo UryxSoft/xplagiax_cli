@@ -1946,6 +1946,30 @@ _MAX_PROVIDER_FILES = int(os.environ.get('STORAGE_MAX_FILES', '500'))
 # Tope de páginas como segundo cinturón de seguridad ante paginación patológica.
 _MAX_PROVIDER_PAGES = int(os.environ.get('STORAGE_MAX_PAGES', '20'))
 
+# PERF (Fase 4): TTL del caché de cuota de storage por (usuario, provider).
+_QUOTA_CACHE_TTL = int(os.environ.get('STORAGE_QUOTA_TTL', '300'))  # 5 min
+
+
+def _quota_cache_get(key):
+    """Lee la cuota cacheada en Redis. None si no hay o Redis falla (best-effort)."""
+    try:
+        from settings.redisconnect import redis_client
+        raw = redis_client.get(key)
+        if raw:
+            return json.loads(raw)
+    except Exception as e:
+        print(f"quota cache get skip: {e}")
+    return None
+
+
+def _quota_cache_set(key, value):
+    """Cachea la cuota con TTL. No-op si Redis falla."""
+    try:
+        from settings.redisconnect import redis_client
+        redis_client.setex(key, _QUOTA_CACHE_TTL, json.dumps(value))
+    except Exception as e:
+        print(f"quota cache set skip: {e}")
+
 
 def fetch_files_from_provider(provider, access_token):
     """Obtener archivos específicos de cada proveedor - busca en TODAS las carpetas.
@@ -2132,7 +2156,7 @@ def fetch_files_from_provider(provider, access_token):
                 unique_files.append(f)
         
         print(f"DEBUG - Box total documents found: {len(unique_files)}")
-        return unique_files
+        return unique_files[:_MAX_PROVIDER_FILES]
     
     elif provider == 'onedrive':
         # OneDrive: Usar la API de búsqueda de Microsoft Graph para buscar documentos
@@ -2178,7 +2202,7 @@ def fetch_files_from_provider(provider, access_token):
                 unique_files.append(f)
         
         print(f"DEBUG - OneDrive total documents found: {len(unique_files)}")
-        return unique_files
+        return unique_files[:_MAX_PROVIDER_FILES]
 
     return []
 
@@ -2259,17 +2283,28 @@ def get_storage_usage(provider):
         return jsonify({'error': 'Proveedor no conectado'}), 404
     
     token_info = user_tokens[provider]
-    
+
+    # PERF (Fase 4): la cuota cambia lentamente y el panel de stats la pide en
+    # cada apertura; se cachea por (usuario, provider) durante _QUOTA_CACHE_TTL
+    # para no golpear la API del provider cada vez. No tiene el problema de
+    # invalidación del listado de archivos (una cuota 5 min desactualizada es
+    # irrelevante). Tolerante a Redis caído (best-effort).
+    cache_key = f"storage_quota:{session['user_id']}:{provider}"
+    cached = _quota_cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
     # Verificar expiración y renovar si es necesario
     if is_token_expired(token_info):
         if not refresh_access_token(session['user_id'], provider):
             return jsonify({'error': 'Token expirado'}), 401
         user_tokens = get_user_tokens(session['user_id'])
         token_info = user_tokens[provider]
-        
+
     quota = fetch_storage_quota(provider, token_info['access_token'])
-    
+
     if quota and 'error' not in quota:
+        _quota_cache_set(cache_key, quota)
         return jsonify(quota)
     else:
         # Si falla, retornar error explícito o nulls pero con status
