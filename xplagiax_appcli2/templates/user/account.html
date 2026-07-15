@@ -94,6 +94,7 @@
       <div class="sm-nav-section">
         <div class="sm-nav-label">Platform</div>
 
+        {% if user_data.user_type != 'Starter' %}
         <button class="sm-nav-item" data-panel="integrations" data-label="Integrations">
           <span class="sm-nav-icon sm-nav-icon--teal">
             <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -107,6 +108,7 @@
           </span>
           AI &amp; Automation
         </button>
+        {% endif %}
 
         <button class="sm-nav-item" data-panel="advanced" data-label="Advanced">
           <span class="sm-nav-icon sm-nav-icon--blue">
@@ -730,6 +732,7 @@
               Danger Zone
             </div>
           </div>
+          {% if user_data.user_type != 'Starter' %}
           <div class="sm-row">
             <div class="sm-row-left">
               <div class="sm-row-label">Delete All Documents</div>
@@ -737,6 +740,7 @@
             </div>
             <button class="sm-btn sm-btn-danger" onclick="smOpenDeleteAllModal()">Delete All</button>
           </div>
+          {% endif %}
           <div class="sm-row">
             <div class="sm-row-left">
               <div class="sm-row-label">Delete Account</div>
@@ -1065,6 +1069,7 @@
               <div class="sm-kv-label">FinderX</div>
               <div class="sm-kv-value">v2.0.0</div>
             </div>
+            {% if user_data.user_type != 'Starter' %}
             <div class="sm-kv sm-kv--with-icon">
               <div class="sm-kv-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="icon-svg bi bi-pencil-square" viewBox="0 0 16 16">
@@ -1075,6 +1080,7 @@
               <div class="sm-kv-label">MarkTrack</div>
               <div class="sm-kv-value">v1.0</div>
             </div>
+            {% endif %}
           </div>
           <div class="sm-card-foot">
             <a href="/x_system_status" class="sm-btn sm-btn-ghost" target="_blank">

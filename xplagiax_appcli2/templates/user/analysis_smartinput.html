@@ -966,8 +966,10 @@ body.xp-file-preview .mode-switch-container {
 
         <!-- INSERTAR EL SWITCH Y BOTON DE REGRESO AQUÍ -->
         <div class="mode-switch-container" style="display: flex; align-items: center; gap: 15px; justify-content: flex-end;">
-            <!-- Botón de regreso -->
-            <button class="back-to-drop-btn" id="backToDropBtn" title="Back to drop zone" style="position: relative; top: 0; left: 0;">
+            <!-- Botón de regreso — margin-right:auto lo empuja al extremo
+                 izquierdo, lo más lejos posible del mode-switch (derecha).
+                 Si el botón está oculto, el switch conserva su posición. -->
+            <button class="back-to-drop-btn" id="backToDropBtn" title="Back to drop zone" style="position: relative; top: 0; left: 0; margin-right: auto;">
                 <svg class="back-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2">
                     <path d="M19 12H5" />

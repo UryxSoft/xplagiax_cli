@@ -58,6 +58,7 @@
         </svg>
       </div>
 
+      {% if user_data.user_type != 'Starter' %}
       <a href="{{ url_for('x_users.analysis') }}"
         class="nav-btn {{ 'active' if request.endpoint == 'x_users.analysis' else '' }}" data-tip="Analysis">
         <svg viewBox="0 0 24 24">
@@ -65,6 +66,7 @@
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
       </a>
+      {% endif %}
 
       {% if user_data.user_type != 'Starter' %}
       <a href="{{ url_for('x_users.documents') }}"
@@ -168,8 +170,13 @@
     <!-- ══════════════════════════════════════
          DASHBOARD (marktrack design)
     ══════════════════════════════════════ -->
-    <div class="dashboard" style="--sidebar-w:68px;" id="mainDashboard">
+    {% set is_starter = user_data.user_type == 'Starter' %}
+    {# Starter: sin sidebar. display:block anula el grid de dos columnas para
+       que el contenido ocupe todo el ancho (si solo se quitara el aside, el
+       contenido caería en la columna de 68px del grid). #}
+    <div class="dashboard" style="--sidebar-w:{{ '0px' if is_starter else '68px' }};{% if is_starter %} display:block;{% endif %}" id="mainDashboard">
 
+      {% if not is_starter %}
       <!-- SIDEBAR PANEL -->
       <aside class="sidebar-panel collapsed" id="sidebarPanel">
         <div class="sidebar-header">
@@ -287,6 +294,7 @@
 
       </aside>
       <!-- END SIDEBAR PANEL -->
+      {% endif %}
 
       <!-- ══════════════════════════════════════
            MAIN
