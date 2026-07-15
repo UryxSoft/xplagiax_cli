@@ -1,6 +1,16 @@
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
 basedir = os.path.abspath(os.path.dirname(__file__))
+
+# Cargar variables desde el .env de la raíz del proyecto ANTES de leer
+# os.environ. python-dotenv estaba en requirements pero nunca se invocaba:
+# cualquier credencial definida en .env (GOOGLE_CLIENT_ID, SECRET_KEY, etc.)
+# jamás llegaba al proceso y OAuth quedaba sin configurar en silencio.
+# override=False (default): las variables de entorno reales siempre ganan
+# sobre el archivo (docker -e / --env-file no se ven afectados).
+load_dotenv(os.path.join(basedir, '..', '.env'))
 
 
 def _env_bool(key, default=False):
