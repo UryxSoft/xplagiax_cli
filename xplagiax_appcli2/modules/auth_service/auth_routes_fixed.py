@@ -133,6 +133,43 @@ def find_or_create_user(user_data):
     db.session.commit()
     return user, is_new_user
 
+@auth_bp.route('/oauth-status')
+def oauth_status():
+    """Diagnóstico de configuración OAuth — sin exponer datos sensibles.
+
+    Los client_id son públicos por diseño (viajan en la URL de autorización
+    que ve cualquier navegador); de los secretos solo se informa SI están
+    definidos, nunca su valor. Sirve para verificar en 5 segundos si las
+    credenciales llegaron al proceso y qué redirect_uri se va a usar (esa
+    misma URI es la que debe estar registrada en Google/Azure)."""
+    def _preview(value):
+        return (value[:12] + '…') if value else None
+
+    env_path = os.path.join(current_app.root_path, '.env')
+    return jsonify({
+        'google': {
+            'client_id_set': bool(google_oauth.client_id),
+            'client_id_preview': _preview(google_oauth.client_id),
+            'client_secret_set': bool(google_oauth.client_secret),
+            'redirect_uri': google_oauth.get_redirect_uri(),
+            'ready': bool(google_oauth.client_id and google_oauth.client_secret),
+        },
+        'microsoft': {
+            'client_id_set': bool(microsoft_oauth.client_id),
+            'client_id_preview': _preview(microsoft_oauth.client_id),
+            'client_secret_set': bool(microsoft_oauth.client_secret),
+            'redirect_uri': microsoft_oauth.get_redirect_uri(),
+            'ready': bool(microsoft_oauth.client_id and microsoft_oauth.client_secret),
+        },
+        'env_file_expected_at': os.path.abspath(env_path),
+        'env_file_exists': os.path.exists(env_path),
+        'hint': ('Si ready=false: define GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET en el .env '
+                 'o como variables de entorno del proceso y reinicia. La redirect_uri '
+                 'mostrada arriba debe estar registrada EXACTAMENTE igual en la consola '
+                 'del proveedor.'),
+    })
+
+
 @auth_bp.route("/google/login")
 def google_login():
     # Fail-fast con mensaje visible: sin GOOGLE_CLIENT_ID/SECRET el redirect a
