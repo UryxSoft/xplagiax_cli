@@ -541,11 +541,16 @@ def microsoft_callback():
         flash("Internal error in authentication with Microsoft. Please try again.", "error")
         return redirect(url_for('x_apps.login'))
 
+# Endpoints donde avisar "sesión expirada" es puro ruido: el usuario ya está
+# en (o yendo hacia) la pantalla de login/registro, o iniciando un flujo OAuth.
+_SESSION_FLASH_EXEMPT = ('x_apps.login', 'x_apps.index', 'x_apps.register')
+
+
 @auth_bp.before_app_request
 def security_checks():
     """Single-session enforcement and trial expiry check"""
     g.session_invalidated = False
-    
+
     # Single-session enforcement
     if current_user.is_authenticated:
         try:
@@ -554,7 +559,12 @@ def security_checks():
                 logout_user()
                 session.clear()
                 g.session_invalidated = True
-                if request.endpoint and not request.endpoint.startswith('auth.'):
+                # El blueprint se llama 'auth_bp': el check anterior
+                # startswith('auth.') no coincidía nunca y el aviso se
+                # disparaba incluso al pulsar los botones de OAuth.
+                if (request.endpoint
+                        and not request.endpoint.startswith('auth_bp.')
+                        and request.endpoint not in _SESSION_FLASH_EXEMPT):
                     flash('Your session has expired. Please log in again.', 'warning')
         except Exception as e:
             current_app.logger.exception("Session validation error")

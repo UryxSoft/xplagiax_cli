@@ -6,6 +6,7 @@ from flask import Flask, send_from_directory, make_response, request
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from celery import Celery
+from datetime import timedelta
 import logging
 import os
 
@@ -44,7 +45,13 @@ _is_production = env == 'production'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = _is_production
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['PERMANENT_SESSION_LIFETIME'] = 3600
+# 30 días, alineado con la validez del session_token del modelo (Users.
+# is_session_valid expira a los 30 días) y con la cookie remember. Con 1h,
+# cada visita posterior re-autenticaba vía cookie remember pero la sesión ya
+# no tenía session_token → el enforcement de sesión única expulsaba al
+# usuario con "Your session has expired" en cada vuelta.
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
 app.config['SESSION_PERMANENT'] = True
 
 # Inicializar extensiones
