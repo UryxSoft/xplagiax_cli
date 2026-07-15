@@ -1,3 +1,83 @@
+// ── Confirm modal reutilizable (Trash / Archived / Auto-Archived) ─────────────
+// Modal profesional con el estándar visual del proyecto (confirm_modal.css,
+// mismo lenguaje que el modal de logout). Reemplaza los confirm() nativos y
+// agrega confirmación a las acciones de restaurar. Devuelve Promise<boolean>.
+//
+//   xpConfirm({ variant:'danger'|'restore', title, message, confirmLabel,
+//               confirmIcon })  →  Promise<true|false>
+(function () {
+  var current = null; // { overlay, resolve, onKey }
+
+  function build() {
+    var overlay = document.createElement('div');
+    overlay.className = 'xpc-overlay';
+    overlay.innerHTML =
+      '<div class="xpc-container" role="dialog" aria-modal="true">' +
+        '<div class="xpc-header">' +
+          '<div class="xpc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg></div>' +
+          '<h3 class="xpc-title"></h3>' +
+          '<p class="xpc-message"></p>' +
+        '</div>' +
+        '<div class="xpc-footer">' +
+          '<button type="button" class="xpc-btn xpc-btn-cancel"><i class="bi bi-x-square"></i> Cancel</button>' +
+          '<button type="button" class="xpc-btn xpc-btn-action"></button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  var ICONS = {
+    danger:  '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+    restore: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>'
+  };
+
+  function close(result) {
+    if (!current) return;
+    var c = current; current = null;
+    c.overlay.classList.remove('active');
+    document.removeEventListener('keydown', c.onKey);
+    var r = c.resolve;
+    setTimeout(function () { r(result); }, 200); // esperar la transición
+  }
+
+  window.xpConfirm = function (opts) {
+    opts = opts || {};
+    var variant = opts.variant === 'restore' ? 'restore' : 'danger';
+    return new Promise(function (resolve) {
+      // Si ya hay uno abierto, resolver el anterior como cancelado.
+      if (current) close(false);
+
+      var overlay = window.__xpcOverlay || (window.__xpcOverlay = build());
+      overlay.className = 'xpc-overlay xpc-overlay--' + variant;
+
+      overlay.querySelector('.xpc-icon svg').innerHTML = ICONS[variant];
+      overlay.querySelector('.xpc-title').textContent = opts.title || (variant === 'restore' ? 'Restore item' : 'Delete item');
+      overlay.querySelector('.xpc-message').textContent = opts.message || '';
+
+      var actionBtn = overlay.querySelector('.xpc-btn-action');
+      actionBtn.className = 'xpc-btn xpc-btn-action ' + (variant === 'restore' ? 'xpc-btn-restore' : 'xpc-btn-danger');
+      var icon = opts.confirmIcon ? '<i class="bi ' + opts.confirmIcon + '"></i> ' : '';
+      actionBtn.innerHTML = icon + (opts.confirmLabel || (variant === 'restore' ? 'Restore' : 'Delete'));
+
+      var cancelBtn = overlay.querySelector('.xpc-btn-cancel');
+      var containerClick = function (e) { if (e.target === overlay) close(false); };
+      var onKey = function (e) { if (e.key === 'Escape') close(false); };
+
+      actionBtn.onclick = function () { close(true); };
+      cancelBtn.onclick = function () { close(false); };
+      overlay.onclick = containerClick;
+      document.addEventListener('keydown', onKey);
+
+      current = { overlay: overlay, resolve: resolve, onKey: onKey };
+      // Forzar reflow para que la transición de entrada corra.
+      // eslint-disable-next-line no-unused-expressions
+      overlay.offsetWidth;
+      overlay.classList.add('active');
+    });
+  };
+})();
+
 // ── Profile dropdown ──────────────────────────────────────────────────────────
 const profile = document.querySelector('.profile__btn');
 const dropdown = document.querySelector('.dropdown__wrapper_bar');
@@ -128,35 +208,50 @@ function closeTrashOc() {
 }
 
 function restoreTrashItem(id, type, btn) {
-  if (btn) btn.disabled = true;
-  window.fetch('/x_doc/organize/restore', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ item_id: id, type: type })
-  }).then(function(r) {
-    if (r.ok) {
-      var el = document.querySelector('#trashOcBody .xp-arc-item[data-id="' + id + '"][data-type="' + type + '"]');
-      _removeTrashEl(el);
-      if (window.refreshSidebarCounts) window.refreshSidebarCounts();
-      if (window._listCacheClear) window._listCacheClear('native');
-    } else { if (btn) btn.disabled = false; }
-  }).catch(function() { if (btn) btn.disabled = false; });
+  xpConfirm({
+    variant: 'restore',
+    title: 'Restore item',
+    message: 'This item will be moved back to your documents.',
+    confirmLabel: 'Restore', confirmIcon: 'bi-arrow-counterclockwise'
+  }).then(function(ok) {
+    if (!ok) return;
+    if (btn) btn.disabled = true;
+    window.fetch('/x_doc/organize/restore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: id, type: type })
+    }).then(function(r) {
+      if (r.ok) {
+        var el = document.querySelector('#trashOcBody .xp-arc-item[data-id="' + id + '"][data-type="' + type + '"]');
+        _removeTrashEl(el);
+        if (window.refreshSidebarCounts) window.refreshSidebarCounts();
+        if (window._listCacheClear) window._listCacheClear('native');
+      } else { if (btn) btn.disabled = false; }
+    }).catch(function() { if (btn) btn.disabled = false; });
+  });
 }
 
 function deleteTrashItem(id, type, btn) {
-  if (!confirm('Permanently delete this item? This cannot be undone.')) return;
-  if (btn) btn.disabled = true;
-  window.fetch('/x_doc/organize/permanent-delete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ item_id: id, type: type })
-  }).then(function(r) {
-    if (r.ok) {
-      var el = document.querySelector('#trashOcBody .xp-arc-item[data-id="' + id + '"][data-type="' + type + '"]');
-      _removeTrashEl(el);
-      if (window.refreshSidebarCounts) window.refreshSidebarCounts();
-    } else { if (btn) btn.disabled = false; }
-  }).catch(function() { if (btn) btn.disabled = false; });
+  xpConfirm({
+    variant: 'danger',
+    title: 'Delete permanently',
+    message: 'This item will be permanently deleted. This action cannot be undone.',
+    confirmLabel: 'Delete', confirmIcon: 'bi-trash'
+  }).then(function(ok) {
+    if (!ok) return;
+    if (btn) btn.disabled = true;
+    window.fetch('/x_doc/organize/permanent-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: id, type: type })
+    }).then(function(r) {
+      if (r.ok) {
+        var el = document.querySelector('#trashOcBody .xp-arc-item[data-id="' + id + '"][data-type="' + type + '"]');
+        _removeTrashEl(el);
+        if (window.refreshSidebarCounts) window.refreshSidebarCounts();
+      } else { if (btn) btn.disabled = false; }
+    }).catch(function() { if (btn) btn.disabled = false; });
+  });
 }
 
 function _removeTrashEl(el) {
@@ -281,48 +376,64 @@ function closeArchivedOc() {
 }
 
 function restoreArchivedFile(id, btn) {
-  if (btn) btn.disabled = true;
-  fetch('/x_doc/files/' + id + '/status', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'Borrador' })
-  }).then(function(r) {
-    if (r.ok) {
-      var item = document.querySelector('.xp-arc-item[data-id="' + id + '"]');
-      if (item) {
-        item.style.transition = 'opacity .25s, transform .25s';
-        item.style.opacity = '0';
-        item.style.transform = 'translateX(20px)';
-        setTimeout(function() { item.remove(); _updateOcCount(); }, 260);
+  xpConfirm({
+    variant: 'restore',
+    title: 'Restore file',
+    message: 'This file will be moved back to your documents as a draft.',
+    confirmLabel: 'Restore', confirmIcon: 'bi-arrow-counterclockwise'
+  }).then(function(ok) {
+    if (!ok) return;
+    if (btn) btn.disabled = true;
+    fetch('/x_doc/files/' + id + '/status', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'Borrador' })
+    }).then(function(r) {
+      if (r.ok) {
+        var item = document.querySelector('.xp-arc-item[data-id="' + id + '"]');
+        if (item) {
+          item.style.transition = 'opacity .25s, transform .25s';
+          item.style.opacity = '0';
+          item.style.transform = 'translateX(20px)';
+          setTimeout(function() { item.remove(); _updateOcCount(); }, 260);
+        }
+        if (window.refreshSidebarCounts) window.refreshSidebarCounts();
+        if (window._listCacheClear) window._listCacheClear('native');
+      } else {
+        if (btn) btn.disabled = false;
       }
-      if (window.refreshSidebarCounts) window.refreshSidebarCounts();
-      if (window._listCacheClear) window._listCacheClear('native');
-    } else {
-      if (btn) btn.disabled = false;
-    }
-  }).catch(function() { if (btn) btn.disabled = false; });
+    }).catch(function() { if (btn) btn.disabled = false; });
+  });
 }
 
 function trashArchivedFile(id, btn) {
-  if (btn) btn.disabled = true;
-  fetch('/x_doc/organize/trash', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ item_id: id, type: 'file' })
-  }).then(function(r) {
-    if (r.ok) {
-      var item = document.querySelector('.xp-arc-item[data-id="' + id + '"]');
-      if (item) {
-        item.style.transition = 'opacity .25s, transform .25s';
-        item.style.opacity = '0';
-        item.style.transform = 'translateX(-20px)';
-        setTimeout(function() { item.remove(); _updateOcCount(); }, 260);
+  xpConfirm({
+    variant: 'danger',
+    title: 'Move to trash',
+    message: 'This file will be moved to Trash, where it is permanently deleted after 30 days.',
+    confirmLabel: 'Move to trash', confirmIcon: 'bi-trash'
+  }).then(function(ok) {
+    if (!ok) return;
+    if (btn) btn.disabled = true;
+    fetch('/x_doc/organize/trash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: id, type: 'file' })
+    }).then(function(r) {
+      if (r.ok) {
+        var item = document.querySelector('.xp-arc-item[data-id="' + id + '"]');
+        if (item) {
+          item.style.transition = 'opacity .25s, transform .25s';
+          item.style.opacity = '0';
+          item.style.transform = 'translateX(-20px)';
+          setTimeout(function() { item.remove(); _updateOcCount(); }, 260);
+        }
+        if (window.refreshSidebarCounts) window.refreshSidebarCounts();
+      } else {
+        if (btn) btn.disabled = false;
       }
-      if (window.refreshSidebarCounts) window.refreshSidebarCounts();
-    } else {
-      if (btn) btn.disabled = false;
-    }
-  }).catch(function() { if (btn) btn.disabled = false; });
+    }).catch(function() { if (btn) btn.disabled = false; });
+  });
 }
 
 function _updateOcCount() {
@@ -462,39 +573,54 @@ function closeAutoArchiveOc() {
 }
 
 function restoreAutoArchivedFile(id, btn) {
-  if (btn) btn.disabled = true;
-  fetch('/x_doc/auto-archive/files/' + id + '/restore', { method: 'POST' })
-    .then(function(r) {
-      if (r.ok) {
-        var item = document.querySelector('#autoArchiveOcBody .xp-arc-item[data-id="' + id + '"]');
-        if (item) {
-          item.style.transition = 'opacity .25s, transform .25s';
-          item.style.opacity = '0';
-          item.style.transform = 'translateX(20px)';
-          setTimeout(function() { item.remove(); _updateAutoArchiveOcCount(); }, 260);
-        }
-        if (window.refreshSidebarCounts) window.refreshSidebarCounts();
-        if (window._listCacheClear) window._listCacheClear('native');
-      } else { if (btn) btn.disabled = false; }
-    }).catch(function() { if (btn) btn.disabled = false; });
+  xpConfirm({
+    variant: 'restore',
+    title: 'Restore file',
+    message: 'This file will be moved back to your documents.',
+    confirmLabel: 'Restore', confirmIcon: 'bi-arrow-counterclockwise'
+  }).then(function(ok) {
+    if (!ok) return;
+    if (btn) btn.disabled = true;
+    fetch('/x_doc/auto-archive/files/' + id + '/restore', { method: 'POST' })
+      .then(function(r) {
+        if (r.ok) {
+          var item = document.querySelector('#autoArchiveOcBody .xp-arc-item[data-id="' + id + '"]');
+          if (item) {
+            item.style.transition = 'opacity .25s, transform .25s';
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(20px)';
+            setTimeout(function() { item.remove(); _updateAutoArchiveOcCount(); }, 260);
+          }
+          if (window.refreshSidebarCounts) window.refreshSidebarCounts();
+          if (window._listCacheClear) window._listCacheClear('native');
+        } else { if (btn) btn.disabled = false; }
+      }).catch(function() { if (btn) btn.disabled = false; });
+  });
 }
 
 function deleteNowAutoArchivedFile(id, btn) {
-  if (!confirm('Permanently delete this document? This cannot be undone.')) return;
-  if (btn) btn.disabled = true;
-  fetch('/x_doc/auto-archive/files/' + id + '/delete-now', { method: 'POST' })
-    .then(function(r) {
-      if (r.ok) {
-        var item = document.querySelector('#autoArchiveOcBody .xp-arc-item[data-id="' + id + '"]');
-        if (item) {
-          item.style.transition = 'opacity .25s, transform .25s';
-          item.style.opacity = '0';
-          item.style.transform = 'translateX(-20px)';
-          setTimeout(function() { item.remove(); _updateAutoArchiveOcCount(); }, 260);
-        }
-        if (window.refreshSidebarCounts) window.refreshSidebarCounts();
-      } else { if (btn) btn.disabled = false; }
-    }).catch(function() { if (btn) btn.disabled = false; });
+  xpConfirm({
+    variant: 'danger',
+    title: 'Delete permanently',
+    message: 'This document will be permanently deleted now. This action cannot be undone.',
+    confirmLabel: 'Delete', confirmIcon: 'bi-trash'
+  }).then(function(ok) {
+    if (!ok) return;
+    if (btn) btn.disabled = true;
+    fetch('/x_doc/auto-archive/files/' + id + '/delete-now', { method: 'POST' })
+      .then(function(r) {
+        if (r.ok) {
+          var item = document.querySelector('#autoArchiveOcBody .xp-arc-item[data-id="' + id + '"]');
+          if (item) {
+            item.style.transition = 'opacity .25s, transform .25s';
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(-20px)';
+            setTimeout(function() { item.remove(); _updateAutoArchiveOcCount(); }, 260);
+          }
+          if (window.refreshSidebarCounts) window.refreshSidebarCounts();
+        } else { if (btn) btn.disabled = false; }
+      }).catch(function() { if (btn) btn.disabled = false; });
+  });
 }
 
 function _updateAutoArchiveOcCount() {

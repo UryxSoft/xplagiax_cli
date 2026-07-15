@@ -4189,9 +4189,11 @@ def citation_validation_report(job_id):
 
 # ════════════════════════════════════════════════════════════════════════════
 # Analysis history (pantalla "analysiss") — persistido en MySQL por usuario.
-# Solo planes Individual / Research Essentials / Institutes.
+# Todos los planes PAGOS: Scholar Suite, Individual, Research Essentials,
+# Institutes (alineado con la definición de "plan pago" en Users, model.py).
+# Starter (gratis) no guarda historial.
 # ════════════════════════════════════════════════════════════════════════════
-HISTORY_PLANS = {'Individual', 'Research Essentials', 'Institutes'}
+HISTORY_PLANS = {'Scholar Suite', 'Individual', 'Research Essentials', 'Institutes'}
 HISTORY_MAX_PER_USER = 50
 
 

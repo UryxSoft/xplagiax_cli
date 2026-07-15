@@ -1,0 +1,171 @@
+/* ════════════════════════════════════════════════════════════════════════
+   Confirm Modal (xpc) — modal de confirmación reutilizable para las acciones
+   de los offcanvas (Trash / Archived / Auto-Archived): eliminar y restaurar.
+   Replica el estándar visual del modal de logout (logout.css): overlay con
+   blur, container blanco redondeado, icono circular, título, mensaje y footer
+   con botón Cancel + botón de acción. Variantes: --danger (rojo) / --restore.
+   ════════════════════════════════════════════════════════════════════════ */
+
+.xpc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100; /* por encima de los offcanvas */
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.xpc-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.xpc-container {
+  background: #fff;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 440px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  transform: scale(0.9) translateY(20px);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.xpc-overlay.active .xpc-container {
+  transform: scale(1) translateY(0);
+}
+
+.xpc-header {
+  padding: 24px 24px 16px 24px;
+  text-align: center;
+}
+
+.xpc-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+}
+
+.xpc-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+/* Variante DANGER (eliminar) */
+.xpc-overlay--danger .xpc-icon {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+}
+.xpc-overlay--danger .xpc-icon svg { color: #dc2626; }
+
+/* Variante RESTORE (restaurar) */
+.xpc-overlay--restore .xpc-icon {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+}
+.xpc-overlay--restore .xpc-icon svg { color: #2563eb; }
+
+.xpc-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.xpc-message {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.xpc-footer {
+  padding: 16px 24px 24px 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.xpc-btn {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 100px;
+  flex: 1;
+}
+
+.xpc-btn-cancel {
+  background-color: #f9fafb;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+.xpc-btn-cancel:hover { background-color: #f3f4f6; border-color: #9ca3af; }
+.xpc-btn-cancel:active { background-color: #e5e7eb; transform: translateY(1px); }
+
+/* Botón de acción DANGER */
+.xpc-btn-danger {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+.xpc-btn-danger:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+  transform: translateY(-1px);
+}
+.xpc-btn-danger:active {
+  background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+  transform: translateY(0);
+}
+
+/* Botón de acción RESTORE */
+.xpc-btn-restore {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+.xpc-btn-restore:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
+}
+.xpc-btn-restore:active {
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+  transform: translateY(0);
+}
+
+.xpc-btn-loading { opacity: 0.7; cursor: not-allowed; }
+
+.xpc-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  animation: xpc-spin 1s linear infinite;
+}
+
+@keyframes xpc-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .xpc-container { width: 95%; margin: 20px; }
+  .xpc-footer { flex-direction: column-reverse; }
+}

@@ -204,6 +204,28 @@ class AnalysisTracker {
         }, 5 * 60 * 1000);
     }
 
+    // Chequeo del límite SIN consumir crédito. Se usa como pre-gate antes de
+    // correr el análisis; el crédito se consume con performAnalysis() SOLO
+    // después de entregar resultados (así un análisis fallido no cobra).
+    async canAnalyze() {
+        try {
+            const response = await fetch('/x_analysiscounter/api/analysis/check', {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            if (data && data.success) {
+                return { can_analyze: !!data.can_analyze, remaining: data.remaining };
+            }
+        } catch (error) {
+            console.error('Error checking analysis limit:', error);
+        }
+        // Fail-open en el pre-check: no bloquear por un fallo de red; el gate
+        // server-side (can_perform_analysis en analyze_text/finderx_check) es
+        // la defensa autoritativa.
+        return { can_analyze: true, remaining: null };
+    }
+
     async performAnalysis() {
         try {
             const response = await fetch('/x_analysiscounter/api/analysis/perform', {

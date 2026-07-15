@@ -409,6 +409,10 @@ class Users(db.Model, UserMixin):
         from sqlalchemy import text
         today = datetime.utcnow().date()
         limit = self.get_daily_analysis_limit()
+        # Garantizar que exista la fila de hoy ANTES del UPDATE atómico. Sin
+        # esto, si ningún caller llamó get_today_usage() antes, el UPDATE afecta
+        # 0 filas y el contador "no se guarda" en silencio.
+        self.get_today_usage()
         try:
             result = db.session.execute(
                 text(

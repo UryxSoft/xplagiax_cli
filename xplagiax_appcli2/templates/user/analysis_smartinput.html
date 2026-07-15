@@ -3081,15 +3081,18 @@ body.xp-file-preview .mode-switch-container {
                 return;
             }
 
-            // Enforce the per-account daily analysis limit (id="miniProgress")
-            // before running ANY analysis type — document, plain text, or any
-            // combination of types. This is the single convergence point for
-            // both handleFileAnalysis() and the text-mode shortcuts, so one
-            // check here covers every entry point.
-            if (typeof checkAndPerformAnalysis === 'function') {
-                const usage = await checkAndPerformAnalysis();
-                if (!usage || !usage.success) {
-                    this.showError((usage && usage.error) || 'Daily analysis limit reached.');
+            // Enforce the per-account daily analysis limit BEFORE running any
+            // analysis type — but WITHOUT consuming a credit here. The credit is
+            // consumed only AFTER results are delivered (see below), so a failed
+            // analysis never costs the user. This is the single convergence
+            // point for handleFileAnalysis() and the text-mode shortcuts.
+            if (window.analysisTracker && typeof analysisTracker.canAnalyze === 'function') {
+                const gate = await analysisTracker.canAnalyze();
+                if (gate && gate.can_analyze === false) {
+                    this.showError('Daily analysis limit reached.');
+                    if (typeof analysisTracker.showUpgradeModal === 'function') {
+                        analysisTracker.showUpgradeModal();
+                    }
                     return;
                 }
             }
@@ -3111,6 +3114,14 @@ body.xp-file-preview .mode-switch-container {
                 const citationResult = citS.status === 'fulfilled' ? citS.value : null;
 
                 if (aiResult || sourceResult || citationResult) {
+                    // Consumir UN crédito ahora que hay resultados (requisito:
+                    // el contador se reduce DESPUÉS de dar los resultados). Una
+                    // sola llamada por acción, aunque se hayan corrido varios
+                    // tipos (AI + FinderX + Citations). performAnalysis()
+                    // incrementa en el server y refresca el mini-contador.
+                    if (typeof checkAndPerformAnalysis === 'function') {
+                        checkAndPerformAnalysis();
+                    }
                     // Avisar de los servicios pedidos que fallaron (sin bloquear el resto).
                     if (wantAi && !aiResult)
                         this.showError('AI detection failed: ' + ((aiS.reason && aiS.reason.message) || 'unknown error'));
@@ -5204,9 +5215,18 @@ body.xp-file-preview .mode-switch-container {
                     resultView: htmlViewUrl || null,
                 };
                 // CSRF lo inyecta el wrapper global de fetch (user_base.html).
+                // fetch NO rechaza en 4xx/5xx, así que hay que revisar res.ok:
+                // antes se tragaba el 403 (plan sin historial) en silencio.
                 fetch('/x_doc/history', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
+                }).then(async res => {
+                    if (res.ok) return;
+                    if (res.status === 403) {
+                        console.info('[history] no guardado: el plan no incluye historial de análisis');
+                    } else {
+                        console.warn('[history] save failed', res.status, await res.text().catch(() => ''));
+                    }
                 }).catch(e => console.warn('[history] save failed', e));
             } catch (e) { console.warn('[history] save failed', e); }
         }
