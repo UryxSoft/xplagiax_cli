@@ -9,6 +9,7 @@
     <meta name="Xplagiax ltd" content="Uryx technologies">
     <meta name="robots" content="index, follow">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>XplagiaX - Sign In / Sign Up</title>
     <!-- Favicon optimizado -->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
@@ -286,6 +287,13 @@
                     <div class="form-header">
                         <h2>Welcome Back</h2>
                         <p>Sign in to your account</p>
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="{{ 'success-message' if category == 'success' else 'error-message' }}">{{ message }}</div>
+                        {% endfor %}
+                        {% endif %}
+                        {% endwith %}
                     </div>
 
                     <div class="form-group">

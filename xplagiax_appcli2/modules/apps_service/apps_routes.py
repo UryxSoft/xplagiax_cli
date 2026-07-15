@@ -2,7 +2,7 @@
 """
 Copyright (c) 2024 - present URYX TECHNOLOGIES SRL
 """
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, redirect, url_for
 import logging
 
 x_apps = Blueprint('x_apps', __name__)
@@ -23,7 +23,9 @@ def login():
 
 @x_apps.route('/register')
 def register():
-    return render_template('/auth/signup.html')
+    # auth/signup.html no existe (500 TemplateNotFound). El registro vive en
+    # sign_users.html; ?mode=register activa el panel de registro (JS inline).
+    return redirect(url_for('x_apps.login', mode='register'))
 
 @x_apps.route('/reset_password')
 def reset_password():

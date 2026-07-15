@@ -15,8 +15,7 @@ class GoogleOAuth:
         # estaba comprometido y debe rotarse en Google Cloud Console.
         self.client_id = os.getenv('GOOGLE_CLIENT_ID', '')
         self.client_secret = os.getenv('GOOGLE_CLIENT_SECRET', '')
-        self.redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', "http://127.0.0.1:5000/auth_bp/google/callbackx")
-        
+
         # URLs de Google OAuth
         self.auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
         self.token_url = "https://oauth2.googleapis.com/token"
@@ -25,17 +24,30 @@ class GoogleOAuth:
         # Scopes mínimos necesarios
         self.scopes = ["email", "profile"]
 
+    def get_redirect_uri(self):
+        """Redirect URI resuelta EN TIEMPO DE REQUEST.
+
+        La env var GOOGLE_REDIRECT_URI siempre tiene prioridad; si no está,
+        se deriva del host real de la request con url_for(_external=True)
+        (ProxyFix ya garantiza esquema/host correctos detrás de nginx).
+        Antes era un valor fijo al puerto 5000 mientras la app corre en el
+        5003 → Google devolvía redirect_uri_mismatch en todos los entornos
+        sin la env var. Debe usarse el MISMO valor en authorize y en el
+        intercambio de código (requisito de la spec OAuth2)."""
+        return os.getenv('GOOGLE_REDIRECT_URI') or url_for('auth_bp.google_callbackx', _external=True)
+
     def get_authorization_url(self):
         """Generar URL de autorización para redirigir al usuario"""
         # Generar estado único para seguridad CSRF
         state = secrets.token_urlsafe(32)
         session['oauth_state'] = state
         session.permanent = True  # asegurar que la cookie persista el ida-y-vuelta
-        current_app.logger.info("[google-oauth] authorize: state set, redirect_uri=%s", self.redirect_uri)
+        redirect_uri = self.get_redirect_uri()
+        current_app.logger.info("[google-oauth] authorize: state set, redirect_uri=%s", redirect_uri)
 
         params = {
             'client_id': self.client_id,
-            'redirect_uri': self.redirect_uri,
+            'redirect_uri': redirect_uri,
             'scope': ' '.join(self.scopes),
             'response_type': 'code',
             'state': state,
@@ -70,12 +82,13 @@ class GoogleOAuth:
                     return None, "Estado OAuth inválido - posible ataque CSRF"
 
             # Intercambiar código por token
+            redirect_uri = self.get_redirect_uri()
             token_data = {
                 'client_id': self.client_id,
                 'client_secret': self.client_secret,
                 'code': authorization_code,
                 'grant_type': 'authorization_code',
-                'redirect_uri': self.redirect_uri
+                'redirect_uri': redirect_uri
             }
 
             # Obtener token de acceso
@@ -83,7 +96,7 @@ class GoogleOAuth:
             if not token_response.ok:
                 current_app.logger.error(
                     "[google-oauth] token exchange failed %s: %s (redirect_uri=%s)",
-                    token_response.status_code, token_response.text[:300], self.redirect_uri)
+                    token_response.status_code, token_response.text[:300], redirect_uri)
                 return None, f"Error obteniendo token: {token_response.status_code}"
             
             token_info = token_response.json()

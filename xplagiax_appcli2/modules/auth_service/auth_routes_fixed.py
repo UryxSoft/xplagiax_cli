@@ -4,7 +4,6 @@ import re
 import logging
 from urllib.parse import urlparse
 from flask import Blueprint, request, jsonify, session, url_for, redirect, render_template, current_app, g, flash, session, make_response
-from flask_wtf.csrf import CSRFProtect, validate_csrf
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField,BooleanField, validators
 #from extensions_fixed import db, login_manager, mail
@@ -16,7 +15,6 @@ from settings.email_service import EmailService, EmailTemplates
 import bcrypt
 import requests
 from flask_mail import Message
-from flask_dance.contrib.azure import azure  # ✅ CORREGIDO: azure en lugar de microsoft
 from .google_oauth import GoogleOAuth
 from .microsoft_oauth import MicrosoftOAuth
 from datetime import datetime, timedelta
@@ -137,6 +135,13 @@ def find_or_create_user(user_data):
 
 @auth_bp.route("/google/login")
 def google_login():
+    # Fail-fast con mensaje visible: sin GOOGLE_CLIENT_ID/SECRET el redirect a
+    # Google muere en un "invalid_request" críptico fuera de nuestra app.
+    if not google_oauth.client_id or not google_oauth.client_secret:
+        current_app.logger.error(
+            "Google OAuth no configurado: define GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET")
+        flash('Google sign-in is not available right now. Please use email and password.', 'error')
+        return redirect(url_for('x_apps.login'))
     next_url = request.args.get('next', url_for('x_users.analysis'))
     session['oauth_next'] = next_url
     auth_url = google_oauth.get_authorization_url()  # tu cliente OAuth
@@ -324,11 +329,37 @@ def google_callbackx():
 @auth_bp.route("/microsoft/login")
 def microsoft_login():
     """Iniciar login con Microsoft"""
+    if not microsoft_oauth.client_id or not microsoft_oauth.client_secret:
+        current_app.logger.error(
+            "Microsoft OAuth no configurado: define MICROSOFT_CLIENT_ID y MICROSOFT_CLIENT_SECRET")
+        flash('Microsoft sign-in is not available right now. Please use email and password.', 'error')
+        return redirect(url_for('x_apps.login'))
     next_url = request.args.get('next', url_for('x_users.analysis'))
     session['oauth_next'] = next_url
     auth_url = microsoft_oauth.get_authorization_url()
     current_app.logger.info("Iniciando login con Microsoft")
     return redirect(auth_url)
+
+def _save_microsoft_avatar(user, access_token):
+    """Guarda la foto de perfil de Microsoft de forma best-effort.
+
+    NUNCA debe abortar la autenticación: antes, un fallo aquí (el directorio
+    static/img/avatars no existe en un despliegue limpio) lanzaba
+    FileNotFoundError dentro del try global del callback y hacía rollback
+    del login/creación de usuario completos."""
+    try:
+        photo_content = microsoft_oauth.get_user_photo(access_token)
+        if not photo_content:
+            return
+        photo_dir = os.path.join(current_app.root_path, 'static', 'img', 'avatars')
+        os.makedirs(photo_dir, exist_ok=True)
+        photo_filename = f"ms_{user.id}.jpg"
+        with open(os.path.join(photo_dir, photo_filename), 'wb') as f:
+            f.write(photo_content)
+        user.avatar = f"/static/img/avatars/{photo_filename}"
+    except Exception:
+        current_app.logger.warning("No se pudo guardar el avatar de Microsoft", exc_info=True)
+
 
 @auth_bp.route("/microsoft/callback")
 def microsoft_callback():
@@ -391,29 +422,17 @@ def microsoft_callback():
             db.session.add(user)
             db.session.flush()
             is_new_user = True
-            
-            # ✅ Obtener y guardar foto de Microsoft
+
+            # ✅ Obtener y guardar foto de Microsoft (best-effort, nunca aborta el login)
             if user_data.get('access_token'):
-                photo_content = microsoft_oauth.get_user_photo(user_data['access_token'])
-                if photo_content:
-                    photo_filename = f"ms_{user.id}.jpg"
-                    photo_path = os.path.join(current_app.root_path, 'static', 'img', 'avatars', photo_filename)
-                    with open(photo_path, 'wb') as f:
-                        f.write(photo_content)
-                    user.avatar = f"/static/img/avatars/{photo_filename}"
-            
+                _save_microsoft_avatar(user, user_data['access_token'])
+
             #print(f" Usuario Microsoft creado con ID: {user.id}")
         else:
             #print(f" Usuario existente encontrado: {email}")
-            # ✅ Actualizar foto de Microsoft si es necesario
+            # ✅ Actualizar foto de Microsoft si es necesario (best-effort)
             if user_data.get('access_token'):
-                photo_content = microsoft_oauth.get_user_photo(user_data['access_token'])
-                if photo_content:
-                    photo_filename = f"ms_{user.id}.jpg"
-                    photo_path = os.path.join(current_app.root_path, 'static', 'img', 'avatars', photo_filename)
-                    with open(photo_path, 'wb') as f:
-                        f.write(photo_content)
-                    user.avatar = f"/static/img/avatars/{photo_filename}"
+                _save_microsoft_avatar(user, user_data['access_token'])
 
             # Asegurar que usuario existente esté activo
             if not user.isactive:
@@ -608,7 +627,14 @@ def login():
     if not user.isactive:
         print("DEBUG LOGIN: User account is not active")
         return jsonify({'error': 'Account not activated. Check your email.'}), 401
-    
+
+    # El user_loader exige isactive Y confirmed: sin este check, un usuario no
+    # confirmado recibía "Session started successfully" y quedaba deslogueado
+    # en la request siguiente (login fantasma, sin mensaje de error).
+    if not user.confirmed:
+        print("DEBUG LOGIN: User account is not confirmed")
+        return jsonify({'error': 'Please confirm your email before signing in.'}), 401
+
     if not user._password_hash:
         print("DEBUG LOGIN: User has no password hash (OAuth user?)")
         return jsonify({'error': 'This account was created with Google/Microsoft. Use the corresponding button.'}), 400
@@ -659,8 +685,10 @@ def logout():
 @limiter.limit("3 per 15 minutes")
 def signup():
     if request.method == 'GET':
-        return render_template('auth/signup.html')
-    
+        # auth/signup.html no existe (TemplateNotFound → 500). El registro vive
+        # en sign_users.html, que activa el panel de registro con ?mode=register.
+        return redirect(url_for('x_apps.login', mode='register'))
+
     if request.is_json:
         data = request.get_json()
     else:
@@ -672,6 +700,7 @@ def signup():
     email = data.get('email', '').strip().lower()
     password = data.get('password', '')
     name = data.get('name', '').strip()
+    lastname = (data.get('lastname') or '').strip()
 
     if not email or not password:
         return jsonify({'error': 'Email and password required'}), 400
@@ -699,6 +728,7 @@ def signup():
             email = email,
             _password_hash = hashed,
             name = name,
+            lastname = lastname,
             storage_plan_id = starter_plan.id,
             user_type = "Starter",
             confirmed=True,  # Auto-confirm for local use
@@ -876,8 +906,10 @@ def resend_confirmation():
         return jsonify({'error': 'This account is already confirmed'}), 400
     
     #try:
-    token = user.generate_token('confirm')
-    confirm_url = url_for('auth.confirm_email', token=token, _external=True)
+    # user.generate_token no existe (el método del modelo es get_token) y el
+    # blueprint se llama auth_bp, no auth — ambos producían 500 en esta ruta.
+    token = user.get_token('confirm')
+    confirm_url = url_for('auth_bp.confirm_email', token=token, _external=True)
     
     # Usar EmailService
     email_result = EmailTemplates.send_confirmation_email(

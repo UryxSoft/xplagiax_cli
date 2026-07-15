@@ -14,8 +14,7 @@ class MicrosoftOAuth:
         self.client_id =  os.environ.get("MICROSOFT_CLIENT_ID", "35f3700d-cfc1-42df-bde5-2f03206dbf82")
         self.client_secret =  os.environ.get("MICROSOFT_CLIENT_SECRET", "uv~8Q~nwt.OD0611lMKDiFW58GhNDeaIiueGnbln")
         self.tenant_id =  os.environ.get("MICROSOFT_TENANT_ID", "common")  # 'common' permite cuentas personales y organizacionales
-        self.redirect_uri =  os.environ.get("MICROSOFT_REDIRECT_URI", "http://localhost:5000/auth_bp/microsoft/callback")
-        
+
         # URLs de Microsoft OAuth
         self.auth_url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/authorize"
         self.token_url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
@@ -24,15 +23,25 @@ class MicrosoftOAuth:
         # Scopes mínimos necesarios
         self.scopes = ["openid", "profile", "email", "User.Read"]
 
+    def get_redirect_uri(self):
+        """Redirect URI resuelta EN TIEMPO DE REQUEST (ver google_oauth.py).
+
+        MICROSOFT_REDIRECT_URI tiene prioridad; sin ella se deriva del host
+        real de la request. El valor fijo anterior (localhost:5000) no
+        coincidía con el puerto real de la app (5003) ni con el dominio de
+        producción → AADSTS50011 (redirect URI mismatch)."""
+        return os.environ.get('MICROSOFT_REDIRECT_URI') or url_for('auth_bp.microsoft_callback', _external=True)
+
     def get_authorization_url(self):
         """Generar URL de autorización para redirigir al usuario"""
         # Generar estado único para seguridad CSRF
         state = secrets.token_urlsafe(32)
         session['oauth_state'] = state
-        
+        session.permanent = True  # asegurar que la cookie persista el ida-y-vuelta
+
         params = {
             'client_id': self.client_id,
-            'redirect_uri': self.redirect_uri,
+            'redirect_uri': self.get_redirect_uri(),
             'scope': ' '.join(self.scopes),
             'response_type': 'code',
             'state': state,
@@ -62,7 +71,7 @@ class MicrosoftOAuth:
                 'client_secret': self.client_secret,
                 'code': authorization_code,
                 'grant_type': 'authorization_code',
-                'redirect_uri': self.redirect_uri,
+                'redirect_uri': self.get_redirect_uri(),
                 'scope': ' '.join(self.scopes)
             }
             

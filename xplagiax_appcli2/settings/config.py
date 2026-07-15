@@ -16,7 +16,10 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', '21XSWcxz3zaq45EDCxsw')
     SECURITY_PASSWORD_SALT = os.environ.get(
         'SECURITY_PASSWORD_SALT', '146585145368132386173505678016728509634')
-    REMEMBER_COOKIE_SAMESITE = "strict"
+    # 'Lax' (no 'strict') por la misma razón que SESSION_COOKIE_SAMESITE: con
+    # 'strict' la cookie remember no viaja en la navegación de retorno del IdP
+    # (OAuth callback) y el "remember me" se pierde en esos flujos.
+    REMEMBER_COOKIE_SAMESITE = "Lax"
     # C-3: 'Lax' (no 'strict') es lo mínimo que permite que la cookie de sesión
     # viaje en el callback OAuth (navegación GET cross-site top-level). Con
     # 'strict' la cookie no se enviaba, el state no sobrevivía y por eso se
