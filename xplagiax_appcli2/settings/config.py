@@ -158,8 +158,8 @@ class Config:
             'api_base': 'https://api.dropboxapi.com/2'
         },
         'box': {
-            'client_id': os.environ.get('BOX_CLIENT_ID', '2exf4vhqo7jozfhrxt3grl885ltm36c1'),
-            'client_secret': os.environ.get('BOX_CLIENT_SECRET', 'Jdgzvg5HExQAnupFNYzGXmdUQNrwrhsf'),
+            'client_id': os.environ.get('BOX_CLIENT_ID', 'o5uxvj36b2xtdzwoe0oijbj7dy4g8ggj'),
+            'client_secret': os.environ.get('BOX_CLIENT_SECRET', 'OFRoyMklzni3roq1rjdWLIbMK78t2PwN'),
             'authorization_url': 'https://account.box.com/api/oauth2/authorize',
             'token_url': 'https://api.box.com/oauth2/token',
             'scope': 'root_readwrite',

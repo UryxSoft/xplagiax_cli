@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
         initializeFilePond();
     }
     setupEventListeners();
+    switchView(getSavedView());
 
     const _params = new URLSearchParams(window.location.search);
     if (_params.get('view') === 'trash') {
@@ -106,14 +107,20 @@ function setupEventListeners() {
     // Share Search input
     const shareSearchInput = document.getElementById('share-user-search');
     if (shareSearchInput) {
+        // Genuine typing only — selectUser() sets .value programmatically,
+        // which never fires 'input', so this never fights that assignment.
+        // Poka-Yoke: editing the field after picking a user must drop the
+        // stale selection, or "Share Now" would silently share with whoever
+        // was picked before, not the email now showing in the box.
         shareSearchInput.addEventListener('input', debounce(function () {
+            clearSelectedUser({ keepQuery: true });
             searchUsers(this.value);
         }, 500));
     }
 
-    // Share Modal confirm
-    const confirmShareBtn = document.getElementById('confirm-share');
-    if (confirmShareBtn) confirmShareBtn.addEventListener('click', executeShare);
+    // Share Modal confirm is wired via the inline onclick="executeEnhancedShare()"
+    // in the HTML — do not also bind a click listener here (previously this
+    // double-fired every share as two separate POST requests).
 
     const clearSelectedUserBtn = document.getElementById('clear-selected-user');
     if (clearSelectedUserBtn) clearSelectedUserBtn.addEventListener('click', clearSelectedUser);
@@ -156,7 +163,8 @@ function setupEventListeners() {
     if (panelDelete) {
         panelDelete.addEventListener('click', function () {
             if (activeSelection) {
-                openDeleteModal(activeSelection.item.id, activeSelection.type);
+                const selName = activeSelection.item.name || activeSelection.item.original_filename;
+                openDeleteModal(activeSelection.item.id, activeSelection.type, selName);
             }
         });
     }
@@ -183,11 +191,23 @@ function setupEventListeners() {
 let activeSelection = null;
 let currentItemType = null;
 
-function openDeleteModal(id, type) {
+function openDeleteModal(id, type, name) {
     currentDocumentId = id;
     currentItemType = type;
     const modal = document.getElementById('delete-modal');
-    if (modal) modal.classList.add('active');
+    if (!modal) return;
+
+    const displayName = name || (type === 'folder' ? 'this folder' : 'this document');
+    const shortName = typeof truncateText === 'function' ? truncateText(displayName, 40) : displayName;
+    const titleEl = document.getElementById('deleteConfirmTitle');
+    const textEl = document.getElementById('deleteConfirmText');
+    const folderWarning = document.getElementById('deleteConfirmFolderWarning');
+
+    if (titleEl) titleEl.textContent = `Delete "${shortName}"?`;
+    if (textEl) textEl.textContent = `This will move ${type === 'folder' ? 'the folder' : 'the file'} to Trash.`;
+    if (folderWarning) folderWarning.classList.toggle('d-none', type !== 'folder');
+
+    modal.classList.add('active');
 }
 
 // Handle action items
@@ -302,35 +322,7 @@ function createFolderCard(folder) {
     card.dataset.id = folder.id;
     card.dataset.type = 'folder';
 
-    // Different menu for trash view
-    const menuContent = isViewingTrash ? `
-        <div class="dropdown-item text-success" onclick="event.stopPropagation(); restoreItem(${folder.id}, 'folder')">
-            <i class="bi bi-arrow-counterclockwise"></i> Restore
-        </div>
-        <div class="dropdown-item text-danger" onclick="event.stopPropagation(); permanentDeleteItem(${folder.id}, 'folder')">
-            <i class="bi bi-x-circle"></i> Delete Permanently
-        </div>
-    ` : `
-        <div class="dropdown-item" onclick="event.stopPropagation(); openFolder(${folder.id}, '${folder.name.replace(/'/g, "\\'")}')">
-            <i class="bi bi-folder-symlink"></i> Open
-        </div>
-        <div class="dropdown-item" onclick="event.stopPropagation(); shareItem(${folder.id}, 'folder')">
-            <i class="bi bi-share"></i> Share
-        </div>
-        <div class="dropdown-item" onclick="event.stopPropagation(); renameItem(${folder.id}, 'folder', '${folder.name.replace(/'/g, "\\'")}')">
-            <i class="bi bi-pencil"></i> Rename
-        </div>
-        <div class="dropdown-item" onclick="event.stopPropagation(); openMoveModal(${folder.id}, 'folder', '${folder.name.replace(/'/g, "\\'")}')">
-            <i class="bi bi-arrow-right-circle"></i> Move
-        </div>
-        <div class="dropdown-item text-danger" onclick="event.stopPropagation(); openDeleteModal(${folder.id}, 'folder')">
-            <i class="bi bi-trash"></i> Delete
-        </div>
-        <div class="dropdown-divider"></div>
-        <div class="dropdown-item" onclick="event.stopPropagation(); showDetails(${folder.id}, 'folder')">
-            <i class="bi bi-info-circle"></i> Details
-        </div>
-    `;
+    const menuContent = _buildItemMenu(folder.id, 'folder', folder.name);
 
     card.innerHTML = `
         <div class="card-menu">
@@ -365,25 +357,70 @@ function createFolderCard(folder) {
 function _nativeFileTypeInfo(filename) {
     const ext = (filename.split('.').pop() || '').toLowerCase();
     const map = {
-        pdf:  { label: 'PDF',   tagBg: '#fee2e2', tagColor: '#991b1b', frontBg: '#fff5f5' },
-        doc:  { label: 'DOC',   tagBg: '#dbeafe', tagColor: '#1e40af', frontBg: '#f0f7ff' },
-        docx: { label: 'DOCX',  tagBg: '#dbeafe', tagColor: '#1e40af', frontBg: '#f0f7ff' },
-        xls:  { label: 'XLS',   tagBg: '#dcfce7', tagColor: '#166534', frontBg: '#f0fff4' },
-        xlsx: { label: 'XLSX',  tagBg: '#dcfce7', tagColor: '#166534', frontBg: '#f0fff4' },
-        ppt:  { label: 'PPT',   tagBg: '#ffedd5', tagColor: '#9a3412', frontBg: '#fffbf0' },
-        pptx: { label: 'PPTX',  tagBg: '#ffedd5', tagColor: '#9a3412', frontBg: '#fffbf0' },
-        txt:  { label: 'TXT',   tagBg: '#f3f4f6', tagColor: '#374151', frontBg: '#f9fafb' },
-        md:   { label: 'MD',    tagBg: '#f3f4f6', tagColor: '#374151', frontBg: '#f9fafb' },
-        jpg:  { label: 'IMG',   tagBg: '#fae8ff', tagColor: '#7e22ce', frontBg: '#fdf4ff' },
-        jpeg: { label: 'IMG',   tagBg: '#fae8ff', tagColor: '#7e22ce', frontBg: '#fdf4ff' },
-        png:  { label: 'IMG',   tagBg: '#fae8ff', tagColor: '#7e22ce', frontBg: '#fdf4ff' },
-        csv:  { label: 'CSV',   tagBg: '#d1fae5', tagColor: '#065f46', frontBg: '#f0fdf4' },
-        zip:  { label: 'ZIP',   tagBg: '#e5e7eb', tagColor: '#4b5563', frontBg: '#f9fafb' },
+        pdf:  { label: 'PDF',   tagBg: '#fee2e2', tagColor: '#991b1b', frontBg: '#fff5f5', icon: 'bi-filetype-pdf' },
+        doc:  { label: 'DOC',   tagBg: '#dbeafe', tagColor: '#1e40af', frontBg: '#f0f7ff', icon: 'bi-filetype-doc' },
+        docx: { label: 'DOCX',  tagBg: '#dbeafe', tagColor: '#1e40af', frontBg: '#f0f7ff', icon: 'bi-filetype-docx' },
+        xls:  { label: 'XLS',   tagBg: '#dcfce7', tagColor: '#166534', frontBg: '#f0fff4', icon: 'bi-filetype-xls' },
+        xlsx: { label: 'XLSX',  tagBg: '#dcfce7', tagColor: '#166534', frontBg: '#f0fff4', icon: 'bi-filetype-xlsx' },
+        ppt:  { label: 'PPT',   tagBg: '#ffedd5', tagColor: '#9a3412', frontBg: '#fffbf0', icon: 'bi-filetype-ppt' },
+        pptx: { label: 'PPTX',  tagBg: '#ffedd5', tagColor: '#9a3412', frontBg: '#fffbf0', icon: 'bi-filetype-pptx' },
+        txt:  { label: 'TXT',   tagBg: '#f3f4f6', tagColor: '#374151', frontBg: '#f9fafb', icon: 'bi-filetype-txt' },
+        md:   { label: 'MD',    tagBg: '#f3f4f6', tagColor: '#374151', frontBg: '#f9fafb', icon: 'bi-filetype-md' },
+        jpg:  { label: 'IMG',   tagBg: '#fae8ff', tagColor: '#7e22ce', frontBg: '#fdf4ff', icon: 'bi-filetype-jpg' },
+        jpeg: { label: 'IMG',   tagBg: '#fae8ff', tagColor: '#7e22ce', frontBg: '#fdf4ff', icon: 'bi-filetype-jpg' },
+        png:  { label: 'IMG',   tagBg: '#fae8ff', tagColor: '#7e22ce', frontBg: '#fdf4ff', icon: 'bi-filetype-png' },
+        csv:  { label: 'CSV',   tagBg: '#d1fae5', tagColor: '#065f46', frontBg: '#f0fdf4', icon: 'bi-filetype-csv' },
+        zip:  { label: 'ZIP',   tagBg: '#e5e7eb', tagColor: '#4b5563', frontBg: '#f9fafb', icon: 'bi-file-earmark-zip' },
     };
     const info = map[ext];
     if (info) return info;
     const label = ext ? ext.toUpperCase() : 'FILE';
-    return { label, tagBg: '#e5e7eb', tagColor: '#4b5563', frontBg: '#f6f4ef' };
+    return { label, tagBg: '#e5e7eb', tagColor: '#4b5563', frontBg: '#f6f4ef', icon: 'bi-file-earmark' };
+}
+
+// Shared context-menu markup for both card and list-row views
+function _buildItemMenu(id, type, name, extra) {
+    const safeName = (name || '').replace(/'/g, "\\'");
+    if (isViewingTrash) {
+        return `
+        <div class="dropdown-item text-success" onclick="event.stopPropagation(); restoreItem(${id}, '${type}')">
+            <i class="bi bi-arrow-counterclockwise"></i> Restore
+        </div>
+        <div class="dropdown-item text-danger" onclick="event.stopPropagation(); permanentDeleteItem(${id}, '${type}')">
+            <i class="bi bi-x-circle"></i> Delete Permanently
+        </div>
+    `;
+    }
+    const primaryItem = type === 'folder'
+        ? `<div class="dropdown-item" onclick="event.stopPropagation(); openFolder(${id}, '${safeName}')">
+            <i class="bi bi-folder-symlink"></i> Open
+        </div>`
+        : `<div class="dropdown-item" onclick="event.stopPropagation(); handleDocumentAction('view', {url: '${(extra && extra.url) || ''}', name: '${safeName}'})">
+            <i class="bi bi-eye"></i> View
+        </div>`;
+    return `
+        ${primaryItem}
+        <div class="dropdown-item" onclick="event.stopPropagation(); shareItem(${id}, '${type}')">
+            <i class="bi bi-share"></i> Share
+        </div>
+        <div class="dropdown-item" onclick="event.stopPropagation(); renameItem(${id}, '${type}', '${safeName}')">
+            <i class="bi bi-pencil"></i> Rename
+        </div>
+        <div class="dropdown-item" onclick="event.stopPropagation(); openMoveModal(${id}, '${type}', '${safeName}')">
+            <i class="bi bi-arrow-right-circle"></i> Move
+        </div>
+        <div class="dropdown-item text-danger" onclick="event.stopPropagation(); openDeleteModal(${id}, '${type}', '${safeName}')">
+            <i class="bi bi-trash"></i> Delete
+        </div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item" onclick="event.stopPropagation(); showDetails(${id}, '${type}')">
+            <i class="bi bi-info-circle"></i> Details
+        </div>
+    `;
+}
+
+function _rowDateStr(dateVal) {
+    return dateVal ? new Date(dateVal).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 }
 
 async function _fetchNativePreview(fileId, filename) {
@@ -414,34 +451,7 @@ function createDocumentCard(doc) {
     const sizeStr = formatSize(doc.size);
     const dateStr = doc.created_at ? new Date(doc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
-    const menuContent = isViewingTrash ? `
-        <div class="dropdown-item text-success" onclick="event.stopPropagation(); restoreItem(${doc.id}, 'file')">
-            <i class="bi bi-arrow-counterclockwise"></i> Restore
-        </div>
-        <div class="dropdown-item text-danger" onclick="event.stopPropagation(); permanentDeleteItem(${doc.id}, 'file')">
-            <i class="bi bi-x-circle"></i> Delete Permanently
-        </div>
-    ` : `
-        <div class="dropdown-item" onclick="event.stopPropagation(); handleDocumentAction('view', {url: '${doc.minio_url || ''}'})">
-            <i class="bi bi-eye"></i> View
-        </div>
-        <div class="dropdown-item" onclick="event.stopPropagation(); shareItem(${doc.id}, 'file')">
-            <i class="bi bi-share"></i> Share
-        </div>
-        <div class="dropdown-item" onclick="event.stopPropagation(); renameItem(${doc.id}, 'file', '${fileName.replace(/'/g, "\\'")}')">
-            <i class="bi bi-pencil"></i> Rename
-        </div>
-        <div class="dropdown-item" onclick="event.stopPropagation(); openMoveModal(${doc.id}, 'file', '${fileName.replace(/'/g, "\\'")}')">
-            <i class="bi bi-arrow-right-circle"></i> Move
-        </div>
-        <div class="dropdown-item text-danger" onclick="event.stopPropagation(); openDeleteModal(${doc.id}, 'file')">
-            <i class="bi bi-trash"></i> Delete
-        </div>
-        <div class="dropdown-divider"></div>
-        <div class="dropdown-item" onclick="event.stopPropagation(); showDetails(${doc.id}, 'file')">
-            <i class="bi bi-info-circle"></i> Details
-        </div>
-    `;
+    const menuContent = _buildItemMenu(doc.id, 'file', fileName, { url: doc.minio_url });
 
     const initialPreviewClass = previewSupported ? 'doc-preview doc-preview--loading' : 'doc-preview doc-preview--empty';
     const initialPreviewText  = previewSupported ? ' ' : sizeStr;
@@ -488,24 +498,77 @@ function createDocumentCard(doc) {
 function createFolderRow(folder) {
     const row = document.createElement('div');
     row.className = 'table-row folder-row';
+    row.dataset.id = folder.id;
+    row.dataset.type = 'folder';
+    const safeName = folder.name.replace(/'/g, "\\'");
+    const menu = _buildItemMenu(folder.id, 'folder', folder.name);
     row.innerHTML = `
-        <div class="table-cell"><div class="doc-name-cell"><i class="bi bi-folder-fill text-warning me-2"></i><span>${folder.name}</span></div></div>
-        <div class="table-cell">-</div>
-        <div class="table-cell">${new Date(folder.created_at).toLocaleDateString()}</div>
-        <div class="table-cell"><button class="btn btn-sm btn-outline-primary" onclick="openFolder(${folder.id}, '${folder.name}')">Open</button></div>
+        <div class="table-cell">
+            <div class="doc-name-cell">
+                <div class="row-icon row-icon--folder"><i class="bi bi-folder-fill"></i></div>
+                <div class="row-name-info">
+                    <span class="row-name" title="${folder.name}">${folder.name}</span>
+                    <span class="row-type">Folder</span>
+                </div>
+            </div>
+        </div>
+        <div class="table-cell row-meta">—</div>
+        <div class="table-cell row-meta">${_rowDateStr(folder.created_at)}</div>
+        <div class="table-cell row-actions">
+            <button class="row-action-btn" title="Open" onclick="event.stopPropagation(); openFolder(${folder.id}, '${safeName}')">
+                <i class="bi bi-box-arrow-up-right"></i>
+            </button>
+        </div>
+        <div class="table-cell row-menu-cell">
+            <div class="row-menu">
+                <button class="card-menu-btn" onclick="event.stopPropagation(); toggleCardMenu(this)">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <div class="card-dropdown">${menu}</div>
+            </div>
+        </div>
     `;
     row.addEventListener('click', () => selectItem(folder, 'folder'));
+    if (!isViewingTrash) {
+        row.addEventListener('dblclick', () => openFolder(folder.id, folder.name));
+    }
     return row;
 }
 
 function createDocumentRow(doc) {
     const row = document.createElement('div');
     row.className = 'table-row document-row';
+    row.dataset.id = doc.id;
+    row.dataset.type = 'file';
+    const fileName = doc.original_filename || '';
+    const fileInfo = _nativeFileTypeInfo(fileName);
+    const safeName = fileName.replace(/'/g, "\\'");
+    const menu = _buildItemMenu(doc.id, 'file', fileName, { url: doc.minio_url });
     row.innerHTML = `
-        <div class="table-cell"><div class="doc-name-cell"><span class="me-2 d-flex align-items-center">${getFileIconSVG(doc.original_filename)}</span><span>${doc.original_filename}</span></div></div>
-        <div class="table-cell">${formatSize(doc.size)}</div>
-        <div class="table-cell">${new Date(doc.created_at).toLocaleDateString()}</div>
-        <div class="table-cell"><button class="btn btn-sm btn-outline-primary" onclick="handleDocumentAction('view', {url: '${doc.minio_url}'})">View</button></div>
+        <div class="table-cell">
+            <div class="doc-name-cell">
+                <div class="row-icon" style="background:${fileInfo.tagBg};color:${fileInfo.tagColor};"><i class="bi ${fileInfo.icon}"></i></div>
+                <div class="row-name-info">
+                    <span class="row-name" title="${fileName}">${fileName}</span>
+                    <span class="row-type">${fileInfo.label}</span>
+                </div>
+            </div>
+        </div>
+        <div class="table-cell row-meta">${formatSize(doc.size)}</div>
+        <div class="table-cell row-meta">${_rowDateStr(doc.created_at)}</div>
+        <div class="table-cell row-actions">
+            <button class="row-action-btn" title="View" onclick="event.stopPropagation(); handleDocumentAction('view', {url: '${doc.minio_url || ''}', name: '${safeName}'})">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
+        <div class="table-cell row-menu-cell">
+            <div class="row-menu">
+                <button class="card-menu-btn" onclick="event.stopPropagation(); toggleCardMenu(this)">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <div class="card-dropdown">${menu}</div>
+            </div>
+        </div>
     `;
     row.addEventListener('click', () => selectItem(doc, 'file'));
     return row;
@@ -1044,12 +1107,24 @@ function animateEntrance() {
     });
 }
 
+const DOC_VIEW_PREF_KEY = 'xplagia-doc-view';
+
+function getSavedView() {
+    try {
+        const v = localStorage.getItem(DOC_VIEW_PREF_KEY);
+        return (v === 'list' || v === 'card') ? v : 'card';
+    } catch {
+        return 'card';
+    }
+}
+
 function switchView(view) {
     document.querySelectorAll('.toggle-btn').forEach(b => {
         b.classList.toggle('active', b.dataset.view === view);
     });
     document.getElementById('card-view').classList.toggle('hidden', view !== 'card');
     document.getElementById('list-view').classList.toggle('hidden', view !== 'list');
+    try { localStorage.setItem(DOC_VIEW_PREF_KEY, view); } catch { /* best-effort */ }
 }
 
 // Search Filtering
@@ -1131,9 +1206,52 @@ document.addEventListener('click', () => {
     document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
 });
 
+// Shared rename validation (native + cloud) — Poka-Yoke: reject empty,
+// whitespace-only, overlong or path-separator names before hitting the API.
+function validateItemName(name, currentName) {
+    const trimmed = (name || '').trim();
+    if (!trimmed) return { valid: false, error: 'Name cannot be empty.' };
+    if (trimmed.length > 255) return { valid: false, error: 'Name is too long (max 255 characters).' };
+    if (/[\\/]/.test(trimmed)) return { valid: false, error: 'Name cannot contain "/" or "\\".' };
+    return { valid: true, trimmed, isNoop: trimmed === (currentName || '').trim() };
+}
+window.validateItemName = validateItemName;
+
+// Shared email validator (native + cloud share modals) — simple, permissive
+// format check; the actual account lookup always happens server-side.
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || '').trim());
+}
+window.isValidEmail = isValidEmail;
+
 // Rename item
+
+// Wire live inline validation on a rename input: toggles is-invalid + inline
+// error text + disables the confirm button while the current value is invalid.
+function wireRenameValidation(inputId, errorId, confirmBtnId, getCurrentName) {
+    const input = document.getElementById(inputId);
+    const errorEl = document.getElementById(errorId);
+    const confirmBtn = document.getElementById(confirmBtnId);
+    if (!input) return;
+
+    const check = () => {
+        const result = validateItemName(input.value, getCurrentName ? getCurrentName() : '');
+        const hasError = !result.valid;
+        input.classList.toggle('is-invalid', hasError);
+        if (errorEl) {
+            errorEl.textContent = hasError ? result.error : '';
+            errorEl.classList.toggle('d-none', !hasError);
+        }
+        if (confirmBtn) confirmBtn.disabled = hasError;
+        return result;
+    };
+
+    input.oninput = check;
+    check();
+}
+
 function renameItem(id, type, currentName) {
-    activeRenameItem = { id, type };
+    activeRenameItem = { id, type, currentName };
     const modal = document.getElementById('rename-modal');
     const input = document.getElementById('rename-input');
     const historyPreview = document.getElementById('rename-history-preview');
@@ -1144,14 +1262,23 @@ function renameItem(id, type, currentName) {
         if (currentNameDisplay) currentNameDisplay.textContent = currentName;
         if (historyPreview) historyPreview.classList.remove('d-none');
         modal.classList.add('active');
+        wireRenameValidation('rename-input', 'rename-error', 'confirm-rename', () => activeRenameItem && activeRenameItem.currentName);
         input.focus();
+        input.select();
     }
 }
 
 async function executeRename() {
     if (!activeRenameItem) return;
-    const newName = document.getElementById('rename-input').value.trim();
-    if (!newName) return showAlert('Name is required', 'error');
+    const input = document.getElementById('rename-input');
+    const result = validateItemName(input.value, activeRenameItem.currentName);
+    if (!result.valid) {
+        input.classList.add('is-invalid');
+        const errorEl = document.getElementById('rename-error');
+        if (errorEl) { errorEl.textContent = result.error; errorEl.classList.remove('d-none'); }
+        return;
+    }
+    if (result.isNoop) { closeModals(); return; }
 
     try {
         const res = await fetch('/x_doc/rename', {
@@ -1160,7 +1287,7 @@ async function executeRename() {
             body: JSON.stringify({
                 id: activeRenameItem.id,
                 type: activeRenameItem.type,
-                name: newName
+                name: result.trimmed
             })
         });
         const data = await res.json();
@@ -1183,6 +1310,7 @@ function shareItem(id, type) {
     if (modal) {
         clearSelectedUser();
         modal.classList.add('active');
+        loadNativeCollaborators();
     }
 }
 
@@ -1194,6 +1322,9 @@ async function searchUsers(query) {
         resultsContainer.classList.add('d-none');
         return;
     }
+
+    resultsContainer.innerHTML = '<div class="list-group-item small text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Searching...</div>';
+    resultsContainer.classList.remove('d-none');
 
     try {
         const res = await fetch(`/x_doc/users/search?q=${encodeURIComponent(query)}`);
@@ -1221,6 +1352,16 @@ async function searchUsers(query) {
 }
 
 function selectUser(user) {
+    hideShareError();
+
+    // Poka-Yoke: mirrors the backend's own "Cannot share with yourself" rule
+    // — catch it immediately instead of a round-trip to find out.
+    if (currentUserData && user.email === currentUserData.email) {
+        showShareError('You cannot share an item with yourself.');
+        document.getElementById('user-search-results').classList.add('d-none');
+        return;
+    }
+
     selectedShareUser = user;
     document.getElementById('user-search-results').classList.add('d-none');
     document.getElementById('share-user-search').value = user.email;
@@ -1230,45 +1371,87 @@ function selectUser(user) {
     document.getElementById('selected-user-email').textContent = user.email;
     document.getElementById('selected-user-avatar').textContent = user.avatar;
 
+    // Duplicate check — if this person already has access, surface it and
+    // preselect their current permission instead of quietly re-sharing.
+    const existingRow = document.querySelector(`#native-share-collaborators [data-email="${user.email}"]`);
+    const alreadyHint = document.getElementById('share-already-has-access');
+    if (existingRow && alreadyHint) {
+        alreadyHint.classList.remove('d-none');
+    } else if (alreadyHint) {
+        alreadyHint.classList.add('d-none');
+    }
+
     preview.classList.remove('d-none');
     document.getElementById('confirm-share').classList.remove('d-none');
 }
 
-function clearSelectedUser() {
+function clearSelectedUser(opts) {
     selectedShareUser = null;
     document.getElementById('selected-user-preview').classList.add('d-none');
     document.getElementById('confirm-share').classList.add('d-none');
-    document.getElementById('share-user-search').value = '';
+    document.getElementById('share-already-has-access').classList.add('d-none');
+    if (!opts || !opts.keepQuery) document.getElementById('share-user-search').value = '';
     document.getElementById('user-search-results').classList.add('d-none');
+    hideShareError();
 }
 
-async function executeShare() {
-    if (!activeShareItem || !selectedShareUser) return;
+function showShareError(message) {
+    const el = document.getElementById('share-error');
+    if (el) { el.textContent = message; el.classList.remove('d-none'); }
+}
 
-    const permission = document.getElementById('share-permission').value;
+function hideShareError() {
+    const el = document.getElementById('share-error');
+    if (el) el.classList.add('d-none');
+}
 
+// Load current collaborators for the native Share modal (mirrors what the
+// cloud Share modal already shows) — surfaces "who already has access" so
+// re-sharing with someone reads as an update, not a silent duplicate.
+async function loadNativeCollaborators() {
+    const container = document.getElementById('native-share-collaborators');
+    if (!container || !activeShareItem) return;
+
+    container.innerHTML = '<div class="text-center text-muted small py-2">Loading...</div>';
     try {
-        const res = await fetch('/x_doc/share', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                item_id: activeShareItem.id,
-                item_type: activeShareItem.type,
-                email: selectedShareUser.email,
-                permission: permission
-            })
-        });
+        const res = await fetch(`/x_doc/shared/${activeShareItem.type}/${activeShareItem.id}`);
         const data = await res.json();
+        const shares = data.shares || [];
+        if (shares.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted small py-2">No one else has access</div>';
+            return;
+        }
+        container.innerHTML = shares.map(s => `
+            <div class="d-flex align-items-center gap-2 py-2 border-bottom" data-share-id="${s.id}" data-email="${s.user.email}">
+                <div class="shared-user-avatar small">${s.user.avatar}</div>
+                <div class="flex-grow-1">
+                    <div class="small fw-medium">${s.user.name}</div>
+                    <div class="extra-small text-muted">${s.user.email} · ${s.permission}${s.is_expired ? ' · expired' : ''}</div>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="revokeNativeShare(${s.id})" title="Remove access">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<div class="text-center text-danger small py-2">Error loading</div>';
+    }
+}
+
+async function revokeNativeShare(shareId) {
+    try {
+        const res = await fetch(`/x_doc/share/${shareId}`, { method: 'DELETE' });
         if (res.ok) {
-            showAlert('Shared successfully', 'success');
-            closeModals();
+            showAlert('Access removed', 'success');
+            loadNativeCollaborators();
         } else {
-            showAlert(data.error || 'Error sharing', 'error');
+            showAlert('Error removing access', 'error');
         }
     } catch (e) {
         showAlert('Network error', 'error');
     }
 }
+window.revokeNativeShare = revokeNativeShare;
 
 window.selectUser = selectUser;
 
@@ -1525,13 +1708,40 @@ window.openShareModal = openShareModal;
 // ==========================================
 let activeMoveItem = null;
 
-function openMoveModal(id, type) {
-    activeMoveItem = { id, type };
+function openMoveModal(id, type, name) {
+    activeMoveItem = { id, type, name, sourceFolderId: currentFolderId };
     const modal = document.getElementById('move-modal');
     if (modal) {
+        selectedMoveTarget = undefined;
+        const confirmBtn = document.getElementById('confirm-move');
+        if (confirmBtn) confirmBtn.disabled = true;
+        const itemLabel = document.getElementById('move-item-label');
+        if (itemLabel) itemLabel.textContent = name || (type === 'folder' ? 'this folder' : 'this document');
+        const itemIcon = document.getElementById('move-native-item-icon');
+        if (itemIcon) itemIcon.className = type === 'folder' ? 'bi bi-folder-fill text-warning' : 'bi bi-file-earmark text-secondary';
+        const destPreview = document.getElementById('move-destination-preview');
+        if (destPreview) destPreview.classList.add('d-none');
         loadFolderTree();
         modal.classList.add('active');
     }
+}
+
+// Collect a folder id and every descendant id (used to block moving a folder
+// into itself or one of its own children — the backend already rejects this,
+// but we want to prevent the doomed round-trip and show it clearly up front).
+function collectFolderIds(node) {
+    let ids = [node.id];
+    (node.children || []).forEach(c => { ids = ids.concat(collectFolderIds(c)); });
+    return ids;
+}
+
+function findFolderNode(nodes, id) {
+    for (const n of nodes || []) {
+        if (n.id === id) return n;
+        const found = findFolderNode(n.children, id);
+        if (found) return found;
+    }
+    return null;
 }
 
 async function loadFolderTree() {
@@ -1543,46 +1753,66 @@ async function loadFolderTree() {
     try {
         const res = await fetch('/x_doc/folders/tree');
         const data = await res.json();
-        container.innerHTML = renderFolderTree(data.tree, activeMoveItem);
+
+        // Poka-Yoke: the item's current folder (no-op) is always invalid; for
+        // a folder being moved, itself + all of its descendants are too.
+        const invalidIds = new Set();
+        if (activeMoveItem) {
+            invalidIds.add(activeMoveItem.sourceFolderId);
+            if (activeMoveItem.type === 'folder') {
+                const selfNode = findFolderNode(data.tree, activeMoveItem.id);
+                if (selfNode) collectFolderIds(selfNode).forEach(fid => invalidIds.add(fid));
+            }
+        }
+
+        container.innerHTML = renderFolderTree(data.tree, invalidIds);
     } catch (e) {
         container.innerHTML = '<div class="text-danger">Error loading folders</div>';
     }
 }
 
-function renderFolderTree(tree, excludeItem = null) {
+function renderFolderTree(tree, invalidIds) {
     if (!tree || tree.length === 0) return '<div class="text-muted small">No folders</div>';
+    invalidIds = invalidIds || new Set();
 
     return tree.map(folder => {
-        // Exclude the item being moved (if it's a folder)
-        if (excludeItem && excludeItem.type === 'folder' && folder.id === excludeItem.id) return '';
-
         const isRoot = folder.id === null;
+        const isInvalid = invalidIds.has(folder.id);
         const hasChildren = folder.children && folder.children.length > 0;
+        const safeName = (folder.name || '').replace(/'/g, "\\'");
 
         return `
             <div class="folder-tree-item" data-folder-id="${folder.id}">
-                <div class="folder-tree-row" onclick="selectMoveTarget(${folder.id === null ? 'null' : folder.id})">
+                <div class="folder-tree-row${isInvalid ? ' folder-tree-row--disabled' : ''}"
+                     ${isInvalid ? '' : `onclick="selectMoveTarget(${folder.id === null ? 'null' : folder.id}, '${safeName}')"`}
+                     ${isInvalid ? 'title="Cannot move here"' : ''}>
                     <i class="bi ${isRoot ? 'bi-house' : 'bi-folder'}"></i>
                     <span>${folder.name}</span>
+                    ${isInvalid ? '<i class="bi bi-slash-circle ms-auto text-muted"></i>' : ''}
                 </div>
-                ${hasChildren ? `<div class="folder-tree-children">${renderFolderTree(folder.children, excludeItem)}</div>` : ''}
+                ${hasChildren ? `<div class="folder-tree-children">${renderFolderTree(folder.children, invalidIds)}</div>` : ''}
             </div>
         `;
     }).join('');
 }
 
-let selectedMoveTarget = null;
+let selectedMoveTarget = undefined;
 
-function selectMoveTarget(folderId) {
+function selectMoveTarget(folderId, folderName) {
     selectedMoveTarget = folderId;
     document.querySelectorAll('.folder-tree-row').forEach(el => el.classList.remove('selected'));
     const row = document.querySelector(`.folder-tree-item[data-folder-id="${folderId}"] > .folder-tree-row`);
     if (row) row.classList.add('selected');
     document.getElementById('confirm-move').disabled = false;
+    const destPreview = document.getElementById('move-destination-preview');
+    const destLabel = document.getElementById('move-destination-label');
+    if (destLabel) destLabel.textContent = folderName || 'My Documents';
+    if (destPreview) destPreview.classList.remove('d-none');
 }
 
 async function executeMove() {
-    if (!activeMoveItem) return;
+    if (!activeMoveItem || selectedMoveTarget === undefined) return;
+    if (selectedMoveTarget === activeMoveItem.sourceFolderId) { closeMoveModal(); return; }
 
     try {
         const res = await fetch('/x_doc/organize/move-to', {
@@ -1612,7 +1842,7 @@ function closeMoveModal() {
     const modal = document.getElementById('move-modal');
     if (modal) modal.classList.remove('active');
     activeMoveItem = null;
-    selectedMoveTarget = null;
+    selectedMoveTarget = undefined;
 }
 
 // ==========================================
@@ -1767,6 +1997,10 @@ function renderSharedAvatarsStack(avatars, hasMore = false, total = 0) {
 // ==========================================
 async function executeEnhancedShare() {
     if (!activeShareItem || !selectedShareUser) return;
+    if (currentUserData && selectedShareUser.email === currentUserData.email) {
+        showShareError('You cannot share an item with yourself.');
+        return;
+    }
 
     const permission = document.getElementById('share-permission').value;
     const expiresAtInput = document.getElementById('share-expires-at');

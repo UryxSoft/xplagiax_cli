@@ -144,6 +144,9 @@ function openCloudRenameModal(item, type) {
     if (currentName) currentName.textContent = name;
 
     modal.classList.add('active');
+    if (typeof wireRenameValidation === 'function') {
+        wireRenameValidation('cloud-rename-input', 'cloud-rename-error', 'confirm-cloud-rename', () => name);
+    }
     input.focus();
     input.select();
 }
@@ -159,19 +162,24 @@ async function confirmCloudRename() {
     if (!renameTarget || !window.storageManager) return;
 
     const input = document.getElementById('cloud-rename-input');
-    const newName = input?.value?.trim();
     const currentName = renameTarget.name || renameTarget.title || '';
+    const result = typeof validateItemName === 'function'
+        ? validateItemName(input?.value, currentName)
+        : { valid: !!input?.value?.trim(), trimmed: input?.value?.trim(), isNoop: false };
 
-    if (!newName) {
-        showToast('Please enter a name', 'warning');
+    if (!result.valid) {
+        input.classList.add('is-invalid');
+        const errorEl = document.getElementById('cloud-rename-error');
+        if (errorEl) { errorEl.textContent = result.error || 'Please enter a name'; errorEl.classList.remove('d-none'); }
         return;
     }
 
-    if (newName === currentName) {
+    if (result.isNoop) {
         closeCloudRenameModal();
         return;
     }
 
+    const newName = result.trimmed;
     const sm = window.storageManager;
 
     // Call the backend directly with the new name
@@ -188,12 +196,12 @@ async function confirmCloudRename() {
             body: JSON.stringify({ [bodyKey]: renameTarget.id, new_name: newName })
         });
 
-        const result = await response.json();
-        if (result.success) {
+        const result2 = await response.json();
+        if (result2.success) {
             showToast('Renamed successfully', 'success');
             await sm.loadStorageContent(sm.currentStorage, sm.cloudFolderId);
         } else {
-            showToast(result.error || 'Failed to rename', 'error');
+            showToast(result2.error || 'Failed to rename', 'error');
         }
     } catch (error) {
         console.error('Rename error:', error);
@@ -281,7 +289,7 @@ function openCloudFolderPicker(item, type) {
     moveTargetType = type;
     pickerCurrentFolderId = null;
     pickerBreadcrumbs = [{ id: null, name: 'Root' }];
-    selectedMoveDestination = null;
+    selectedMoveDestination = undefined;
 
     const modal = document.getElementById('cloud-folder-picker-modal');
     const itemName = document.getElementById('move-item-name');
@@ -309,8 +317,13 @@ function closeCloudFolderPicker() {
 
 async function loadPickerFolders(folderId) {
     pickerCurrentFolderId = folderId;
-    const container = document.getElementById('picker-folder-list');
+    // Poka-Yoke: navigating resets any prior selection — a destination
+    // picked at a different level no longer applies to the new view.
+    selectedMoveDestination = undefined;
+    const confirmBtn = document.getElementById('confirm-cloud-move');
+    if (confirmBtn) confirmBtn.disabled = true;
 
+    const container = document.getElementById('picker-folder-list');
     if (!container || !window.storageManager) return;
 
     container.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-arrow-repeat spin"></i> Loading...</div>';
@@ -347,12 +360,23 @@ function renderPickerFolders(folders) {
         return true;
     });
 
-    if (filteredFolders.length === 0) {
-        container.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-folder"></i> No subfolders here</div>';
-        return;
-    }
+    // "Move to this folder" — explicit, deliberate selection of the folder
+    // currently being browsed (nothing is auto-selected just from viewing).
+    // Blocked when we've navigated into the very folder being moved.
+    const isSelfFolder = moveTargetType === 'folder' && moveTarget && String(pickerCurrentFolderId) === String(moveTarget.id);
+    const currentOptionHtml = isSelfFolder
+        ? `<div class="folder-picker-item folder-picker-item--disabled" title="Cannot move a folder into itself">
+               <i class="bi bi-slash-circle text-muted"></i>
+               <span class="flex-grow-1 text-muted">Cannot move here (same folder)</span>
+           </div>`
+        : `<div class="folder-picker-item folder-picker-item--current">
+               <i class="bi bi-check2-circle text-primary"></i>
+               <span class="flex-grow-1">Move to this folder</span>
+           </div>`;
 
-    container.innerHTML = filteredFolders.map(folder => `
+    const subfoldersHtml = filteredFolders.length === 0
+        ? '<div class="text-center text-muted py-3 small"><i class="bi bi-folder"></i> No subfolders here</div>'
+        : filteredFolders.map(folder => `
         <div class="folder-picker-item" data-id="${folder.id}" data-name="${folder.name}">
             <i class="bi bi-folder-fill text-warning"></i>
             <span class="flex-grow-1">${folder.name}</span>
@@ -360,19 +384,30 @@ function renderPickerFolders(folders) {
         </div>
     `).join('');
 
-    // Add click handlers
-    container.querySelectorAll('.folder-picker-item').forEach(item => {
+    container.innerHTML = currentOptionHtml + subfoldersHtml;
+
+    // "Move to this folder" row: select-only, no navigation target
+    const currentOption = container.querySelector('.folder-picker-item--current');
+    if (currentOption) {
+        currentOption.addEventListener('click', () => {
+            container.querySelectorAll('.folder-picker-item').forEach(i => i.classList.remove('selected'));
+            currentOption.classList.add('selected');
+            selectedMoveDestination = pickerCurrentFolderId;
+            document.getElementById('confirm-cloud-move').disabled = false;
+        });
+    }
+
+    // Subfolder rows: click once to select, click the selected row again to navigate in
+    container.querySelectorAll('.folder-picker-item:not(.folder-picker-item--current):not(.folder-picker-item--disabled)').forEach(item => {
         item.addEventListener('click', () => {
             const id = item.dataset.id;
             const name = item.dataset.name;
 
-            // Toggle selection
             if (item.classList.contains('selected')) {
-                // Double click - navigate into folder
+                // Second click on an already-selected row - navigate into it
                 pickerBreadcrumbs.push({ id, name });
                 loadPickerFolders(id);
             } else {
-                // Single click - select as destination
                 container.querySelectorAll('.folder-picker-item').forEach(i => i.classList.remove('selected'));
                 item.classList.add('selected');
                 selectedMoveDestination = id;
@@ -411,18 +446,10 @@ function renderPickerBreadcrumbs() {
             }
         });
     });
-
-    // Enable moving to current folder (pickerCurrentFolderId)
-    const confirmBtn = document.getElementById('confirm-cloud-move');
-    if (confirmBtn) {
-        // Always allow moving to the currently viewed folder
-        selectedMoveDestination = pickerCurrentFolderId;
-        confirmBtn.disabled = false;
-    }
 }
 
 async function confirmCloudMove() {
-    if (!moveTarget || !window.storageManager) return;
+    if (!moveTarget || !window.storageManager || selectedMoveDestination === undefined) return;
 
     const sm = window.storageManager;
     await sm.moveCloudItem(moveTarget.id, moveTargetType, selectedMoveDestination);
@@ -739,15 +766,24 @@ async function loadCollaborators(fileId) {
 async function confirmCloudShare() {
     if (!shareTarget || !window.storageManager) return;
 
-    const email = document.getElementById('share-email-input')?.value?.trim();
+    const emailInput = document.getElementById('share-email-input');
+    const errorEl = document.getElementById('cloud-share-error');
+    const email = emailInput?.value?.trim();
     const role = document.getElementById('share-role-select')?.value || 'reader';
     const notify = document.getElementById('share-notify-check')?.checked ?? true;
     const message = document.getElementById('share-message-input')?.value?.trim() || '';
 
-    if (!email) {
-        showToast('Please enter an email address', 'warning');
+    const showError = (msg) => {
+        if (emailInput) emailInput.classList.add('is-invalid');
+        if (errorEl) { errorEl.textContent = msg; errorEl.classList.remove('d-none'); }
+    };
+
+    if (!email || (typeof isValidEmail === 'function' && !isValidEmail(email))) {
+        showError(email ? 'Please enter a valid email address' : 'Please enter an email address');
         return;
     }
+    if (emailInput) emailInput.classList.remove('is-invalid');
+    if (errorEl) errorEl.classList.add('d-none');
 
     const sm = window.storageManager;
 
@@ -916,15 +952,26 @@ async function removePublicLink() {
     }
 }
 
+function flashCopyButton() {
+    const btn = document.getElementById('copy-link-btn');
+    if (!btn || btn.dataset.flashing) return;
+    const original = btn.innerHTML;
+    btn.dataset.flashing = '1';
+    btn.innerHTML = '<i class="bi bi-check-lg text-success"></i>';
+    setTimeout(() => { btn.innerHTML = original; delete btn.dataset.flashing; }, 1200);
+}
+
 function copyLinkToClipboard() {
     const linkInput = document.getElementById('public-link-url');
     if (linkInput && linkInput.value) {
         navigator.clipboard.writeText(linkInput.value).then(() => {
             showToast('Link copied!', 'success');
+            flashCopyButton();
         }).catch(() => {
             linkInput.select();
             document.execCommand('copy');
             showToast('Link copied!', 'success');
+            flashCopyButton();
         });
     }
 }
@@ -935,6 +982,22 @@ document.addEventListener('DOMContentLoaded', function () {
     const confirmShareBtn = document.getElementById('confirm-cloud-share');
     if (confirmShareBtn) {
         confirmShareBtn.addEventListener('click', confirmCloudShare);
+    }
+
+    // Live duplicate check: warn (don't block) when the typed email already
+    // appears in the currently-loaded collaborators list.
+    const shareEmailInput = document.getElementById('share-email-input');
+    if (shareEmailInput) {
+        shareEmailInput.addEventListener('input', debounce(function () {
+            const email = this.value.trim().toLowerCase();
+            const errorEl = document.getElementById('cloud-share-error');
+            const hintEl = document.getElementById('cloud-share-already-has-access');
+            this.classList.remove('is-invalid');
+            if (errorEl) errorEl.classList.add('d-none');
+
+            const match = email && document.querySelector(`#collaborators-list [data-email="${CSS.escape(email)}" i]`);
+            if (hintEl) hintEl.classList.toggle('d-none', !match);
+        }, 300));
     }
 
     // Link toggle

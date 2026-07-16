@@ -1319,16 +1319,20 @@
 
 .table-row {
   display: grid;
-  grid-template-columns: 4fr 1fr 1.5fr 1.5fr 0.5fr;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
+  grid-template-columns: minmax(0, 3.4fr) 0.9fr 1.2fr 56px 48px;
+  gap: 0.75rem;
+  padding: 0.65rem 1.25rem;
   border-bottom: 1px solid var(--border);
-  transition: background 0.2s ease;
+  transition: background 0.15s ease;
   align-items: center;
   width: 100%;
 }
 
-.table-row:hover {
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-body .table-row:hover {
   background: var(--sidebar-primary-hover);
 }
 
@@ -1342,6 +1346,9 @@
 .header-cell {
   font-weight: 600;
   color: var(--primary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .file-info {
@@ -1361,6 +1368,93 @@
   width: 1.5rem;
   height: 1.5rem;
   flex-shrink: 0;
+}
+
+/* List-row name cell: type icon + name/type stack */
+.doc-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.row-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.row-icon--folder {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.row-name-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.row-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--primary-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-type {
+  font-size: 0.7rem;
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.row-meta {
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.row-actions,
+.row-menu-cell {
+  justify-content: center;
+}
+
+.row-action-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: var(--sidebar-primary-hover);
+  border-radius: 7px;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.row-action-btn:hover {
+  background: var(--primary);
+  color: var(--white);
+}
+
+.row-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.table-body .table-row:hover .row-menu .card-menu-btn {
+  opacity: 1;
 }
 
 /* Button groups in table */
@@ -1915,9 +2009,32 @@
 
 /* PDF Modal - Wider for better document viewing */
 #pdf-modal .modal-content {
-  max-width: 1200px;
+  max-width: 1400px;
   width: 95%;
-  height: 90vh;
+  height: 85vh;
+}
+
+.modal-body-pdf {
+  max-height: 80vh;
+  overflow: hidden;
+}
+
+#pdf-modal .modal-body-pdf {
+  height: calc(85vh - 140px);
+  max-height: none;
+}
+
+#pdf-modal #pdfContainer {
+  height: 100%;
+}
+
+#pdf-modal #pdfFrame {
+  height: 100%;
+  min-height: 500px;
+}
+
+#pdfFrame {
+  transition: opacity 0.3s ease;
 }
 
 .modal-overlay {
@@ -1933,11 +2050,13 @@
   background: white;
   width: 90%;
   max-width: 500px;
+  max-height: 90vh;
   margin: auto;
   border-radius: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   animation: modalFadeIn 0.3s ease-out;
   z-index: 10001;
+  overflow-y: auto;
 }
 
 @keyframes modalFadeIn {
@@ -1972,15 +2091,22 @@
 .modal-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   cursor: pointer;
   color: #666;
   padding: 0;
   line-height: 1;
-  transition: color 0.2s ease;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
 }
 
 .modal-close:hover {
+  background: #f0f0f0;
   color: #333;
 }
 
@@ -2058,6 +2184,23 @@
 
 .btn-secondary:hover {
   background: #e0e0e0;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-primary.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-danger {
+  background: #dc3545;
+  border-color: #dc3545;
+}
+
+.btn-danger:hover {
+  background: #bb2d3b;
 }
 
 /* =============================================== */
@@ -2319,6 +2462,15 @@
 
 .folder-tree-row i {
   font-size: 1.1rem;
+}
+
+.folder-tree-row--disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.folder-tree-row--disabled:hover {
+  background: transparent;
 }
 
 /* =============================================== */
