@@ -39,6 +39,7 @@
 - [CI/CD](#-cicd)
 - [Code Conventions](#-code-conventions)
 - [Troubleshooting / FAQ](#-troubleshooting--faq)
+- [Changelog — Recent Improvements](#-changelog--recent-improvements)
 - [Roadmap](#-roadmap)
 - [Contributing](#-contributing)
 - [License & Author](#-license--author)
@@ -411,11 +412,34 @@ AI_TEXT_SERVICE_API_KEY=__set_me__
 FINDERX_SERVICE_BASE=http://xplagiax_finderx_api:8000
 FINDERX_SERVICE_API_KEY=__set_me__
 
-# Email / OAuth
+# Email / OAuth (login)
 MAIL_USERNAME=noreply@XplagiaX.ca
 MAIL_PASSWORD=__set_me__
+GOOGLE_CLIENT_ID=__set_me__
+GOOGLE_CLIENT_SECRET=__set_me__          # login con Google (mismo cliente que Google Drive)
 GOOGLE_REDIRECT_URI=https://app.xplagiax.ca/auth_bp/google/callbackx
 MICROSOFT_REDIRECT_URI=https://app.xplagiax.ca/auth_bp/microsoft/callback
+
+# Cloud Storage OAuth (pantalla /cloudstorage). Los secretos NO tienen default
+# en el código: sin la env var el provider queda deshabilitado (callback 503).
+DROPBOX_CLIENT_ID=__set_me__
+DROPBOX_CLIENT_SECRET=__set_me__
+BOX_CLIENT_ID=__set_me__
+BOX_CLIENT_SECRET=__set_me__
+ONEDRIVE_CLIENT_ID=__set_me__
+ONEDRIVE_CLIENT_SECRET=__set_me__
+# PKCE por-provider (default: Google/OneDrive on, Dropbox/Box off). Override:
+# OAUTH_PKCE_DROPBOX=true
+
+# Cifrado en reposo de los tokens OAuth de cloud storage (Fernet). Genera:
+#   python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"
+# Si falta, se deriva de SECRET_KEY (se recomienda una clave dedicada).
+TOKEN_ENCRYPTION_KEY=__set_me__
+
+# Límites de listado de cloud storage (performance)
+STORAGE_MAX_FILES=500
+STORAGE_MAX_PAGES=20
+STORAGE_QUOTA_TTL=300
 ```
 
 ---
@@ -562,6 +586,72 @@ pytest --cov=modules --cov-report=term-missing   # coverage
 | Google login loops back to `/login` | Shared OAuth client; `app.xplagiax.ca` redirect URI not registered, **or** session `state` lost | Register the redirect URI in Google Cloud Console; keep `SECRET_KEY` fixed; temp bypass via `OAUTH_RELAX_STATE=true` |
 | Logout redirects to `127.0.0.1:5000` | Stale cached `logout.js` / missing ProxyFix | Hard-refresh (`/static` is cached 1y); ProxyFix is enabled in `app.py` |
 | Healthcheck unhealthy | `curl` missing or wrong port | Image ships `curl`; ensure probe hits `:5003/test_alive` |
+
+---
+
+## 📝 Changelog — Recent Improvements
+
+### Cloud Storage integration audit (Google Drive · Dropbox · Box · OneDrive)
+
+Full 5-phase hardening of the `/cloudstorage` OAuth integration
+(`modules/integration_service/`).
+
+**Phase 1 — Security (critical)**
+- OAuth `state` (anti-CSRF) validation re-enabled with constant-time compare;
+  works now that `SESSION_COOKIE_SAMESITE=Lax` (the cookie survives the OAuth
+  callback).
+- Removed the hardcoded `session['user_id']=1` fallback — it mixed one user's
+  cloud tokens into user 1 (IDOR / cross-account leak). The callback now
+  requires a real session.
+- **Tokens encrypted at rest** with Fernet (`token_crypto.py`), transparently
+  backward-compatible with legacy plaintext rows (`TOKEN_ENCRYPTION_KEY`).
+- Removed the TLS `verify=False` fallback (MITM risk on the token exchange).
+- Provider `client_secret`s moved to env-only (no defaults in code); a missing
+  secret disables that provider with a `503` instead of using a leaked value.
+
+**Phase 2 — Functional correctness**
+- **PKCE (S256)** for Google & OneDrive (confidential-client-safe); per-provider
+  toggle via `OAUTH_PKCE_<PROVIDER>`.
+- Refresh tokens now actually issued: Dropbox `token_access_type=offline`,
+  Google `access_type=offline&prompt=consent`; provider-aware auth params
+  (the old blanket `access_type=offline` was a Google-only no-op elsewhere).
+- Token expiry compared in **UTC** with a 60 s refresh margin.
+- UI aligned to the 4 real providers (added OneDrive; removed pcloud/mega/yandex).
+
+**Phase 3 — Architecture**
+- `TokenRepository` (Repository pattern) — single, testable place for token
+  persistence + encryption + expiry; the ~40 call sites keep working via thin
+  facades.
+- `documents` screen: removed a broken duplicate route (rendered a missing
+  template → 500) and a stub API returning fake hardcoded data.
+
+**Phase 4 — Performance**
+- Bounded provider file-listing pagination (`STORAGE_MAX_FILES` /
+  `STORAGE_MAX_PAGES`) — no more pulling an entire account into memory.
+- Short-TTL Redis cache of storage quota (`STORAGE_QUOTA_TTL`), best-effort
+  (tolerates Redis down).
+
+**Phase 5 — UX**
+- Frontend provider maps (name/icon/brand) made consistent with the 4 real
+  providers.
+
+> Manual follow-ups (not code): rotate the 4 OAuth `client_secret`s in each
+> provider console, set the new env vars, and purge the old secrets from git
+> history. See `.env.example`.
+
+### Analysis screen & UI
+
+- **Analysis counter** now decrements *after* results are delivered (was
+  counting before).
+- **Analysis history** (`/x_doc/history`): `Scholar Suite` added to the paid
+  plans that save history; the frontend no longer silently swallows the `403`
+  when a plan doesn't include history.
+- **Confirmation modals** for the Trash / Archived / Auto-Archived offcanvases:
+  professional delete & restore modals (`confirm_modal.css` + `xpConfirm()` in
+  `base_page.js`), matching the app's modal standard — replaces the native
+  `confirm()` dialogs and adds confirmation to restore actions.
+- **Settings**: removed the *Watermark Detection* and *Citation Check* plugin
+  toggles.
 
 ---
 
