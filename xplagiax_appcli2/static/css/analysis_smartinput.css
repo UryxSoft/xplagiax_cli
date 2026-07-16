@@ -47,7 +47,9 @@
 
 /* Estado inicial - centrado */
 .input-wrapper {
-    background: #ffffffad;
+    /* Sólido (antes #ffffffad): el fondo semitransparente dejaba ver la página
+       detrás del card y el texto se percibía lavado/borroso. */
+    background: #ffffff;
     border-radius: var(--radius);
     padding: 32px;
     box-shadow: 0 8px 20px rgba(20, 30, 40, 0.06);
@@ -60,7 +62,13 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    /* translate(-50%,-50%) puede caer en MEDIO píxel (viewport impar) y
+       re-rasterizar todo el texto del card borroso. Las variables --xp-snap-*
+       las fija un snippet JS midiendo getBoundingClientRect() para compensar
+       la fracción y aterrizar en píxel entero. Sin JS valen 0 (comportamiento
+       anterior). */
+    transform: translate(calc(-50% + var(--xp-snap-x, 0px)),
+                         calc(-50% + var(--xp-snap-y, 0px)));
     transform-origin: center center;
     z-index: 1;
 
@@ -215,9 +223,11 @@
     padding: 24px;
 }
 
-/* Fade in del contenido cuando se expande */
+/* El contenido va SIEMPRE nítido (antes opacity 0.8 en reposo: el drop-zone
+   y sus textos se veían difusos de forma permanente — molestaba a la vista).
+   El fade de la expansión lo cubre .expanding-vertical, que es transitorio. */
 .input-wrapper:not(.expanded) .input-content {
-    opacity: 0.8;
+    opacity: 1;
 }
 
 .input-wrapper.expanded .input-content {
@@ -1696,8 +1706,21 @@
 .mode-switch-container {
     position: absolute;
     top: 12px;
+    /* Estirado a todo el ancho del card (antes solo right:30px → el contenedor
+       se encogía a su contenido en la esquina y el margin-right:auto del botón
+       de regreso no tenía ancho donde empujar). Con left+right fijados, el
+       botón queda en el extremo izquierdo y el switch en el derecho. */
+    left: 30px;
     right: 30px;
     z-index: 200;
+    display: flex;
+    align-items: center;
+    /* La franja vacía entre ambos extremos no debe robar clicks al contenido */
+    pointer-events: none;
+}
+
+.mode-switch-container > * {
+    pointer-events: auto;
 }
 
 .mode-switch {
@@ -1814,6 +1837,7 @@
 @media (max-width: 768px) {
     .mode-switch-container {
         top: 12px;
+        left: 12px;
         right: 12px;
     }
 

@@ -142,8 +142,8 @@ class Config:
             'api_base': 'https://graph.microsoft.com/v1.0'
         },
         'google_drive': {
-            'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
-            'client_secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID', '121671119534-92uo2m1vpju3m3msh74jcf389nqhif4r.apps.googleusercontent.com'),
+            'client_secret': os.environ.get('GOOGLE_CLIENT_SECRET', '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'),
             'authorization_url': 'https://accounts.google.com/o/oauth2/v2/auth',
             'token_url': 'https://oauth2.googleapis.com/token',
             'scope': 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata.readonly',

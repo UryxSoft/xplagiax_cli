@@ -7250,6 +7250,32 @@ body.xp-file-preview .mode-switch-container {
         });
     }
     );
+
+    // ══ Pixel-snap del card centrado ══
+    // El centrado translate(-50%,-50%) del .input-wrapper puede caer en medio
+    // píxel (viewport de dimensión impar) y re-rasterizar TODO el texto del
+    // card ligeramente borroso. Se mide la fracción con getBoundingClientRect
+    // y se compensa vía las variables --xp-snap-* que consume el transform en
+    // el CSS. Solo aplica en reposo (no .expanded, cuyo transform es 0,0).
+    document.addEventListener('DOMContentLoaded', () => {
+        const wrapper = document.getElementById('inputWrapper');
+        if (!wrapper) return;
+        const snap = () => {
+            if (wrapper.classList.contains('expanded')) return;
+            wrapper.style.setProperty('--xp-snap-x', '0px');
+            wrapper.style.setProperty('--xp-snap-y', '0px');
+            const rect = wrapper.getBoundingClientRect();
+            const dx = Math.round(rect.left) - rect.left;
+            const dy = Math.round(rect.top) - rect.top;
+            if (dx) wrapper.style.setProperty('--xp-snap-x', dx.toFixed(2) + 'px');
+            if (dy) wrapper.style.setProperty('--xp-snap-y', dy.toFixed(2) + 'px');
+        };
+        snap();
+        window.addEventListener('resize', () => requestAnimationFrame(snap));
+        // Al terminar la transición de contracción (expanded → reposo) el
+        // transform vuelve a -50%,-50%: re-medir.
+        wrapper.addEventListener('transitionend', () => requestAnimationFrame(snap));
+    });
 </script>
 
 <script rel="JavaScript" src="{{ url_for('static', filename='js/analysis_page_.js') }}"></script>

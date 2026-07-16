@@ -125,56 +125,10 @@ function setupEventListeners() {
     const clearSelectedUserBtn = document.getElementById('clear-selected-user');
     if (clearSelectedUserBtn) clearSelectedUserBtn.addEventListener('click', clearSelectedUser);
 
-    // Side panel actions
-    const panelOpen = document.getElementById('panel-open');
-    if (panelOpen) {
-        panelOpen.addEventListener('click', function () {
-            if (activeSelection) {
-                if (activeSelection.type === 'folder') openFolder(activeSelection.item.id, activeSelection.item.name);
-                else handleDocumentAction('view', { url: activeSelection.item.minio_url });
-            }
-        });
-    }
-
-    const panelShare = document.getElementById('panel-share');
-    if (panelShare) {
-        panelShare.addEventListener('click', function () {
-            if (activeSelection && activeSelection.item.minio_url) {
-                const url = activeSelection.item.minio_url;
-                navigator.clipboard.writeText(url).then(() => {
-                    showAlert('Link copied to clipboard', 'success');
-                }).catch(() => {
-                    // Fallback for non-secure contexts
-                    const el = document.createElement('textarea');
-                    el.value = url;
-                    document.body.appendChild(el);
-                    el.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(el);
-                    showAlert('Link copied to clipboard', 'success');
-                });
-            } else if (activeSelection) {
-                showAlert('Sharing not available for this item', 'info');
-            }
-        });
-    }
-
-    const panelDelete = document.getElementById('panel-delete');
-    if (panelDelete) {
-        panelDelete.addEventListener('click', function () {
-            if (activeSelection) {
-                const selName = activeSelection.item.name || activeSelection.item.original_filename;
-                openDeleteModal(activeSelection.item.id, activeSelection.type, selName);
-            }
-        });
-    }
-
-    const panelClose = document.getElementById('close-panel');
-    if (panelClose) {
-        panelClose.addEventListener('click', () => {
-            document.getElementById('context-panel').classList.add('hidden');
-        });
-    }
+    // Note: #panel-open/#panel-share/#panel-delete/#close-panel (the old
+    // #context-panel quick actions) are not wired here — that panel is
+    // permanently superseded by #rich-details-offcanvas (see showSidePanel
+    // alias below) and is never shown, so those buttons are unreachable.
 
     // Delete confirmation
     const confirmDeleteButton = document.getElementById('confirmDeleteButton');
@@ -626,21 +580,8 @@ function selectItem(item, type) {
     document.querySelectorAll('.document-card, .table-row').forEach(el => el.classList.remove('selected'));
 
     // Highlight visually (approximate if no IDs on elements)
-    // For now we just show the panel
+    // showSidePanel is aliased to openRichDetails below (#rich-details-offcanvas)
     showSidePanel(item, type);
-}
-
-function showSidePanel(item, type) {
-    const panel = document.getElementById('context-panel');
-    if (!panel) return;
-
-    document.getElementById('panel-title').textContent = type === 'folder' ? item.name : item.original_filename;
-    document.getElementById('panel-status').textContent = type === 'folder' ? 'Local' : (item.status || 'Active');
-    document.getElementById('panel-type').textContent = type === 'folder' ? 'Folder' : (item.mime_type || 'File');
-    document.getElementById('panel-size').textContent = type === 'folder' ? '-' : formatSize(item.size);
-    document.getElementById('panel-created').textContent = new Date(item.created_at).toLocaleDateString();
-
-    panel.classList.remove('hidden');
 }
 
 // Rich Details Offcanvas Logic
@@ -663,6 +604,56 @@ function timeAgo(dateParam) {
 }
 
 // Rich Details Offcanvas Logic
+const HISTORY_ACTION_META = {
+    rename: { icon: 'bi-pencil', verb: 'Renamed' },
+    move: { icon: 'bi-arrows-move', verb: 'Moved' },
+    create: { icon: 'bi-plus-circle', verb: 'Created' },
+};
+
+// Real change history (native items only — cloud items don't have local
+// ItemHistory rows). Replaces the old hardcoded "Analysis Completed" /
+// "Document Processed" placeholder text that never reflected reality.
+async function loadRichHistory(item, type, provider) {
+    const historyList = document.getElementById('rich-history-list');
+    if (!historyList) return;
+
+    if (provider !== 'native') {
+        historyList.innerHTML = '<div class="text-center text-muted py-4 small"><i class="bi bi-clock-history" style="font-size: 1.5rem;"></i><p class="mt-2 mb-0">Change history is only available for My Documents items.</p></div>';
+        return;
+    }
+
+    historyList.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
+
+    try {
+        const res = await fetch(`/x_doc/history/${type}/${item.id}`);
+        const data = await res.json();
+        const history = data.history || [];
+
+        if (history.length === 0) {
+            historyList.innerHTML = '<div class="text-center text-muted py-4 small"><i class="bi bi-clock-history" style="font-size: 1.5rem;"></i><p class="mt-2 mb-0">No changes recorded yet.</p></div>';
+            return;
+        }
+
+        historyList.innerHTML = history.map(h => {
+            const meta = HISTORY_ACTION_META[h.action] || { icon: 'bi-clock-history', verb: h.action ? (h.action.charAt(0).toUpperCase() + h.action.slice(1)) : 'Changed' };
+            const change = (h.old_value && h.new_value && h.old_value !== h.new_value)
+                ? `<span class="text-muted">${h.old_value}</span> <i class="bi bi-arrow-right mx-1"></i> ${h.new_value}`
+                : (h.new_value || '');
+            return `
+                <div class="activity-item">
+                    <div class="timeline-content">
+                        <div class="fw-bold" style="font-size: 0.9rem;"><i class="bi ${meta.icon} me-1"></i>${meta.verb}</div>
+                        <div class="small">${change}</div>
+                        <div class="small text-muted">${h.user || 'You'} · ${h.date || ''}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        historyList.innerHTML = '<div class="text-center text-danger py-4 small">Error loading history</div>';
+    }
+}
+
 window.openRichDetails = function (item, type) {
     if (!item) return;
     const panel = document.getElementById('rich-details-offcanvas');
@@ -741,7 +732,7 @@ window.openRichDetails = function (item, type) {
                     </div>
                     
                     <div class="mt-4">
-                        <button class="btn btn-outline-primary w-100 py-3 d-flex align-items-center justify-content-center gap-2" style="border-radius: 14px; font-weight: 600;" onclick="window.handleDocumentAction('share')">
+                        <button class="btn btn-outline-primary w-100 py-3 d-flex align-items-center justify-content-center gap-2" style="border-radius: 14px; font-weight: 600;" onclick="shareItem(${item.id}, '${type}')">
                             <i class="bi bi-person-plus"></i> Share with others
                         </button>
                     </div>
@@ -766,43 +757,8 @@ window.openRichDetails = function (item, type) {
             }
         }
 
-        // 4. History Tab (Timeline)
-        const historyList = document.getElementById('rich-history-list');
-        if (historyList) {
-            const baseDate = item.created_at || item.modified;
-            const dateStr = baseDate ? timeAgo(baseDate) : 'Unknown time';
-            let secondaryDateStr = 'Recent';
-
-            if (baseDate) {
-                try {
-                    const parsedDate = new Date(baseDate);
-                    if (!isNaN(parsedDate.getTime())) {
-                        secondaryDateStr = timeAgo(new Date(parsedDate.getTime() + 1000 * 60 * 5));
-                    }
-                } catch (e) { }
-            }
-
-            historyList.innerHTML = `
-                <div class="activity-item">
-                    <div class="timeline-content">
-                        <div class="fw-bold" style="font-size: 0.9rem;">Analysis Completed</div>
-                        <div class="small text-muted">${secondaryDateStr}</div>
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <div class="timeline-content">
-                        <div class="fw-bold" style="font-size: 0.9rem;">Document Processed</div>
-                        <div class="small text-muted">${dateStr}</div>
-                    </div>
-                </div>
-                <div class="activity-item">
-                    <div class="timeline-content">
-                        <div class="fw-bold" style="font-size: 0.9rem;">File Uploaded</div>
-                        <div class="small text-muted">${dateStr}</div>
-                    </div>
-                </div>
-            `;
-        }
+        // 4. History Tab (real change log for native items)
+        loadRichHistory(item, type, provider);
 
         // Show Panel with Animation
         panel.classList.remove('hidden');
@@ -1455,253 +1411,18 @@ window.revokeNativeShare = revokeNativeShare;
 
 window.selectUser = selectUser;
 
-// Show details in offcanvas
-function showDetails(id, type) {
-    const item = type === 'folder' ? folders.find(f => f.id === id) : documents.find(d => d.id === id);
-    if (!item) return;
-
-    let offcanvas = document.getElementById('details-offcanvas');
-    if (!offcanvas) {
-        createDetailsOffcanvas();
-        offcanvas = document.getElementById('details-offcanvas');
-    }
-
-    // Populate basic info
-    document.getElementById('offcanvas-title').textContent = type === 'folder' ? item.name : item.original_filename;
-    document.getElementById('offcanvas-icon').className = type === 'folder' ? 'bi bi-folder-fill text-warning' : 'bi ' + getFileIcon(item.original_filename);
-    document.getElementById('offcanvas-type').textContent = type === 'folder' ? 'Folder' : (item.mime_type || 'Document');
-    document.getElementById('offcanvas-size').textContent = type === 'folder' ? '-' : formatSize(item.size);
-    document.getElementById('offcanvas-created').textContent = new Date(item.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
-    document.getElementById('offcanvas-status').textContent = type === 'folder' ? 'Local' : (item.status || 'Active');
-    document.getElementById('offcanvas-id').textContent = '#' + id;
-
-    // Load shared users (mock data - replace with API call)
-    loadSharedUsers(id, type);
-
-    // Load name history (mock data - replace with API call)
-    loadNameHistory(id, type);
-
-    // Show offcanvas with overlay
-    document.getElementById('offcanvas-overlay').classList.add('active');
-    offcanvas.classList.add('active');
-}
-
-function createDetailsOffcanvas() {
-    // Create overlay
-    const overlay = document.createElement('div');
-    overlay.id = 'offcanvas-overlay';
-    overlay.className = 'offcanvas-overlay';
-    overlay.onclick = closeDetailsOffcanvas;
-    document.body.appendChild(overlay);
-
-    const offcanvas = document.createElement('div');
-    offcanvas.id = 'details-offcanvas';
-    offcanvas.className = 'details-offcanvas';
-    offcanvas.innerHTML = `
-        <div class="offcanvas-header">
-            <div class="offcanvas-title-section">
-                <i id="offcanvas-icon" class="bi bi-file-earmark offcanvas-icon"></i>
-                <div>
-                    <h5 id="offcanvas-title">Details</h5>
-                    <span class="offcanvas-id" id="offcanvas-id">#0</span>
-                </div>
-            </div>
-            <button class="offcanvas-close" onclick="closeDetailsOffcanvas()">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-        
-        <div class="offcanvas-tabs">
-            <button class="offcanvas-tab active" onclick="switchOffcanvasTab('info')">
-                <i class="bi bi-info-circle"></i> Info
-            </button>
-            <button class="offcanvas-tab" onclick="switchOffcanvasTab('shared')">
-                <i class="bi bi-people"></i> Shared
-            </button>
-            <button class="offcanvas-tab" onclick="switchOffcanvasTab('history')">
-                <i class="bi bi-clock-history"></i> History
-            </button>
-        </div>
-        
-        <div class="offcanvas-body">
-            <!-- Info Tab -->
-            <div id="tab-info" class="offcanvas-tab-content active">
-                <div class="info-card">
-                    <div class="info-row">
-                        <div class="info-item">
-                            <i class="bi bi-file-earmark"></i>
-                            <div>
-                                <label>Type</label>
-                                <span id="offcanvas-type">-</span>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <i class="bi bi-hdd"></i>
-                            <div>
-                                <label>Size</label>
-                                <span id="offcanvas-size">-</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-item">
-                            <i class="bi bi-calendar"></i>
-                            <div>
-                                <label>Created</label>
-                                <span id="offcanvas-created">-</span>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <i class="bi bi-check-circle"></i>
-                            <div>
-                                <label>Status</label>
-                                <span id="offcanvas-status">-</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Shared Tab -->
-            <div id="tab-shared" class="offcanvas-tab-content">
-                <div class="shared-section">
-                    <div class="shared-header">
-                        <span>Shared with</span>
-                        <button class="btn-add-share" onclick="openShareModal()">
-                            <i class="bi bi-plus"></i> Add
-                        </button>
-                    </div>
-                    <div id="shared-users-list" class="shared-users-list">
-                        <div class="empty-state-small">
-                            <i class="bi bi-person-x"></i>
-                            <p>Not shared with anyone</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- History Tab -->
-            <div id="tab-history" class="offcanvas-tab-content">
-                <div class="history-section">
-                    <div class="history-header">
-                        <span>Name Changes</span>
-                    </div>
-                    <div id="name-history-list" class="history-list">
-                        <div class="empty-state-small">
-                            <i class="bi bi-clock"></i>
-                            <p>No changes recorded</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(offcanvas);
-}
-
-function switchOffcanvasTab(tab) {
-    document.querySelectorAll('.offcanvas-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.offcanvas-tab-content').forEach(c => c.classList.remove('active'));
-    document.querySelector(`.offcanvas-tab[onclick*="${tab}"]`).classList.add('active');
-    document.getElementById('tab-' + tab).classList.add('active');
-}
-
-function loadSharedUsers(id, type) {
-    const container = document.getElementById('shared-users-list');
-
-    // Show loading state
-    container.innerHTML = `<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>`;
-
-    fetch(`/x_doc/shared/${type}/${id}`)
-        .then(res => res.json())
-        .then(data => {
-            const shares = data.shares || [];
-
-            if (shares.length === 0) {
-                container.innerHTML = `<div class="empty-state-small"><i class="bi bi-person-x"></i><p>Not shared with anyone</p></div>`;
-                return;
-            }
-
-            container.innerHTML = shares.map(share => {
-                const user = share.user || {};
-                return `
-                    <div class="shared-user">
-                        <div class="shared-user-avatar">${user.avatar || 'U'}</div>
-                        <div class="shared-user-info">
-                            <div class="shared-user-name">${user.name || 'Unknown User'}</div>
-                            <div class="shared-user-email">${user.email || ''}</div>
-                        </div>
-                        <span class="shared-user-permission">${share.permission || 'Viewer'}</span>
-                    </div>
-                `;
-            }).join('');
-        })
-        .catch(err => {
-            console.error('Error loading shared users:', err);
-            container.innerHTML = `<div class="empty-state-small"><i class="bi bi-person-x"></i><p>Not shared with anyone</p></div>`;
-        });
-}
-
-function loadNameHistory(id, type) {
-    const container = document.getElementById('name-history-list');
-
-    // Show loading state
-    container.innerHTML = `<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>`;
-
-    fetch(`/x_doc/history/${type}/${id}`)
-        .then(res => res.json())
-        .then(data => {
-            const history = data.history || [];
-
-            if (history.length === 0) {
-                container.innerHTML = `<div class="empty-state-small"><i class="bi bi-clock"></i><p>No changes recorded</p></div>`;
-                return;
-            }
-
-            container.innerHTML = history.map(h => {
-                return `
-                    <div class="history-item">
-                        <div class="history-icon"><i class="bi bi-pencil"></i></div>
-                        <div class="history-content">
-                            <div class="history-change">
-                                <span class="old-name">${h.old_value || 'N/A'}</span>
-                                <i class="bi bi-arrow-right"></i>
-                                <span class="new-name">${h.new_value || 'N/A'}</span>
-                            </div>
-                            <div class="history-meta">
-                                <span>${h.user || 'You'}</span> • <span>${h.date || ''}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        })
-        .catch(err => {
-            console.error('Error loading history:', err);
-            container.innerHTML = `<div class="empty-state-small"><i class="bi bi-clock"></i><p>No changes recorded</p></div>`;
-        });
-}
-
-function openShareModal() {
-    showAlert('Share modal coming soon', 'info');
-}
-
-function closeDetailsOffcanvas() {
-    const offcanvas = document.getElementById('details-offcanvas');
-    const overlay = document.getElementById('offcanvas-overlay');
-    if (offcanvas) offcanvas.classList.remove('active');
-    if (overlay) overlay.classList.remove('active');
-}
-
-// Expose functions globally
+// "Details" always opens the rich offcanvas (#rich-details-offcanvas, see the
+// window.showDetails alias above) — this used to also point at a second,
+// older, dynamically-built offcanvas (createDetailsOffcanvas/showDetails)
+// reached only from the "Details" menu item, with its own separate
+// Info/Shared/History tabs, a "+ Add" share button that just showed a
+// "coming soon" toast, and no support for cloud items at all (it looked
+// files up in the native `documents`/`folders` arrays only). Removed in
+// favor of a single, consistent Details panel.
 window.toggleCardMenu = toggleCardMenu;
 window.shareItem = shareItem;
 window.renameItem = renameItem;
-window.showDetails = showDetails;
 window.openDeleteModal = openDeleteModal;
-window.closeDetailsOffcanvas = closeDetailsOffcanvas;
-window.switchOffcanvasTab = switchOffcanvasTab;
-window.openShareModal = openShareModal;
 
 // ==========================================
 // MOVE DOCUMENTS FUNCTIONALITY
@@ -2503,3 +2224,95 @@ window.loadCloudFiles = loadCloudFiles;
 window.viewCloudFile = viewCloudFile;
 window.downloadCloudFile = downloadCloudFile;
 window.importCloudFile = importCloudFile;
+
+// ============================================================
+// ACCESSIBILITY (WCAG 2.2 AA) — dialog semantics, focus trap,
+// Escape-to-close and focus return. Applied generically to every
+// .upload-modal and #rich-details-offcanvas via their existing
+// 'active' class toggle, so this covers all current (and future)
+// dialogs without touching each modal's own open/close functions.
+// ============================================================
+(function () {
+    function getFocusable(container) {
+        return Array.from(container.querySelectorAll(
+            'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )).filter(el => el.offsetParent !== null);
+    }
+
+    // Static ARIA wiring: role="dialog", aria-modal, aria-labelledby
+    // (pointing at each modal's own header so it stays in sync even when
+    // the title is updated dynamically, e.g. the PDF viewer's filename),
+    // and aria-hidden on purely decorative icons inside buttons/links.
+    document.querySelectorAll('.upload-modal .modal-content').forEach((content, i) => {
+        content.setAttribute('role', 'dialog');
+        content.setAttribute('aria-modal', 'true');
+        const heading = content.querySelector('.modal-header h2, .modal-header h5');
+        if (heading) {
+            if (!heading.id) heading.id = `a11y-modal-title-${i}`;
+            content.setAttribute('aria-labelledby', heading.id);
+        }
+        content.querySelectorAll('button i.bi, a i.bi').forEach(icon => icon.setAttribute('aria-hidden', 'true'));
+    });
+
+    const richDetailsPanel = document.getElementById('rich-details-offcanvas');
+    if (richDetailsPanel) {
+        richDetailsPanel.setAttribute('role', 'dialog');
+        richDetailsPanel.setAttribute('aria-modal', 'true');
+        richDetailsPanel.setAttribute('aria-labelledby', 'rich-details-title');
+        richDetailsPanel.querySelectorAll('button i.bi').forEach(icon => icon.setAttribute('aria-hidden', 'true'));
+    }
+
+    // Focus trap + return-focus, driven by the same 'active' class every
+    // open/close function already toggles — no changes needed there.
+    let lastFocusedEl = null;
+    function onActiveChange(target) {
+        const isActive = target.classList.contains('active');
+        if (isActive) {
+            lastFocusedEl = document.activeElement;
+            const focusable = getFocusable(target);
+            if (focusable.length) {
+                focusable[0].focus();
+            } else {
+                target.setAttribute('tabindex', '-1');
+                target.focus();
+            }
+        } else if (lastFocusedEl && document.body.contains(lastFocusedEl)) {
+            lastFocusedEl.focus();
+            lastFocusedEl = null;
+        }
+    }
+
+    const modalObserver = new MutationObserver((mutations) => {
+        mutations.forEach(m => onActiveChange(m.target));
+    });
+    document.querySelectorAll('.upload-modal, #rich-details-offcanvas').forEach(el => {
+        modalObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
+    });
+
+    // Escape closes the open dialog; Tab is trapped inside it while open.
+    document.addEventListener('keydown', function (e) {
+        const openModal = document.querySelector('.upload-modal.active') ||
+            (richDetailsPanel && richDetailsPanel.classList.contains('active') ? richDetailsPanel : null);
+        if (!openModal) return;
+
+        if (e.key === 'Escape') {
+            const closeBtn = openModal.querySelector('.modal-close, .modal-cancel, .panel-close');
+            if (closeBtn) closeBtn.click();
+            return;
+        }
+
+        if (e.key === 'Tab') {
+            const focusable = getFocusable(openModal);
+            if (focusable.length === 0) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
+    });
+})();

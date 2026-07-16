@@ -470,6 +470,31 @@ body {
   color: var(--t1);
 }
 
+/* ── Marca XplagiaX en el header (título por defecto) ──
+   Mismo diseño que .tech-brand de las pantallas auth (brand.css), pero con
+   color heredado del header: el blanco del original es para fondos oscuros. */
+#homeGreeting .tech-brand {
+  font-family: 'Inter', 'Work Sans', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  color: var(--t1);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+#homeGreeting .tech-brand:hover {
+  color: #064CDB;
+}
+
+#homeGreeting .tech-brand span {
+  font-size: 1.7rem;
+  position: relative;
+  top: 1px;
+}
+
 .head-actions {
   display: flex;
   gap: 10px;

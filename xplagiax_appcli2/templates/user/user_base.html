@@ -29,7 +29,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/icon/favicon-16x16.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Work+Sans&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Work+Sans&family=Inter:wght@600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app_style_1.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/logout.css') }}">
@@ -302,7 +302,15 @@
       <div class="main" id="homeMain">
 
         <div class="main-head" id="homeHead">
-          <h1 id="homeGreeting">{% block page_title %}XplagiaX{% endblock %}</h1>
+          <h1 id="homeGreeting">{% block page_title %}<a href="/" class="tech-brand" aria-label="XplagiaX">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" stroke="currentColor" class="bi bi-chevron-contract" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708" stroke-width="0.8"></path>
+              </svg>
+              <span>plagia</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" stroke="currentColor" class="bi bi-chevron-contract" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708" stroke-width="0.8"></path>
+              </svg>
+            </a>{% endblock %}</h1>
           <div class="head-actions" id="homeActions">
 
             <!-- Refresh button -->

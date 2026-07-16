@@ -646,6 +646,7 @@
             <!-- Details Tab -->
             <div class="tab-pane fade show active" id="details-pane" role="tabpanel">
                 <div class="panel-body p-0">
+                    <div class="rich-details-section-label">General</div>
                     <div class="item-info">
                         <div class="info-group">
                             <label><i class="bi bi-shield-check"></i> Status</label>
@@ -655,6 +656,14 @@
                             <label><i class="bi bi-file-earmark"></i> Type</label>
                             <span id="rich-panel-type">-</span>
                         </div>
+                    </div>
+
+                    <div class="rich-details-section-label">Storage</div>
+                    <div class="item-info">
+                        <div class="info-group">
+                            <label><i class="bi bi-geo-alt"></i> Location</label>
+                            <span id="rich-panel-location">-</span>
+                        </div>
                         <div class="info-group">
                             <label><i class="bi bi-database"></i> Size</label>
                             <span id="rich-panel-size">-</span>
@@ -663,13 +672,10 @@
                             <label><i class="bi bi-clock"></i> Modified</label>
                             <span id="rich-panel-modified">-</span>
                         </div>
-                        <div class="info-group">
-                            <label><i class="bi bi-geo-alt"></i> Location</label>
-                            <span id="rich-panel-location">-</span>
-                        </div>
                     </div>
 
-                    <div class="panel-actions mt-4">
+                    <div class="rich-details-section-label">Quick actions</div>
+                    <div class="panel-actions mb-2">
                         <button class="btn-action w-100 mb-2" id="rich-panel-open"><i class="bi bi-eye"></i>
                             Open</button>
                         <button class="btn-action w-100 mb-2" id="rich-panel-download"><i class="bi bi-download"></i>
