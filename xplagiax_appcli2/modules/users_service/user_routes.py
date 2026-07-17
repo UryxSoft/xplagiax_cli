@@ -1037,6 +1037,95 @@ def set_auto_archive_preference():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# ── AI plugin preferences (Settings › AI & Automation) ──────────────────────
+# Guarda qué plugins del servicio de detección (xota:5006) corren junto al
+# análisis principal. 'full_analysis' es maestro y excluye a los individuales.
+AI_PLUGIN_KEYS = {
+    'full_analysis', 'perplexity_check', 'stylometric_analysis',
+    'hallucination_check', 'reasoning_check', 'zone_classifier',
+    'author_signature', 'discourse_structure', 'semantic_consistency',
+    'forensic_report',
+}
+
+_AI_PLUGINS_COL_READY = False
+
+
+def _ensure_ai_plugins_column():
+    """Auto-migración idempotente: añade user_preferences.ai_plugins si falta
+    (mismo patrón que analysis_history.result_view — db.create_all() no altera
+    tablas existentes)."""
+    global _AI_PLUGINS_COL_READY
+    if _AI_PLUGINS_COL_READY:
+        return
+    try:
+        from sqlalchemy import inspect as _sa_inspect, text as _sa_text
+        cols = [c['name'] for c in _sa_inspect(db.engine).get_columns('user_preferences')]
+        if 'ai_plugins' not in cols:
+            db.session.execute(_sa_text(
+                'ALTER TABLE user_preferences ADD COLUMN ai_plugins TEXT NULL'))
+            db.session.commit()
+        _AI_PLUGINS_COL_READY = True
+    except Exception:
+        db.session.rollback()
+        logger.warning('Could not ensure user_preferences.ai_plugins column', exc_info=True)
+
+
+def _clean_ai_plugins(raw):
+    """Whitelist + dedup preservando orden. full_analysis excluye individuales
+    (forensic_report puede acompañarlo: es quien produce el reporte HTML)."""
+    seen, out = set(), []
+    for p in (raw or []):
+        p = str(p or '').strip()
+        if p in AI_PLUGIN_KEYS and p not in seen:
+            seen.add(p)
+            out.append(p)
+    if 'full_analysis' in seen:
+        out = ['full_analysis'] + (['forensic_report'] if 'forensic_report' in seen else [])
+    return out
+
+
+@x_users.route('/api/preferences/ai-plugins', methods=['GET'])
+@login_required
+def get_ai_plugins_preference():
+    """API: plugins de IA seleccionados por el usuario (lista vacía = default)."""
+    import json as _json
+    try:
+        _ensure_ai_plugins_column()
+        preference = UserPreference.query.filter_by(user_id=current_user.id).first()
+        plugins = []
+        if preference and getattr(preference, 'ai_plugins', None):
+            try:
+                plugins = _clean_ai_plugins(_json.loads(preference.ai_plugins))
+            except (ValueError, TypeError):
+                plugins = []
+        return jsonify({'success': True, 'plugins': plugins})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@x_users.route('/api/preferences/ai-plugins', methods=['POST'])
+@login_required
+def set_ai_plugins_preference():
+    """API: guarda los plugins de IA seleccionados en Settings › AI & Automation."""
+    import json as _json
+    try:
+        _ensure_ai_plugins_column()
+        data = request.get_json(silent=True) or {}
+        plugins = _clean_ai_plugins(data.get('plugins'))
+        preference = UserPreference.query.filter_by(user_id=current_user.id).first()
+        if not preference:
+            preference = UserPreference(user_id=current_user.id)
+            db.session.add(preference)
+        preference.ai_plugins = _json.dumps(plugins)
+        preference.updated_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({'success': True, 'plugins': plugins})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @x_users.route('/storage_info')
 @login_required
 def get_storage_info():

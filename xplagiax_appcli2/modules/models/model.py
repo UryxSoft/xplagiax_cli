@@ -529,6 +529,9 @@ class UserPreference(db.Model):
     auto_archive_enabled = db.Column(db.Boolean, default=False)
     archive_after_days = db.Column(db.Integer, default=15)
     delete_after_archive_days = db.Column(db.Integer, default=15)
+    # JSON array de plugins de IA (Settings › AI & Automation), p.ej.
+    # ["perplexity_check","zone_classifier"] o ["full_analysis"]. NULL = default.
+    ai_plugins = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
     

@@ -3780,10 +3780,59 @@ AI_SERVICE_MODE = os.environ.get('AI_SERVICE_MODE', 'sync').strip().lower()
 # Plugins por defecto: idénticos a marktrack (el resultado de ai_detection se usa igual).
 AI_DEFAULT_PLUGINS = ['ai_detection', 'citation_check', 'stylometric_analysis']
 
+# El endpoint corto del servicio (POST /analyze) admite textos limitados; por
+# encima de este umbral (palabras) se usa /analyze_document, que procesa el
+# documento por párrafos sin ese tope. Ajustable por entorno.
+AI_ANALYZE_MAX_WORDS = int(os.environ.get('AI_ANALYZE_MAX_WORDS', '600'))
 
-def _ai_async_urls():
-    """Devuelve (submit_url, base_url) del servicio de IA según AI_SERVICE_MODE."""
+
+def _user_ai_plugins():
+    """Plugins elegidos en Settings › AI & Automation (lista validada, [] = default)."""
+    try:
+        from modules.users_service.user_routes import _clean_ai_plugins
+        from modules.models.model import UserPreference
+        pref = UserPreference.query.filter_by(user_id=current_user.id).first()
+        raw = getattr(pref, 'ai_plugins', None) if pref else None
+        if not raw:
+            return []
+        return _clean_ai_plugins(json.loads(raw))
+    except Exception:
+        logger.warning('Could not read AI plugin preferences', exc_info=True)
+        return []
+
+
+def _effective_ai_plugins(requested):
+    """Lista final de plugins para el servicio de IA.
+
+    - Preferencias con full_analysis  → ['full_analysis'] (+ forensic_report si
+      se marcó): el pipeline completo ya incluye detección/estilometría/citas.
+    - Preferencias individuales       → ai_detection (principal) + defaults +
+      los seleccionados, sin duplicados.
+    - Sin preferencias                → lo pedido por el cliente o el default.
+    """
+    prefs = _user_ai_plugins()
+    if not prefs:
+        return list(requested) if requested else list(AI_DEFAULT_PLUGINS)
+    if 'full_analysis' in prefs:
+        return prefs
+    merged = list(AI_DEFAULT_PLUGINS)
+    for p in prefs:
+        if p not in merged:
+            merged.append(p)
+    return merged
+
+
+def _ai_async_urls(word_count=None):
+    """Devuelve (submit_url, base_url) del servicio de IA según AI_SERVICE_MODE.
+
+    Si la URL configurada apunta al endpoint corto /analyze (limitado en tamaño
+    de texto) y el documento supera AI_ANALYZE_MAX_WORDS, se cambia
+    automáticamente a /analyze_document (procesa por párrafos, sin ese límite) —
+    sin esto, un texto de ~1000 palabras devolvía HTTP 400 del servicio.
+    """
     submit_url = AI_TEXT_SERVICE_URL
+    if submit_url.rstrip('/').endswith('/analyze') and word_count and word_count > AI_ANALYZE_MAX_WORDS:
+        submit_url = submit_url.rstrip('/') + '_document'
     if AI_SERVICE_MODE == 'sync':
         # Forzar endpoint síncrono (no requiere worker).
         if submit_url.endswith('/analyze_document_async'):
@@ -3844,22 +3893,38 @@ def analyze_text():
             'stats': current_user.get_analysis_stats()
         }), 403
 
-    plugins = data.get('plugins') or AI_DEFAULT_PLUGINS
-    submit_url, _ = _ai_async_urls()
+    # Plugins efectivos: preferencias del usuario (Settings › AI & Automation)
+    # mandan sobre lo que pida el cliente; sin preferencias, comportamiento actual.
+    plugins = _effective_ai_plugins(data.get('plugins'))
+    word_count = len(text.split())
+    submit_url, _ = _ai_async_urls(word_count)
     headers = {'Content-Type': 'application/json', 'X-API-Key': AI_TEXT_SERVICE_API_KEY}
+    payload = {'text': text, 'plugins': plugins, 'max_tokens': 150}
 
-    try:
-        submit = session_pool.post(
-            submit_url, headers=headers,
-            json={'text': text, 'plugins': plugins, 'max_tokens': 150},
+    def _post(url):
+        return session_pool.post(
+            url, headers=headers, json=payload,
             # Modo sync procesa inline (tarda unos segundos) → read timeout amplio.
             timeout=(5, 90),
         )
+
+    try:
+        submit = _post(submit_url)
+        # Fallback tamaño: el endpoint corto /analyze rechaza con 400 los textos
+        # que exceden su límite. Reintentar UNA vez contra /analyze_document
+        # (por párrafos, sin ese tope) antes de rendirse.
+        if submit.status_code == 400 and submit_url.rstrip('/').endswith('/analyze'):
+            doc_url = submit_url.rstrip('/') + '_document'
+            logger.info('AI submit got 400 on /analyze — retrying via %s', doc_url)
+            submit = _post(doc_url)
     except requests.exceptions.RequestException as exc:
         logger.error('AI submit failed: %s', exc)
         return jsonify({'error': 'Could not reach the analysis service.'}), 502
     if not submit.ok:
         logger.error('AI submit returned %s: %s', submit.status_code, submit.text[:300])
+        if submit.status_code == 400:
+            return jsonify({'error': 'The analysis service rejected this text. '
+                                     'Try a shorter document or try again later.'}), 502
         return jsonify({'error': f'Analysis service error ({submit.status_code}).'}), 502
 
     try:

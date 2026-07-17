@@ -482,6 +482,13 @@ body.xp-file-preview .mode-switch-container {
 .xpa-card.selected { border-color: var(--accent,#064CDB); background:rgba(6,76,219,0.07); }
 .xpa-card-disabled { opacity:0.45; cursor:not-allowed; pointer-events:none; }
 .xpa-card-disabled:hover { border-color:#e5e7eb; background:none; transform:none; }
+/* Card "AI Plugins" con plugins guardados en Settings: azul y clickeable como
+   acceso rápido a Settings › AI & Automation (no participa de la selección). */
+.xpa-card-quick { opacity:1; cursor:pointer; pointer-events:auto; border-color:var(--accent,#064CDB); background:rgba(6,76,219,0.07); }
+.xpa-card-quick:hover { border-color:var(--accent,#064CDB); background:rgba(6,76,219,0.12); transform:translateY(-2px); }
+.xpa-card-quick .xpa-card-icon { color:var(--accent,#064CDB); }
+.xpa-card-quick .xpa-card-desc { color:var(--accent,#064CDB) !important; font-weight:600; }
+.xpa-card-quick .xpa-card-check { opacity:0; }
 .xpa-card-icon { color:#6b7280; transition:color 0.2s ease; }
 .xpa-card.selected .xpa-card-icon { color: var(--accent,#064CDB); }
 .xpa-card-name { font-size:0.85rem; font-weight:600; color:#111; }
@@ -812,6 +819,21 @@ body.xp-file-preview .mode-switch-container {
 .xpa-mt [data-tip]::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 9px);transform:translateX(-50%) translateY(4px);background:#0f172a;color:#f8fafc;font-size:.68rem;font-weight:500;line-height:1.45;padding:7px 10px;border-radius:8px;white-space:normal;width:max-content;max-width:220px;box-shadow:0 10px 24px -8px rgba(15,23,42,.45);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease,transform .15s ease;z-index:80;text-align:left}
 .xpa-mt [data-tip]::before{content:'';position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%) translateY(4px);border:5px solid transparent;border-top-color:#0f172a;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease,transform .15s ease;z-index:80}
 .xpa-mt [data-tip]:hover::after,.xpa-mt [data-tip]:hover::before,.xpa-mt [data-tip]:focus-visible::after,.xpa-mt [data-tip]:focus-visible::before{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+
+/* ── Forensic report modal (plugin forensic_report / full_analysis) ── */
+.xpa-forensic-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(5px);z-index:100060;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .22s ease;padding:20px}
+.xpa-forensic-overlay.open{opacity:1}
+.xpa-forensic-card{background:#f1f5f9;width:100%;max-width:640px;max-height:88vh;border-radius:16px;box-shadow:0 25px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden;transform:translateY(14px);transition:transform .22s ease}
+.xpa-forensic-overlay.open .xpa-forensic-card{transform:translateY(0)}
+.xpa-forensic-head{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:#fff;border-bottom:1px solid #e2e8f0}
+.xpa-forensic-head h2{margin:0;font-size:14px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:8px}
+.xpa-forensic-head h2 i{color:#4338ca}
+.xpa-forensic-btn{border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.xpa-forensic-btn-pri{background:#064CDB;color:#fff}.xpa-forensic-btn-pri:hover{background:#0540b8}
+.xpa-forensic-close{width:30px;height:30px;border:none;background:none;border-radius:50%;color:#64748b;cursor:pointer;font-size:18px;line-height:1}
+.xpa-forensic-close:hover{background:#f1f5f9;color:#0f172a}
+.xpa-forensic-body{overflow-y:auto;padding:18px}
+.xpa-forensic-doc{background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(15,23,42,.08)}
 .xpa-mt .score-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:12px;color:#64748b;background:#f8fafc;border:1px solid #e6ebf2;border-radius:8px;padding:6px 10px;flex:1 1 auto;min-width:90px}
 .xpa-mt .score-item span:last-child{font-size:11px;font-weight:700;color:#0f172a}
 .xpa-mt .score-badge{font-weight:700;padding:4px 10px;border-radius:8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
@@ -2079,6 +2101,34 @@ body.xp-file-preview .mode-switch-container {
 
 
         // ─── Analysis type modal ──────────────────────────────────────────────────
+        // Card "AI Plugins": refleja las preferencias guardadas en Settings ›
+        // AI & Automation. Con plugins guardados se pinta azul (xpa-card-quick)
+        // y al click abre ese panel de Settings; sin plugins queda deshabilitada
+        // con el mismo click de acceso rápido. Nunca entra en la selección.
+        async _refreshAiPluginsCard() {
+            const card = document.getElementById('aiPluginsQuickCard');
+            if (!card) return;
+            try {
+                const res = await fetch('/api/preferences/ai-plugins', { credentials: 'include' });
+                const data = await res.json();
+                this._aiPlugins = (res.ok && data.success && Array.isArray(data.plugins)) ? data.plugins : [];
+            } catch (_) { this._aiPlugins = this._aiPlugins || []; }
+            const n = this._aiPlugins.length;
+            card.classList.toggle('xpa-card-quick', n > 0);
+            card.classList.toggle('xpa-card-disabled', n === 0);
+            card.setAttribute('aria-disabled', n === 0 ? 'true' : 'false');
+            card.tabIndex = n > 0 ? 0 : -1;
+            const desc = document.getElementById('aiPluginsQuickDesc');
+            if (desc) {
+                desc.textContent = n > 0
+                    ? (this._aiPlugins.includes('full_analysis')
+                        ? 'Full Analysis pipeline enabled — click to manage'
+                        : `${n} plugin${n === 1 ? '' : 's'} enabled — click to manage`)
+                    : 'Extend AI TestPro with specialized detection modules';
+                if (n > 0) desc.style.color = '';
+            }
+        }
+
         openAnalysisModal() {
             const modal = document.getElementById('analysisTypeModal');
             if (!modal) return;
@@ -2090,6 +2140,8 @@ body.xp-file-preview .mode-switch-container {
             const hint = document.getElementById('analysisModalHint');
             if (hint) hint.style.display = 'none';
             this._updateAcceptButtonState();
+            // Estado fresco de la card de plugins (pudo cambiar en Settings).
+            this._refreshAiPluginsCard();
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
         }
@@ -2189,6 +2241,20 @@ body.xp-file-preview .mode-switch-container {
                     }
                 });
             }
+
+            // AI Plugins — acceso rápido a Settings › AI & Automation (no es un
+            // tipo de análisis: no togglea .selected, solo abre el panel).
+            const plugCard = document.getElementById('aiPluginsQuickCard');
+            if (plugCard) {
+                const openSettings = () => {
+                    if (plugCard.classList.contains('xpa-card-disabled')) return;
+                    this.closeAnalysisModal();
+                    if (typeof window.xpOpenAccountModal === 'function') window.xpOpenAccountModal('ai');
+                };
+                plugCard.addEventListener('click', openSettings);
+                plugCard.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSettings(); } });
+            }
+            this._refreshAiPluginsCard();
 
             // Close buttons
             document.getElementById('analysisModalClose').addEventListener('click', () => this.closeAnalysisModal());
@@ -3179,7 +3245,43 @@ body.xp-file-preview .mode-switch-container {
                        : apiData;
             const ai = root && root.results && root.results.ai_detection;
             // Igual que marktrack: ai_detection.data || ai_detection.
-            const data = ai && (ai.data || ai);
+            let data = ai && (ai.data || ai);
+
+            // Resultados de los plugins extra (Settings › AI & Automation): cada
+            // entrada del envelope {status, data} distinta de los 3 básicos se
+            // conserva para pintar su tab. Errores/timeout del plugin se omiten.
+            const pluginResults = {};
+            const CORE_KEYS = { ai_detection: 1, citation_check: 1, stylometric_analysis: 1 };
+            if (root && root.results && typeof root.results === 'object') {
+                Object.keys(root.results).forEach(k => {
+                    if (CORE_KEYS[k]) return;
+                    const entry = root.results[k];
+                    const d = entry && (entry.data !== undefined ? entry.data : entry);
+                    if (entry && entry.status !== 'error' && d && typeof d === 'object' && !d.error) {
+                        pluginResults[k] = d;
+                    }
+                });
+            }
+
+            // Modo full_analysis: el pipeline completo reemplaza a ai_detection —
+            // sintetizar el shape que espera la vista desde detection + segment_analysis.
+            const fa = pluginResults.full_analysis;
+            let faMode = false;
+            if ((!data || data.ai_percentage === undefined) && fa && fa.detection) {
+                faMode = true;
+                data = {
+                    ai_percentage: Number(fa.detection.ai_percentage) || 0,
+                    human_percentage: Number(fa.detection.human_percentage) || 0,
+                    detected_model: fa.detection.detected_model || null,
+                    segments: ((fa.segment_analysis || {}).paragraph_scores || []).map(p => ({
+                        dominant_label: p.zone === 'AI' ? 'ai'
+                                      : p.zone === 'HUMAN' ? 'human'
+                                      : ((p.ai_score || 0) >= 50 ? 'ai' : 'human'),
+                        score: p.zone === 'AI' ? (p.ai_score || 0) : (p.human_score || 0),
+                        text: p.text_preview || '',
+                    })),
+                };
+            }
             if (!data || data.ai_percentage === undefined) {
                 throw new Error('Unexpected response from analysis service.');
             }
@@ -3216,7 +3318,13 @@ body.xp-file-preview .mode-switch-container {
             const segWords = blocks.map(b => b.text.split(/\s+/).filter(Boolean).length);
             const totalSegWords = segWords.reduce((a, n) => a + n, 0);
             const allSameLabel = blocks.length > 0 && blocks.every(b => b.type === blocks[0].type);
-            if (allSameLabel) {
+            if (faMode) {
+                // full_analysis: los segmentos son solo previews (80 chars) — el
+                // promedio ponderado por palabras saldría distorsionado; el
+                // pipeline ya entrega el porcentaje global calculado.
+                aiScore = Math.round(data.ai_percentage);
+                humanScore = 100 - aiScore;
+            } else if (allSameLabel) {
                 // Every segment agrees on the label — there is no opposing class
                 // anywhere in the text, so the per-segment confidence gap (e.g. a
                 // segment that is AI at 91% confidence) is the model's residual
@@ -3254,7 +3362,8 @@ body.xp-file-preview .mode-switch-container {
             const citation = (cit && (cit.data || cit)) || null;
 
             return { ai_score: aiScore, human_score: humanScore, word_count: wordCount,
-                     message, blocks, detected_model: detectedModel, stylometric, citation };
+                     message, blocks, detected_model: detectedModel, stylometric, citation,
+                     plugins: Object.keys(pluginResults).length ? pluginResults : null };
         }
 
         // ─── FinderX (source / plagiarism search) ──────────────────────────────────
@@ -4601,6 +4710,417 @@ body.xp-file-preview .mode-switch-container {
             ${list}`;
         }
 
+        // ════════════════════════════════════════════════════════════════════════
+        // Tabs por plugin (Settings › AI & Automation). Cada builder recibe el
+        // `data` crudo del plugin (shape documentado por el servicio) y lo cuenta
+        // en lenguaje simple: QUÉ mide y POR QUÉ importa, con tooltips (data-tip,
+        // en minúscula) sobre cada dato. Estados inconclusive/error incluidos.
+        // ════════════════════════════════════════════════════════════════════════
+        _buildPluginTabs(ai) {
+            const P = (ai && ai.plugins) || {};
+            const defs = [
+                ['perplexity_check',     'fa-wave-square',    'Predictability',      d => this._buildPerplexityPanel(d)],
+                ['hallucination_check',  'fa-ghost',          'Fabrication Risk',    d => this._buildHallucinationPanel(d)],
+                ['reasoning_check',      'fa-brain',          'Reasoning Signals',   d => this._buildReasoningPanel(d)],
+                ['zone_classifier',      'fa-highlighter',    'Text Zones',          d => this._buildZonesPanel(d)],
+                ['author_signature',     'fa-fingerprint',    'Author Consistency',  d => this._buildAuthorPanel(d)],
+                ['discourse_structure',  'fa-sitemap',        'Structure',           d => this._buildDiscoursePanel(d)],
+                ['semantic_consistency', 'fa-scale-balanced', 'Contradictions',      d => this._buildSemanticPanel(d)],
+                ['full_analysis',        'fa-clipboard-check','Full Analysis',       d => this._buildFullAnalysisPanel(d)],
+            ];
+            let buttons = '', panels = '';
+            defs.forEach(([key, icon, title, build]) => {
+                if (!P[key]) return;
+                const id = 'plg_' + key;
+                buttons += `<button class="tab" data-tab="${id}" type="button" title="${title}"><i class="fas ${icon}"></i></button>`;
+                panels += `<div class="tab-panel" data-panel="${id}">${build(P[key])}</div>`;
+            });
+            // forensic_report standalone (sin full_analysis): solo el enlace al reporte.
+            if (P.forensic_report && P.forensic_report.report_id && !P.full_analysis) {
+                this._lastForensic = P.forensic_report;
+                buttons += `<button class="tab" data-tab="plg_forensic" type="button" title="Forensic Report"><i class="fas fa-file-contract"></i></button>`;
+                panels += `<div class="tab-panel" data-panel="plg_forensic">
+                    <h2>Forensic Report</h2>
+                    <div class="insight-box"><p>A complete, formal report of this analysis was generated.
+                    It gathers all the evidence in one document you can share or keep for your records.</p></div>
+                    ${this._forensicLinkHtml(P.forensic_report)}</div>`;
+            }
+            return { buttons, panels };
+        }
+
+        // ── helpers visuales compartidos ─────────────────────────────────────────
+        _plgHero(pct, color, verdict, explain, tip) {
+            return `<div class="ai-probability" style="padding:18px;gap:18px;">
+                <div style="width:96px;height:96px;flex-shrink:0;" data-tip="${tip}">${this._mtGauge(pct, color)}</div>
+                <div class="probability-label"><strong>${verdict}</strong><p>${explain}</p></div>
+            </div>`;
+        }
+        _plgBar(label, pct, color, tip) {
+            const p = Math.max(0, Math.min(100, Math.round(pct)));
+            return `<div style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;font-size:11.5px;color:#475569;margin-bottom:3px;">
+                    <span${tip ? ` data-tip="${tip}"` : ''}>${label}</span><span style="font-weight:700;color:${color}">${p}%</span></div>
+                <div style="height:7px;border-radius:4px;background:#e2e8f0;overflow:hidden;">
+                    <div style="height:100%;width:${p}%;background:${color};border-radius:4px;"></div></div>
+            </div>`;
+        }
+        _plgRiskColor(pct) { return pct >= 50 ? '#ef4444' : pct >= 25 ? '#f59e0b' : '#10b981'; }
+        _plgLevelChip(level) {
+            const l = String(level || '').toLowerCase();
+            const map = { high: ['#ef4444', 'High'], medium: ['#f59e0b', 'Medium'], low: ['#10b981', 'Low'] };
+            const m = map[l] || ['#64748b', level || '—'];
+            return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;color:${m[0]};background:${m[0]}14;border:1px solid ${m[0]}33;">${m[1]}</span>`;
+        }
+        _plgEmpty(title, why) {
+            return `<div class="empty-state"><p>${title}</p><small>${why}</small></div>`;
+        }
+
+        // ── Perplexity: qué tan predecible es la redacción ───────────────────────
+        _buildPerplexityPanel(d) {
+            if (!d || d.ai_score === undefined) return this._plgEmpty('Predictability not available', 'The service did not return predictability data for this text.');
+            const pct = Math.round((Number(d.ai_score) || 0) * 100);
+            const col = this._plgRiskColor(pct);
+            const risk = String(d.risk_level || '');
+            const verdict = risk.startsWith('HIGH') ? 'Very predictable wording'
+                          : risk.startsWith('MEDIUM') ? 'Somewhat predictable wording'
+                          : risk.startsWith('INSUFFICIENT') ? 'Not enough text to tell'
+                          : 'Natural, varied wording';
+            const feats = d.feature_details || {};
+            const rows = Object.keys(feats).map(k => {
+                const f = feats[k] || {};
+                const tip = String(f.explanation || '').toLowerCase().replace(/"/g, '&quot;');
+                return `<div class="score-item"><span data-tip="${tip}">${this._escapeHtml(f.display_name || k)}</span>${this._plgLevelChip(f.level)}</div>`;
+            }).join('');
+            return `
+            <h2>Predictability Check</h2>
+            ${this._plgHero(pct, col, verdict, `${pct}% predictability signal. AI models tend to pick the most likely next word, so very predictable writing can be a sign of AI.`, 'how predictable the wording is — higher means more ai-like')}
+            <div class="insight-box"><p><b>What is this?</b> We measure how easy it is to guess each next word of your text.
+            <b>Why it matters:</b> people write with surprises and detours; AI tends to choose the safest, most expected word every time.</p></div>
+            <div class="integrity-score" style="margin-top:14px;">
+                <h4 style="margin:0 0 10px;font-size:13px;font-weight:700;" data-tip="each signal we looked at, with how strongly it points to ai">Signals we checked</h4>
+                <div class="score-breakdown">${rows || '<div class="score-item"><span>No signals returned</span></div>'}</div>
+            </div>`;
+        }
+
+        // ── Hallucination: señales de contenido inventado ────────────────────────
+        _buildHallucinationPanel(d) {
+            if (!d || d.overall_risk === undefined) return this._plgEmpty('Fabrication check not available', 'The service did not return fabrication-risk data for this text.');
+            const pct = Math.round((Number(d.overall_risk) || 0) * 100);
+            const col = this._plgRiskColor(pct);
+            const NAMES = {
+                lexical_risk: ['Wording risk', 'hedging or overconfident wording that often hides made-up claims'],
+                entity_anomaly: ['Names & facts', 'unusual patterns in the names, dates and numbers mentioned'],
+                entropy: ['Word variety', 'how varied the vocabulary is — very uniform text is a warning sign'],
+                semantic_incoherence: ['Ideas that don’t connect', 'sentences that don’t follow logically from each other'],
+                vagueness: ['Vague language', 'many claims without concrete details behind them'],
+                repetition: ['Repetition', 'the same phrases or ideas repeated over and over'],
+                structural_anomaly: ['Unusual structure', 'sentences that are suspiciously even in length and shape'],
+                imprecision: ['Imprecise claims', 'numbers and dates stated without real precision'],
+            };
+            const cats = d.category_scores || {};
+            const bars = Object.keys(NAMES).filter(k => cats[k] !== undefined).map(k =>
+                this._plgBar(NAMES[k][0], (cats[k] || 0) * 100, this._plgRiskColor((cats[k] || 0) * 100), NAMES[k][1])
+            ).join('');
+            const top = (d.top_signals || []).map(s => {
+                const n = NAMES[s.category] ? NAMES[s.category][0] : s.category;
+                return `<div class="score-item"><span data-tip="${NAMES[s.category] ? NAMES[s.category][1] : 'signal that contributed most to the risk score'}">${n}</span><span style="font-weight:700;color:${this._plgRiskColor((s.category_score || 0) * 100)}">${Math.round((s.category_score || 0) * 100)}%</span></div>`;
+            }).join('');
+            return `
+            <h2>Fabrication Risk</h2>
+            ${this._plgHero(pct, col, pct >= 50 ? 'High risk of made-up content' : pct >= 25 ? 'Some signs worth checking' : 'Low fabrication risk',
+                `${pct}% overall risk that parts of this text state things that were invented rather than sourced.`,
+                'overall chance that the text contains fabricated claims')}
+            <div class="insight-box"><p><b>What is this?</b> A check for "hallucinations" — confident-sounding statements that may be invented.
+            <b>Why it matters:</b> AI sometimes fills gaps with plausible but false facts; these signals help you know where to double-check.</p></div>
+            <div class="integrity-score" style="margin-top:14px;">
+                <h4 style="margin:0 0 10px;font-size:13px;font-weight:700;">Where the risk comes from</h4>
+                ${bars}
+            </div>
+            ${top ? `<div class="integrity-score" style="margin-top:14px;"><h4 style="margin:0 0 10px;font-size:13px;font-weight:700;" data-tip="the three signals that pushed the score up the most">Strongest signals</h4><div class="score-breakdown">${top}</div></div>` : ''}`;
+        }
+
+        // ── Reasoning: señales de modelos de razonamiento ────────────────────────
+        _buildReasoningPanel(d) {
+            if (!d || d.ai_score === undefined) return this._plgEmpty('Reasoning check not available', 'The service did not return reasoning-model data for this text.');
+            const pct = Math.round((Number(d.ai_score) || 0) * 100);
+            const col = this._plgRiskColor(pct);
+            const groups = d.group_scores || {};
+            const GROUP_TIPS = {
+                'CoT & Self-Correction': 'phrases like "wait, let me reconsider" that reasoning ais leave behind',
+                'Logical Connectors': 'heavy use of "therefore", "because", "consequently" chains',
+                'Lexical Richness': 'how rich and varied the vocabulary is',
+                'Structural Variety': 'whether paragraphs and sentences vary naturally in size',
+                'Intuitive Assertions (inverse)': 'humans state things directly by intuition; reasoning ais rarely do',
+            };
+            const bars = Object.keys(groups).map(g =>
+                this._plgBar(g, (groups[g] || 0) * 100, this._plgRiskColor((groups[g] || 0) * 100), (GROUP_TIPS[g] || '').toLowerCase())
+            ).join('');
+            const top = (d.top_signals || []).slice(0, 5).map(s =>
+                `<div class="score-item"><span data-tip="${String(s.explanation || '').toLowerCase().replace(/"/g, '&quot;')}">${this._escapeHtml(s.display_name || s.feature)}</span>${this._plgLevelChip(s.level)}</div>`
+            ).join('');
+            return `
+            <h2>Reasoning-Model Signals</h2>
+            ${this._plgHero(pct, col, pct >= 50 ? 'Strong reasoning-AI patterns' : pct >= 25 ? 'Some reasoning-AI patterns' : 'No clear reasoning-AI patterns',
+                `${pct}% match with the writing style of step-by-step "reasoning" AI models (like o1 or DeepSeek-R1).`,
+                'how much the text resembles output from step-by-step reasoning ais')}
+            <div class="insight-box"><p><b>What is this?</b> Newer AI models "think out loud" in steps, and that leaves fingerprints: chains of "therefore… because… consequently…", self-corrections, and very tidy structure.
+            <b>Why it matters:</b> these models beat older AI detectors, so this check looks specifically for their style.</p></div>
+            <div class="integrity-score" style="margin-top:14px;"><h4 style="margin:0 0 10px;font-size:13px;font-weight:700;">Pattern groups</h4>${bars}</div>
+            ${top ? `<div class="integrity-score" style="margin-top:14px;"><h4 style="margin:0 0 10px;font-size:13px;font-weight:700;" data-tip="the individual measurements that stood out most">Top signals</h4><div class="score-breakdown">${top}</div></div>` : ''}`;
+        }
+
+        // ── Zone classifier: citas, paráfrasis y texto original ──────────────────
+        _buildZonesPanel(d) {
+            if (!d || d.dominant_style === undefined) return this._plgEmpty('Text zones not available', 'The service did not return zone data for this text.');
+            const esc = t => this._escapeHtml(String(t || ''));
+            const TYPE_LBL = { direct_quote: 'Quote', block_quote: 'Long quote', paraphrase: 'Paraphrase', original: 'Original' };
+            const zones = (d.zones || []).slice(0, 15).map(z => {
+                const risk = Math.round((z.plagiarism_risk || 0) * 100);
+                return `<tr>
+                    <td><span style="font-weight:600;">${TYPE_LBL[z.type] || esc(z.type)}</span><div style="font-size:10px;color:#94a3b8;margin-top:2px;">${esc((z.text_preview || '').slice(0, 90))}…</div></td>
+                    <td style="text-align:center;">${z.has_citation ? '<span style="color:#059669;font-weight:700;">Yes</span>' : '<span style="color:#dc2626;font-weight:700;">No</span>'}</td>
+                    <td style="text-align:right;font-weight:700;color:${this._plgRiskColor(risk)}">${risk}%</td>
+                </tr>`;
+            }).join('');
+            return `
+            <h2>Text Zones &amp; Citation Style</h2>
+            <div class="insight-box"><p><b>What is this?</b> Your text split into zones — direct quotes, paraphrases and your own original writing — plus a check of your citation style.
+            <b>Why it matters:</b> quoted or paraphrased material without a citation is where plagiarism problems usually start.</p></div>
+            <div class="integrity-score" style="margin-top:14px;">
+                <div class="score-breakdown">
+                    <div class="score-item"><span data-tip="the citation format detected most often in the document">Citation style</span><span style="font-weight:700;">${esc(d.dominant_style)}</span></div>
+                    <div class="score-item"><span data-tip="how consistently that single style is used across the document">Style consistency</span><span style="font-weight:700;color:${this._plgRiskColor(100 - (d.style_consistency || 0))}">${Math.round(d.style_consistency || 0)}%</span></div>
+                    <div class="score-item"><span data-tip="share of quoted or paraphrased passages that do include a citation">Citation coverage</span><span style="font-weight:700;">${Math.round(d.citation_coverage || 0)}%</span></div>
+                    <div class="score-item"><span data-tip="citations found inside the text">Citations in text</span><span>${d.total_inline_citations || 0}</span></div>
+                    <div class="score-item"><span data-tip="entries found in the reference list / bibliography">Bibliography entries</span><span>${d.total_bibliography || 0}</span></div>
+                    <div class="score-item"><span data-tip="citations that never appear in the bibliography — readers can’t look them up">Citations missing from bibliography</span><span style="color:${(d.orphan_citations || 0) > 0 ? '#dc2626' : '#059669'};font-weight:700;">${d.orphan_citations || 0}</span></div>
+                    <div class="score-item"><span data-tip="bibliography entries that are never cited in the text">Unused bibliography entries</span><span style="color:${(d.uncited_bibliography || 0) > 0 ? '#d97706' : '#059669'};font-weight:700;">${d.uncited_bibliography || 0}</span></div>
+                </div>
+            </div>
+            ${zones ? `<div class="section-breakdown" style="margin-top:14px;">
+                <h4 data-tip="each zone of your text, whether it cites a source, and its plagiarism risk">Zones found</h4>
+                <table class="analysis-table"><thead><tr>
+                    <th><span data-tip="what kind of writing this zone is">Zone</span></th>
+                    <th style="text-align:center;"><span data-tip="does this zone include a citation?">Cited</span></th>
+                    <th style="text-align:right;"><span data-tip="how risky this zone is if left uncited">Risk</span></th>
+                </tr></thead><tbody>${zones}</tbody></table></div>` : ''}`;
+        }
+
+        // ── Author signature: ¿escribió todo la misma persona? ───────────────────
+        _buildAuthorPanel(d) {
+            if (!d) return this._plgEmpty('Author consistency not available', 'The service did not return authorship data for this text.');
+            if (d.status === 'inconclusive') return this._plgEmpty('Text too short to compare', String(d.reason || 'This check needs at least three sizeable paragraphs to compare writing style between parts.'));
+            if (d.status === 'error' || d.consistency_score === undefined) return this._plgEmpty('Author consistency could not run', 'The style comparison failed for this text.');
+            const pct = Math.round((Number(d.consistency_score) || 0) * 100);
+            const col = pct >= 75 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+            const outliers = (d.outliers || []).map(o => `
+                <div class="reference-item unverified" style="margin-top:8px;">
+                    <span class="ref-status" data-tip="this part reads noticeably different from the rest of the document">Different style</span>
+                    <p><b>Part ${(o.chunk_index || 0) + 1}:</b> ${this._escapeHtml(o.text_preview || '')}…
+                    ${o.divergent_features && o.divergent_features.length ? `<br><small style="color:#94a3b8;">what differs: ${o.divergent_features.join(', ')}</small>` : ''}</p>
+                </div>`).join('');
+            return `
+            <h2>Author Consistency</h2>
+            ${this._plgHero(pct, col, pct >= 75 ? 'Reads like one author' : pct >= 50 ? 'Some style shifts' : 'Clear style shifts',
+                `${pct}% consistency between the different parts of the document.`,
+                'how uniform the writing style is across the document — 100% means every part reads the same')}
+            <div class="insight-box"><p><b>What is this?</b> We split the document into parts and compare the writing style of each one.
+            <b>Why it matters:</b> a sudden change of style in the middle of a document often means a section was pasted in from another author — or from an AI.</p>
+            ${d.interpretation ? `<p style="margin-top:6px;">${this._escapeHtml(d.interpretation)}</p>` : ''}</div>
+            ${outliers ? `<h4 style="margin:16px 0 4px;" data-tip="the specific parts whose style stands apart">Parts that stand out</h4>${outliers}`
+                       : `<div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;padding:12px;background:#f1f5f9;border-radius:10px;border:1px solid #e6ebf2;">
+                            <span style="font-size:12px;font-weight:600;color:#334155;">Style shifts</span>
+                            <span class="score-badge score-high" style="font-size:10px;">Not Detected</span></div>`}`;
+        }
+
+        // ── Discourse: ¿estructura plantillada? ──────────────────────────────────
+        _buildDiscoursePanel(d) {
+            if (!d) return this._plgEmpty('Structure check not available', 'The service did not return structure data for this text.');
+            if (d.status === 'inconclusive') return this._plgEmpty('Text too short to analyze', String(d.reason || 'This check needs at least four sentences.'));
+            if (d.status === 'error' || d.uniformity === undefined) return this._plgEmpty('Structure check could not run', 'The structure analysis failed for this text.');
+            const pct = Math.round((Number(d.uniformity) || 0) * 100);
+            const col = this._plgRiskColor(pct);
+            const F = d.features || {};
+            const FEATS = [
+                ['connective_density', 'Formal connectors', 'how often sentences start with "moreover", "furthermore", "however" — ai overuses them'],
+                ['paragraph_uniformity', 'Even paragraphs', 'paragraphs that are all suspiciously similar in length'],
+                ['enumeration_scaffold', 'Numbered scaffolding', 'firstly / secondly / finally patterns and numbered lists'],
+                ['opening_repetition', 'Repeated openings', 'many sentences starting with the same words'],
+                ['conclusion_marker', 'Formal closing', 'a textbook "in conclusion" style ending'],
+            ];
+            const bars = FEATS.filter(([k]) => F[k] !== undefined).map(([k, lbl, tip]) =>
+                this._plgBar(lbl, (F[k] || 0) * 100, this._plgRiskColor((F[k] || 0) * 100), tip)).join('');
+            const ev = d.evidence || {};
+            const chips = [].concat(ev.transition_markers || [], ev.enumeration_markers || [], ev.conclusion_markers || [])
+                .slice(0, 12).map(m => `<span style="display:inline-block;font-size:11px;padding:2px 9px;margin:2px;border-radius:10px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;">${this._escapeHtml(m)}</span>`).join('');
+            return `
+            <h2>Structure Analysis</h2>
+            ${this._plgHero(pct, col, pct >= 50 ? 'Very templated structure' : pct >= 25 ? 'Somewhat templated' : 'Natural, organic structure',
+                `${pct}% structural regularity across ${d.paragraph_count || 0} paragraphs.`,
+                'how template-like the document structure is — higher looks more machine-planned')}
+            <div class="insight-box"><p><b>What is this?</b> A look at the skeleton of the document: paragraph sizes, connector words and list patterns.
+            <b>Why it matters:</b> AI plans documents like a template — even paragraphs, formal connectors, a tidy conclusion. This survives even when the words are reworded, so it catches paraphrased AI text.</p></div>
+            <div class="integrity-score" style="margin-top:14px;"><h4 style="margin:0 0 10px;font-size:13px;font-weight:700;">What we measured</h4>${bars}</div>
+            ${chips ? `<div style="margin-top:14px;"><h4 style="margin:0 0 8px;font-size:13px;" data-tip="the exact connector words found in your text">Connector words found</h4>${chips}</div>` : ''}`;
+        }
+
+        // ── Semantic: ¿el texto se contradice a sí mismo? ────────────────────────
+        _buildSemanticPanel(d) {
+            if (!d) return this._plgEmpty('Contradiction check not available', 'The service did not return consistency data for this text.');
+            if (d.status === 'inconclusive') return this._plgEmpty('Text too short to check', String(d.reason || 'This check needs at least four sentences.'));
+            const n = d.contradiction_count || 0;
+            const items = (d.contradictions || []).map(c => `
+                <div class="reference-item unverified" style="margin-top:8px;">
+                    <span class="ref-status" data-tip="${String(c.reason || 'these two sentences state incompatible things').toLowerCase().replace(/"/g, '&quot;')}">Contradiction</span>
+                    <p>"${this._escapeHtml(c.sentence_a || '')}"<br>
+                       <b style="color:#dc2626;">vs</b> "${this._escapeHtml(c.sentence_b || '')}"</p>
+                </div>`).join('');
+            return `
+            <h2>Internal Contradictions</h2>
+            <div class="insight-box"><p><b>What is this?</b> A search for sentences in your document that contradict each other — different numbers for the same fact, or a "yes" that later becomes a "no".
+            <b>Why it matters:</b> a human author remembers what they wrote; AI sometimes doesn’t, and contradictions are also a classic sign of fabricated content.</p></div>
+            <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;padding:14px;background:${n > 0 ? '#fef2f2' : '#f0fdf4'};border-radius:10px;border:1px solid ${n > 0 ? '#fecaca' : '#bbf7d0'};">
+                <span style="font-size:13px;font-weight:600;color:#334155;" data-tip="pairs of sentences that state incompatible things">Contradictions found</span>
+                <span style="font-size:18px;font-weight:800;color:${n > 0 ? '#dc2626' : '#059669'};">${n}</span>
+            </div>
+            ${items || '<div style="margin-top:12px;" class="insight-box"><p>The document is internally consistent — no sentence contradicts another. That’s what you’d expect from careful, single-author writing.</p></div>'}`;
+        }
+
+        // ── Full analysis: veredicto del pipeline completo ───────────────────────
+        _buildFullAnalysisPanel(fa) {
+            if (!fa || !fa.detection) return this._plgEmpty('Full analysis not available', 'The complete pipeline did not return results for this text.');
+            const det = fa.detection;
+            const pred = det.prediction || 'Unknown';
+            const conf = Math.round(det.confidence || 0);
+            const aiPct = Math.round(det.ai_percentage || 0);
+            const col = pred === 'AI' ? '#ef4444' : pred === 'Human' ? '#10b981' : '#f59e0b';
+            const verdict = pred === 'AI' ? 'Likely AI-generated' : pred === 'Human' ? 'Likely human-written' : 'Inconclusive';
+            const fusion = fa.fusion || null;
+            const seg = fa.segment_analysis || null;
+            const segRows = ((seg && seg.paragraph_scores) || []).slice(0, 20).map(p => {
+                const zc = p.zone === 'AI' ? '#ef4444' : p.zone === 'HUMAN' ? '#10b981' : '#f59e0b';
+                return `<tr>
+                    <td>Paragraph ${(p.index || 0) + 1}<div style="font-size:10px;color:#94a3b8;margin-top:2px;">${this._escapeHtml(p.text_preview || '')}…</div></td>
+                    <td style="text-align:center;"><span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;color:${zc};background:${zc}14;border:1px solid ${zc}33;">${p.zone === 'AI' ? 'AI' : p.zone === 'HUMAN' ? 'Human' : 'Unsure'}</span></td>
+                    <td style="text-align:right;font-weight:700;color:${this._plgRiskColor(p.ai_score || 0)}">${Math.round(p.ai_score || 0)}%</td>
+                </tr>`;
+            }).join('');
+            const forensic = fa.forensic || null;
+            if (forensic) this._lastForensic = forensic;
+            return `
+            <h2>Full Analysis Verdict</h2>
+            ${this._plgHero(aiPct, col, verdict, `${conf}% confidence. Every check — detection, style, fabrication, reasoning, predictability, structure and citations — was combined into this single verdict.`,
+                'final verdict after combining all the individual checks')}
+            <div class="insight-box"><p><b>What is this?</b> The most complete review available: instead of one detector, a dozen independent checks each give their opinion, and a final step weighs them all together.
+            <b>Why it matters:</b> any single check can be fooled; it is much harder to fool all of them at once.</p></div>
+            ${fusion ? `<div class="integrity-score" style="margin-top:14px;">
+                <h4 style="margin:0 0 10px;font-size:13px;font-weight:700;" data-tip="probability that the text is ai after weighing all checks together">Combined AI probability</h4>
+                ${this._plgBar('All checks combined', (fusion.probability || 0) * 100, this._plgRiskColor((fusion.probability || 0) * 100), 'the final number after every signal is weighed together')}
+            </div>` : ''}
+            ${seg ? `<div class="integrity-score" style="margin-top:14px;">
+                <div class="score-breakdown">
+                    <div class="score-item"><span data-tip="overall reading of how the document was authored">Classification</span><span style="font-weight:700;">${this._escapeHtml(seg.classification || '—')}</span></div>
+                    <div class="score-item"><span data-tip="paragraphs analyzed one by one">Paragraphs</span><span>${seg.total_paragraphs || 0}</span></div>
+                    <div class="score-item"><span data-tip="places where the text switches between human-like and ai-like writing">Style switches</span><span style="color:${(seg.breakpoint_count || 0) > 0 ? '#d97706' : '#059669'};font-weight:700;">${seg.breakpoint_count || 0}</span></div>
+                </div>
+            </div>` : ''}
+            ${segRows ? `<div class="section-breakdown" style="margin-top:14px;">
+                <h4 data-tip="each paragraph scored on its own — spot exactly where ai-like writing appears">Paragraph by paragraph</h4>
+                <table class="analysis-table"><thead><tr>
+                    <th><span data-tip="the paragraph, in document order">Paragraph</span></th>
+                    <th style="text-align:center;"><span data-tip="who most likely wrote it">Verdict</span></th>
+                    <th style="text-align:right;"><span data-tip="chance this paragraph was machine-generated">AI Prob.</span></th>
+                </tr></thead><tbody>${segRows}</tbody></table></div>` : ''}
+            ${forensic ? this._forensicLinkHtml(forensic) : ''}`;
+        }
+
+        // ── Forensic report: link + modal profesional con descarga PDF ───────────
+        _forensicLinkHtml(f) {
+            return `<div style="margin-top:16px;padding:14px 16px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <i class="fas fa-file-contract" style="font-size:20px;color:#4338ca;"></i>
+                    <div><div style="font-size:13px;font-weight:700;color:#1e1b4b;">Forensic Report</div>
+                    <div style="font-size:11px;color:#6366f1;">Formal document with the verdict and all the evidence</div></div>
+                </div>
+                <button type="button" class="btn-link" data-forensic-open style="white-space:nowrap;" data-tip="open the full report — you can download it as a pdf">View Report</button>
+            </div>`;
+        }
+
+        _openForensicModal(f) {
+            if (!f) return;
+            document.getElementById('xpaForensicOverlay')?.remove();
+            const esc = t => this._escapeHtml(String(t || ''));
+            const verdict = f.verdict || 'Unknown';
+            const vCol = verdict === 'AI-Generated' ? '#dc2626' : verdict === 'Human-Written' ? '#059669' : '#d97706';
+            const conf = Math.round((Number(f.confidence) || 0) * 100);
+            const scores = f.scores || null;
+            const SCORE_LBL = { neural: 'AI detector', statistical: 'Statistical patterns', stylometric: 'Writing style', reasoning: 'Reasoning signals', watermark: 'Watermark' };
+            const scoreRows = scores ? Object.keys(scores).map(k =>
+                `<tr><td style="padding:7px 10px;border-bottom:1px solid #eef2f7;color:#475569;">${SCORE_LBL[k] || esc(k)}</td>
+                     <td style="padding:7px 10px;border-bottom:1px solid #eef2f7;text-align:right;font-weight:700;color:${this._plgRiskColor((scores[k] || 0) * 100)}">${Math.round((scores[k] || 0) * 100)}%</td></tr>`
+            ).join('') : '';
+            const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            const bodyHtml = `
+                <div class="xpa-forensic-doc" id="xpaForensicDoc">
+                    <div style="background:#064CDB;color:#fff;padding:22px 26px;border-radius:12px 12px 0 0;">
+                        <div style="font-size:18px;font-weight:800;letter-spacing:.02em;">XplagiaX</div>
+                        <div style="font-size:12px;opacity:.75;margin-top:2px;">AI TestPro — Forensic Analysis Report</div>
+                    </div>
+                    <div style="padding:24px 26px;">
+                        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:11.5px;color:#64748b;margin-bottom:18px;">
+                            <span data-tip="unique id of this report">Report ID: <b style="color:#0f172a;">${esc(f.report_id || '—')}</b></span>
+                            <span>${dateStr}</span>
+                        </div>
+                        <div style="text-align:center;padding:18px;background:${vCol}0d;border:1px solid ${vCol}33;border-radius:12px;margin-bottom:18px;">
+                            <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;" data-tip="the final conclusion of the forensic pipeline">Verdict</div>
+                            <div style="font-size:24px;font-weight:800;color:${vCol};margin-top:4px;">${esc(verdict)}</div>
+                            <div style="font-size:12px;color:#64748b;margin-top:4px;" data-tip="how certain the system is about this verdict">${conf}% confidence · ${f.word_count || 0} words analyzed · ${f.evidence_count || 0} evidence points</div>
+                        </div>
+                        ${f.executive_summary ? `<h4 style="font-size:13px;margin:0 0 8px;color:#0f172a;">Executive Summary</h4>
+                            <p style="font-size:12.5px;line-height:1.6;color:#334155;background:#f8fafc;border-left:3px solid #064CDB;padding:12px 14px;border-radius:0 8px 8px 0;">${esc(f.executive_summary)}</p>` : ''}
+                        ${scoreRows ? `<h4 style="font-size:13px;margin:16px 0 8px;color:#0f172a;" data-tip="what each family of checks concluded on its own">Evidence Scores</h4>
+                            <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border:1px solid #eef2f7;border-radius:8px;overflow:hidden;">${scoreRows}</table>` : ''}
+                        <p style="font-size:10.5px;color:#94a3b8;margin-top:20px;border-top:1px solid #eef2f7;padding-top:10px;">
+                            Generated by XplagiaX · AI TestPro. This report is an automated analysis aid, not a legal determination of authorship.</p>
+                    </div>
+                </div>`;
+            const overlay = document.createElement('div');
+            overlay.id = 'xpaForensicOverlay';
+            overlay.className = 'xpa-forensic-overlay';
+            overlay.innerHTML = `
+                <div class="xpa-forensic-card" role="dialog" aria-modal="true" aria-label="Forensic report">
+                    <div class="xpa-forensic-head">
+                        <h2><i class="fas fa-file-contract"></i> Forensic Report</h2>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <button type="button" class="xpa-forensic-btn xpa-forensic-btn-pri" data-forensic-pdf data-tip="opens the print dialog — choose ‘save as pdf’ as the destination">
+                                <i class="fas fa-file-pdf"></i> Download PDF</button>
+                            <button type="button" class="xpa-forensic-close" aria-label="Close">&#215;</button>
+                        </div>
+                    </div>
+                    <div class="xpa-forensic-body xpa-mt">${bodyHtml}</div>
+                </div>`;
+            document.body.appendChild(overlay);
+            const close = () => overlay.remove();
+            overlay.querySelector('.xpa-forensic-close').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            document.addEventListener('keydown', function onEsc(e) {
+                if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
+            });
+            overlay.querySelector('[data-forensic-pdf]').addEventListener('click', () => {
+                // Descarga como PDF: documento imprimible autónomo → el diálogo de
+                // impresión del navegador permite "Guardar como PDF".
+                const w = window.open('', '_blank');
+                if (!w) return;
+                w.document.write(`<!DOCTYPE html><html><head><title>XplagiaX Forensic Report</title>
+                    <meta charset="utf-8"><style>body{font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;margin:24px;background:#fff;}
+                    [data-tip]{cursor:default;}</style></head><body>${document.getElementById('xpaForensicDoc').outerHTML}</body></html>`);
+                w.document.close();
+                w.focus();
+                setTimeout(() => { w.print(); }, 250);
+            });
+            requestAnimationFrame(() => overlay.classList.add('open'));
+        }
+
         _mtCorpusDark(academic, best, directCopy, copyPct, overall) {
             const seen = new Set();
             const top = academic.filter(m => {
@@ -5226,6 +5746,9 @@ body.xp-file-preview .mode-switch-container {
             overlay.addEventListener('click', e => {
                 const b = e.target.closest('[data-goto]');
                 if (b) { e.preventDefault(); go(b.dataset.goto); }
+                // Link "View Report" del forensic report (plugin) → modal con PDF.
+                const fr = e.target.closest('[data-forensic-open]');
+                if (fr) { e.preventDefault(); this._openForensicModal(this._lastForensic); }
                 // "Show more/less" de las filas de sección — no debe disparar el
                 // click de la fila (que localiza la sección en el panel de texto).
                 const more = e.target.closest('[data-sec-toggle]');
@@ -5364,6 +5887,9 @@ body.xp-file-preview .mode-switch-container {
             const hasCit   = !!citation;
             const hasStyle = !!(ai && ai.stylometric);
             const hasRefs  = !!(ai && ai.citation && Array.isArray(ai.citation.references) && ai.citation.references.length > 0);
+            // Tabs extra: uno por plugin habilitado en Settings › AI & Automation
+            // que haya devuelto datos. Sin plugins seleccionados no aparece ninguno.
+            const plgTabs = this._buildPluginTabs(ai);
 
             const overlay = document.createElement('div');
             overlay.id = 'aiAnalysisSplitView';
@@ -5413,6 +5939,7 @@ body.xp-file-preview .mode-switch-container {
                                 ${hasCit   ? '<button class="tab" data-tab="cit"  type="button" title="Citations, References &amp; Bibliography"><i class="fas fa-quote-right"></i></button>' : ''}
                                 ${hasStyle ? '<button class="tab" data-tab="style" type="button" title="Style Analysis"><i class="fas fa-pen-nib"></i></button>'         : ''}
                                 ${hasRefs  ? '<button class="tab" data-tab="refs" type="button" title="References Integrity"><i class="fas fa-book"></i></button>'       : ''}
+                                ${plgTabs.buttons}
                             </div>
                             <div class="tab-content">
                                 <div class="tab-panel active" data-panel="ov">${this._buildMtOverview(ai, source, citation)}</div>
@@ -5421,6 +5948,7 @@ body.xp-file-preview .mode-switch-container {
                                 ${hasCit   ? `<div class="tab-panel" data-panel="cit">${this._buildMtCitationsPanel(citation)}</div>`    : ''}
                                 ${hasStyle ? `<div class="tab-panel" data-panel="style">${this._buildMtStylePanel(ai)}</div>`            : ''}
                                 ${hasRefs  ? `<div class="tab-panel" data-panel="refs">${this._buildMtRefsPanel(ai)}</div>`              : ''}
+                                ${plgTabs.panels}
                             </div>
                         </div>
                     </div>
@@ -7466,15 +7994,17 @@ body.xp-file-preview .mode-switch-container {
                     <div class="xpa-card-desc" style="color:#d1d5db;">Reverse web search</div>
                     <span class="xpa-card-check">✓</span>
                 </div>
-                <!-- Row 2 col 1 — AI Plugins -->
-                <div class="xpa-card xpa-card-disabled" data-type="ai_plugins" role="checkbox" aria-checked="false" aria-disabled="true" tabindex="-1">
+                <!-- Row 2 col 1 — AI Plugins (acceso rápido a Settings › AI & Automation;
+                     nunca cuenta como tipo de análisis: no usa la clase .selected) -->
+                <div class="xpa-card xpa-card-disabled" data-type="ai_plugins" id="aiPluginsQuickCard" role="button" aria-disabled="true" tabindex="-1"
+                     title="open settings › ai & automation to choose detection plugins">
                     <div class="xpa-card-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M6 0a.5.5 0 0 1 .5.5V3h3V.5a.5.5 0 0 1 1 0V3h1a.5.5 0 0 1 .5.5v3A3.5 3.5 0 0 1 8.5 10c-.002.434-.01.845-.04 1.22-.041.514-.126 1.003-.317 1.424a2.08 2.08 0 0 1-.97 1.028C6.725 13.9 6.169 14 5.5 14c-.998 0-1.61.33-1.974.718A1.92 1.92 0 0 0 3 16H2c0-.616.232-1.367.797-1.968C3.374 13.42 4.261 13 5.5 13c.581 0 .962-.088 1.218-.219.241-.123.4-.3.514-.55.121-.266.193-.621.23-1.09.027-.34.035-.718.037-1.141A3.5 3.5 0 0 1 4 6.5v-3a.5.5 0 0 1 .5-.5h1V.5A.5.5 0 0 1 6 0"/>
                         </svg>
                     </div>
                     <div class="xpa-card-name">AI Plugins</div>
-                    <div class="xpa-card-desc" style="color:#d1d5db;">Extend AI TestPro with specialized detection modules</div>
+                    <div class="xpa-card-desc" id="aiPluginsQuickDesc" style="color:#d1d5db;">Extend AI TestPro with specialized detection modules</div>
                     <span class="xpa-card-check">✓</span>
                 </div>
                 <!-- Row 2 col 2 — Citations & References -->

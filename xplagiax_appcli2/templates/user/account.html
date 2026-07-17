@@ -841,7 +841,7 @@
                 <div class="sm-row-desc">Text predictability analysis via n-gram proxy (Tier 1, CPU) + optional GPT-2 (Tier 2, GPU).</div>
               </div>
               <label class="sm-switch" aria-label="Perplexity check">
-                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <input type="checkbox" onchange="smSaveAiPlugins(this)">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
@@ -852,7 +852,7 @@
                 <div class="sm-row-desc">Detailed analysis of writing style: sentence structure, vocabulary richness, and burstiness.</div>
               </div>
               <label class="sm-switch" aria-label="Stylometric analysis">
-                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <input type="checkbox" onchange="smSaveAiPlugins(this)">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
@@ -863,7 +863,7 @@
                 <div class="sm-row-desc">Detects AI fabrication risk: internal inconsistencies and factual drift.</div>
               </div>
               <label class="sm-switch" aria-label="Hallucination check">
-                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <input type="checkbox" onchange="smSaveAiPlugins(this)">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
@@ -874,7 +874,7 @@
                 <div class="sm-row-desc">Detects reasoning-model signals (o1, DeepSeek-R1): CoT markers and causal density.</div>
               </div>
               <label class="sm-switch" aria-label="Reasoning check">
-                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <input type="checkbox" onchange="smSaveAiPlugins(this)">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
@@ -885,7 +885,7 @@
                 <div class="sm-row-desc">Classifies text zones (direct quotes, paraphrases, original content). Detects citation style (APA/MLA/IEEE/Chicago/Vancouver/Harvard), coverage, and consistency. No network calls.</div>
               </div>
               <label class="sm-switch" aria-label="Zone classifier">
-                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <input type="checkbox" onchange="smSaveAiPlugins(this)">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
@@ -896,7 +896,7 @@
                 <div class="sm-row-desc">Intra-document authorship consistency. Splits the text into chunks and measures style dispersion — flags sections spliced from a different author/AI. Localization aid, not a verdict.</div>
               </div>
               <label class="sm-switch" aria-label="Author signature">
-                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <input type="checkbox" onchange="smSaveAiPlugins(this)">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
@@ -907,7 +907,7 @@
                 <div class="sm-row-desc">Argumentative-structure uniformity (model-agnostic). Detects templated discourse: even paragraphs, formal connectives, enumeration/closing scaffolding. Survives paraphrasing.</div>
               </div>
               <label class="sm-switch" aria-label="Discourse structure">
-                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <input type="checkbox" onchange="smSaveAiPlugins(this)">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
@@ -918,7 +918,7 @@
                 <div class="sm-row-desc">Internal-contradiction detection (model-agnostic). Flags sentences that contradict each other (negation flips, numeric mismatches; optional NLI).</div>
               </div>
               <label class="sm-switch" aria-label="Semantic consistency">
-                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <input type="checkbox" onchange="smSaveAiPlugins(this)">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
@@ -929,7 +929,7 @@
                 <div class="sm-row-desc">Generates a full HTML forensic report via ForensicReportGenerator. Requires full_analysis pipeline.</div>
               </div>
               <label class="sm-switch" aria-label="Forensic report">
-                <input type="checkbox" onchange="smToast('Plugin setting saved.','success')">
+                <input type="checkbox" onchange="smSaveAiPlugins(this)">
                 <span class="sm-switch-track"></span>
               </label>
             </div>
@@ -1541,6 +1541,7 @@ document.addEventListener('DOMContentLoaded', () => {
   secLoadChart();
   smLoadDocumentRetention();
   smLoadAutoArchive();
+  smLoadAiPlugins();
 });
 
 /* ───── Privacy: Document Retention ──────────────────────── */
@@ -1581,14 +1582,80 @@ async function smSetDocumentRetention(el) {
 
 /* ───── AI Detection Settings: plugin toggles ────────────────
    Selecting "Full Analysis" runs the complete pipeline and disables
-   (unchecks + locks) every individual plugin below it. */
-function smTogglePluginMode(el) {
-  const enabled = el.checked;
-  document.querySelectorAll('.sm-plugin-row input[type="checkbox"]').forEach((cb) => {
-    if (enabled) cb.checked = false;
-    cb.disabled = enabled;
+   (unchecks + locks) every individual plugin below it — EXCEPT
+   forensic_report, which is the report produced by that same pipeline.
+   Every change persists to /api/preferences/ai-plugins so the analysis
+   screen can include the selection in the AI TestPro request. */
+function _smCollectAiPlugins() {
+  const out = [];
+  const full = document.getElementById('pluginFullAnalysis');
+  if (full && full.checked) out.push('full_analysis');
+  document.querySelectorAll('.sm-plugin-row').forEach((row) => {
+    const cb = row.querySelector('input[type="checkbox"]');
+    const key = row.dataset.plugin;
+    if (!cb || !key || !cb.checked) return;
+    // Con Full Analysis activo solo acompaña forensic_report.
+    if (full && full.checked && key !== 'forensic_report') return;
+    out.push(key);
   });
-  smToast(enabled ? 'Full Analysis enabled — individual plugins disabled.' : 'Full Analysis disabled.', 'success');
+  return out;
+}
+
+function _smApplyFullAnalysisLock(enabled) {
+  document.querySelectorAll('.sm-plugin-row').forEach((row) => {
+    const cb = row.querySelector('input[type="checkbox"]');
+    if (!cb) return;
+    const isForensic = row.dataset.plugin === 'forensic_report';
+    if (enabled && !isForensic) cb.checked = false;
+    cb.disabled = enabled && !isForensic;
+  });
+}
+
+async function smSaveAiPlugins(el) {
+  if (el) el.disabled = true;
+  try {
+    const res = await fetch('/api/preferences/ai-plugins', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plugins: _smCollectAiPlugins() })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) smToast('Plugin setting saved.', 'success');
+    else {
+      if (el) el.checked = !el.checked;
+      smToast(data.error || 'Could not save plugin setting.', 'error');
+    }
+  } catch (_) {
+    if (el) el.checked = !el.checked;
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    if (el) el.disabled = false;
+    const full = document.getElementById('pluginFullAnalysis');
+    _smApplyFullAnalysisLock(!!(full && full.checked));
+  }
+}
+
+function smTogglePluginMode(el) {
+  _smApplyFullAnalysisLock(el.checked);
+  smSaveAiPlugins(el);
+}
+
+async function smLoadAiPlugins() {
+  const full = document.getElementById('pluginFullAnalysis');
+  if (!full) return;
+  try {
+    const res = await fetch('/api/preferences/ai-plugins', { credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok || !data.success) return;
+    const plugins = data.plugins || [];
+    full.checked = plugins.includes('full_analysis');
+    document.querySelectorAll('.sm-plugin-row').forEach((row) => {
+      const cb = row.querySelector('input[type="checkbox"]');
+      if (cb) cb.checked = plugins.includes(row.dataset.plugin);
+    });
+    _smApplyFullAnalysisLock(full.checked);
+  } catch (_) { /* deja los switches en su estado por defecto (off) si falla */ }
 }
 
 /* ───── Automation Rules: Auto-Archive ───────────────────────
