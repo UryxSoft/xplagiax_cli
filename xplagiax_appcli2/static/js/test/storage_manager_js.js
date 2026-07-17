@@ -1288,7 +1288,12 @@ class StorageManager {
         const percentText = document.getElementById('stats-percentage');
         const usageText = document.getElementById('stats-usage-text');
 
-        if (progressBar) progressBar.style.width = `${percent}%`;
+        if (progressBar) {
+            progressBar.style.width = `${percent}%`;
+            progressBar.classList.remove('stats-progress-bar--warning', 'stats-progress-bar--danger');
+            if (percent >= 90) progressBar.classList.add('stats-progress-bar--danger');
+            else if (percent >= 75) progressBar.classList.add('stats-progress-bar--warning');
+        }
         if (percentText) percentText.textContent = `${percent}%`;
         if (usageText) usageText.textContent = `${this.formatSize(stats.used_storage)} used of ${this.formatSize(stats.total_storage)}`;
 
@@ -1599,12 +1604,15 @@ class StorageManager {
             if (result.success) {
                 this.showSuccess('Moved successfully');
                 await this.loadStorageContent(this.currentStorage, this.cloudFolderId);
+                return true;
             } else {
                 this.showError(result.error || 'Failed to move');
+                return false;
             }
         } catch (error) {
             console.error('Move error:', error);
             this.showError('Failed to move');
+            return false;
         }
     }
 

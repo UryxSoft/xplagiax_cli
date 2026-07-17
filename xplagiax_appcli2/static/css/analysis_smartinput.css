@@ -1871,7 +1871,12 @@
 /* Animación del contenido interno */
 .input-content {
     position: relative;
-    padding-top: 15px;
+    /* .mode-switch-container es absolute (top:12px) y su fila flex mide
+       ~44px de alto (la marca el botón #backToDropBtn, 44x44, no el
+       switch de 24px) → borde inferior ~56px desde el wrapper. Con solo
+       15px de padding-top el contenido (drop-zone) quedaba tapado un
+       poco por debajo del switch. */
+    padding-top: 40px;
     z-index: 1;
     transition: opacity 0.3s ease;
 }

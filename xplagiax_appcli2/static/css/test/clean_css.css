@@ -1510,6 +1510,170 @@
 }
 
 /* =============================================== */
+/* RENAME MODAL — hero context card + live feedback  */
+/* (shared by native #rename-modal and #cloud-rename-modal) */
+/* =============================================== */
+.rename-hero-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.rename-hero-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.05rem;
+  background: #e5e7eb;
+}
+
+.rename-hero-info {
+  min-width: 0;
+}
+
+.rename-hero-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.rename-hero-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.rename-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  margin-top: 8px;
+}
+
+.rename-status-pill--idle {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+.rename-status-pill--dirty {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.rename-status-pill--restored {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.rename-counter {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+.rename-counter--warn {
+  color: #d97706;
+  font-weight: 600;
+}
+
+.rename-checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 12px;
+  font-size: 0.74rem;
+}
+
+.rename-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #94a3b8;
+  transition: color 0.15s ease;
+}
+
+.rename-check i {
+  font-size: 0.85rem;
+}
+
+.rename-check.rename-check--ok {
+  color: #16a34a;
+}
+
+.rename-check.rename-check--bad {
+  color: #dc2626;
+}
+
+.rename-preview {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: #eff6ff;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.rename-preview i {
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.rename-preview-new {
+  color: var(--primary);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+/* Delete modal — reuses .rename-hero-card for the item being deleted (same
+   component as Rename/Move) plus a dedicated danger-toned warning block. */
+.delete-warning-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.delete-warning-block > i {
+  font-size: 1.3rem;
+  color: #dc2626;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.delete-warning-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #7f1d1d;
+}
+
+.delete-warning-text {
+  font-size: 0.78rem;
+  color: #991b1b;
+  margin: 2px 0 0;
+}
+
+/* =============================================== */
 /* BUTTONS */
 /* =============================================== */
 .btn-primary {
@@ -1578,6 +1742,23 @@
 
 .dm-side-panel.hidden {
   display: none;
+}
+
+/* #rich-details-offcanvas and #stats-panel manage their own inner padding
+   via .xp-oc-head / .stats-panel-body / #richDetailsContent, edge-to-edge —
+   the base 20px padding above is for the plain (light) side panels only. */
+#rich-details-offcanvas,
+#stats-panel {
+  padding: 0;
+}
+
+/* .panel-header's own margin/padding/border (light-mode divider) would
+   otherwise stack with and fight .xp-oc-head's — this compound selector
+   (higher specificity than either bare class) settles it in one place. */
+.panel-header.xp-oc-head {
+  margin-bottom: 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
 }
 
 .panel-header {
@@ -2163,30 +2344,33 @@
   font-size: 0.875rem;
 }
 
-/* Rich Details Offcanvas - Premium UI */
+/* Rich Details Offcanvas — restyled to match #trashOc / .xp-oc (dark glass,
+   edge-to-edge slide-in). Header reuses .xp-oc-head/.xp-oc-icon/.xp-oc-title/
+   .xp-oc-subtitle/.xp-oc-close directly (see app_style_1.css) instead of
+   duplicating that CSS — everything below is what .xp-oc doesn't already
+   cover: the tabbed body, its dark-mode content colors, and the footer. */
 #rich-details-offcanvas {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 0;
+  right: 0;
+  bottom: 0;
   width: 420px;
-  height: calc(100vh - 40px);
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 24px;
-  box-shadow:
-    -10px 0 40px rgba(0, 0, 0, 0.1),
-    0 10px 30px rgba(0, 0, 0, 0.05),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  max-width: 92vw;
+  background: rgba(10, 14, 28, .94);
+  backdrop-filter: blur(40px) saturate(160%);
+  -webkit-backdrop-filter: blur(40px) saturate(160%);
+  border-left: 1px solid rgba(255, 255, 255, .10);
+  border-top-left-radius: 22px;
+  border-bottom-left-radius: 22px;
+  box-shadow: -24px 0 72px rgba(0, 0, 0, .45);
   z-index: 10005;
-  transform: translateX(120%);
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+  transform: translateX(110%);
+  transition: transform .38s cubic-bezier(.34, 1.18, .64, 1), opacity .3s ease;
   opacity: 0;
   display: flex !important;
   flex-direction: column;
   overflow: hidden;
   visibility: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 #rich-details-offcanvas.active {
@@ -2195,37 +2379,31 @@
   visibility: visible;
 }
 
-/* Header */
-#rich-details-offcanvas .panel-header {
-  padding: 24px 28px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  background: rgba(255, 255, 255, 0.2);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+#rich-details-offcanvas .xp-oc-head {
+  flex-shrink: 0;
 }
 
-#rich-details-offcanvas h3 {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-weight: 700;
-  font-size: 1.15rem;
-  color: #1a1a1a;
-  letter-spacing: -0.01em;
-  margin: 0;
+#rich-details-offcanvas .xp-oc-icon {
+  background: rgba(255, 255, 255, .08);
 }
 
-/* Tabs Redesign - Segmented Control Style */
+#rich-details-offcanvas .xp-oc-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Tabs — dark segmented control */
 #richDetailsTabs {
   border: none !important;
   padding: 6px !important;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, .06);
   border-radius: 16px;
-  margin: 0 20px 24px !important;
+  margin: 16px 20px 16px !important;
   display: flex !important;
   gap: 4px;
   list-style: none !important;
   padding-left: 0 !important;
-  /* Reset padding to clear dots space */
+  flex-shrink: 0;
 }
 
 #richDetailsTabs li {
@@ -2241,7 +2419,7 @@
 #richDetailsTabs .nav-link {
   border: none !important;
   background: transparent !important;
-  color: #64748b;
+  color: rgba(255, 255, 255, .55);
   font-weight: 600;
   font-size: 0.8rem;
   padding: 10px 4px;
@@ -2261,14 +2439,14 @@
 }
 
 #richDetailsTabs .nav-link:hover {
-  color: #1e293b;
-  background: rgba(255, 255, 255, 0.5) !important;
+  color: #fff;
+  background: rgba(255, 255, 255, .08) !important;
 }
 
 #richDetailsTabs .nav-link.active {
-  color: var(--primary) !important;
-  background: white !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  color: #fff !important;
+  background: linear-gradient(135deg, var(--primary), #4f46e5) !important;
+  box-shadow: 0 4px 12px rgba(22, 33, 255, .35);
 }
 
 #richDetailsTabs .nav-link.active i {
@@ -2284,15 +2462,23 @@
 #richDetailsContent {
   flex: 1;
   overflow-y: auto;
-  padding: 28px;
+  padding: 4px 20px 20px;
   background: transparent;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, .12) transparent;
+}
+
+#rich-details-offcanvas .xp-oc-foot {
+  border-top: 1px solid rgba(255, 255, 255, .07);
+  padding: 12px 20px;
+  flex-shrink: 0;
 }
 
 /* Share List Styling */
 .share-list-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .share-row {
@@ -2300,16 +2486,15 @@
   align-items: center;
   gap: 14px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, .04);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, .06);
+  transition: all 0.2s ease;
 }
 
 .share-row:hover {
-  background: rgba(255, 255, 255, 0.7);
-  transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  background: rgba(255, 255, 255, .07);
+  border-color: rgba(255, 255, 255, .12);
 }
 
 .avatar-small {
@@ -2327,7 +2512,7 @@
 
 .share-user-email {
   font-size: 0.75rem;
-  color: #64748b;
+  color: rgba(255, 255, 255, .45);
   margin-top: 2px;
 }
 
@@ -2337,21 +2522,19 @@
   justify-content: center;
   gap: 10px;
   padding: 12px;
-  border-radius: 14px;
+  border-radius: 12px;
   font-weight: 600;
   font-size: 0.9rem;
-  transition: all 0.3s ease;
-  background: var(--white);
-  border: 1px solid var(--border);
-  color: var(--primary-color);
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .10);
+  color: #fff;
   text-decoration: none;
 }
 
 .btn-manage-cloud:hover {
-  background: var(--sidebar-primary-hover);
-  border-color: var(--primary);
-  color: var(--primary);
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, .1);
+  border-color: rgba(255, 255, 255, .2);
 }
 
 /* Animations for Activity Items */
@@ -2369,7 +2552,7 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, .08);
 }
 
 .activity-item::after {
@@ -2381,8 +2564,8 @@
   height: 10px;
   border-radius: 50%;
   background: var(--primary);
-  border: 2px solid white;
-  box-shadow: 0 0 0 2px rgba(22, 33, 255, 0.1);
+  border: 2px solid rgba(10, 14, 28, 1);
+  box-shadow: 0 0 0 2px rgba(22, 33, 255, 0.25);
 }
 
 @keyframes fadeInRight {
@@ -2397,7 +2580,19 @@
   }
 }
 
-/* Tab Switching Animations - Simplified */
+/* Tab Switching — bootstrap.js is not loaded on this page (only
+   bootstrap-icons is), so Bootstrap's own ".tab-pane{display:none}" /
+   ".active{display:block}" CSS never applied either. Without this, all
+   three panes (Details/Share/History) rendered stacked at once. Pane
+   switching itself is handled by switchRichDetailsTab() in JS. */
+#richDetailsContent .tab-pane {
+  display: none;
+}
+
+#richDetailsContent .tab-pane.active {
+  display: block;
+}
+
 .tab-pane.fade {
   transition: opacity 0.3s ease, transform 0.3s ease;
   transform: translateY(10px);
@@ -2417,19 +2612,33 @@
 }
 
 #richDetailsContent::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 10px;
 }
 
 #richDetailsContent::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Bootstrap's .text-muted/.text-dark/hr are tuned for light backgrounds —
+   override just inside this dark panel. */
+#rich-details-offcanvas .text-muted {
+  color: rgba(255, 255, 255, .4) !important;
+}
+
+#rich-details-offcanvas h6 {
+  color: rgba(255, 255, 255, .7);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /* Section labels/dividers for the Details tab (General / Storage / Quick actions) */
 .rich-details-section-label {
   font-size: 0.68rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: rgba(255, 255, 255, .4);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin: 18px 4px 4px;
@@ -2445,7 +2654,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px 4px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, .06);
 }
 
 .item-info .info-group:last-child {
@@ -2454,7 +2663,7 @@
 
 .item-info label {
   font-size: 0.8rem;
-  color: #64748b;
+  color: rgba(255, 255, 255, .5);
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -2468,7 +2677,7 @@
 
 .item-info span {
   font-size: 0.9rem;
-  color: #1e293b;
+  color: #fff;
   font-weight: 600;
 }
 
@@ -2484,9 +2693,9 @@
 
 /* Actions */
 .btn-action {
-  background: #f8f9fa;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  color: #333;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .10);
+  color: #fff;
   font-weight: 600;
   border-radius: 12px;
   padding: 12px;
@@ -2494,9 +2703,130 @@
 }
 
 .btn-action:hover {
-  background: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, .1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-1px);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STORAGE STATS PANEL — dark glass, matching #trashOc /
+   #rich-details-offcanvas so all three side panels on the
+   documents screen share one visual language.
+   ═══════════════════════════════════════════════════════════ */
+#stats-panel {
+  width: 360px;
+  background: rgba(10, 14, 28, .94);
+  backdrop-filter: blur(40px) saturate(160%);
+  -webkit-backdrop-filter: blur(40px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, .10);
+  border-radius: 22px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .35);
+}
+
+#stats-panel .xp-oc-head {
+  padding: 18px 20px 14px;
+}
+
+#stats-panel .xp-oc-icon {
+  background: rgba(34, 197, 94, .14);
+}
+
+#stats-panel .xp-oc-icon i {
+  color: #22c55e;
+  font-size: 1rem;
+}
+
+.stats-panel-body {
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#stats-panel .text-muted {
+  color: rgba(255, 255, 255, .4) !important;
+}
+
+.stats-card-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, .5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stats-percentage-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.stats-header,
+.storage-section,
+.distribution-section {
+  padding: 14px;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 14px;
+}
+
+.provider-icon-large {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.provider-icon-large i {
+  font-size: 1.3rem;
+  color: rgba(255, 255, 255, .85);
+}
+
+.provider-icon-large img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+#stats-provider-name {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.stats-progress-track.progress {
+  height: 10px;
+  border-radius: 5px;
+  background-color: rgba(255, 255, 255, .08) !important;
+  overflow: hidden;
+}
+
+.stats-progress-bar {
+  background: linear-gradient(90deg, var(--primary), #4f46e5);
+  border-radius: 5px;
+  transition: width .6s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* Approaching/at quota — same red/amber semantics used elsewhere in the app */
+.stats-progress-bar.stats-progress-bar--warning {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.stats-progress-bar.stats-progress-bar--danger {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+/* toast-ui's pie chart renders its own light theme (white bg, dark labels) —
+   wrap it in a light card instead of fighting the chart library's theme API. */
+.distribution-chart-card {
+  background: rgba(255, 255, 255, .96);
+  border-radius: 12px;
+  padding: 6px;
 }
 
 /* Lists */

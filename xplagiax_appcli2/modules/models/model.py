@@ -1307,3 +1307,34 @@ class AnalysisHistory(db.Model):
         d.update({'text': self.text or '', 'ai': self.ai, 'source': self.source,
                   'citation': self.citation, 'result_view': self.result_view})
         return d
+
+
+# ── Análisis compartidos entre usuarios (pantalla "analysiss" / historial) ──
+# Un share apunta a la fila de analysis_history del DUEÑO: si el dueño borra
+# el análisis, el cascade elimina los shares y desaparece para los receptores
+# (requisito del feature). shared_with_id es NULL para correos externos (se
+# les envió el análisis por email; no tienen entrada viva en el historial).
+class AnalysisShare(db.Model):
+    __tablename__ = 'analysis_shares'
+
+    id             = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    analysis_id    = db.Column(db.Integer,
+                               db.ForeignKey('analysis_history.id', ondelete='CASCADE'),
+                               nullable=False, index=True)
+    owner_id       = db.Column(db.Integer, nullable=False, index=True)
+    shared_with_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    email          = db.Column(db.String(255), nullable=False)   # correo destino (usuario o externo)
+    created_at     = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    analysis    = db.relationship('AnalysisHistory',
+                                  backref=db.backref('shares', cascade='all, delete-orphan',
+                                                     passive_deletes=True))
+    shared_with = db.relationship('Users', foreign_keys=[shared_with_id])
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'email': self.email,
+            'is_user': self.shared_with_id is not None,
+            'initial': (self.email or '?')[0].upper(),
+        }

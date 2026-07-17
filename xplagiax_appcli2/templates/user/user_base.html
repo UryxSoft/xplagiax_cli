@@ -76,8 +76,11 @@
         </svg>
       </a>
 
+      {# Oculto por el momento (no eliminado: dropdown_history.js busca este
+         a[href="/history"] en el DOM). Quitar display:none para reactivarlo. #}
       <a href="{{ url_for('x_users.history') }}"
-        class="nav-btn {{ 'active' if request.endpoint == 'x_users.history' else '' }}" data-tip="History">
+        class="nav-btn {{ 'active' if request.endpoint == 'x_users.history' else '' }}" data-tip="History"
+        style="display:none" aria-hidden="true" tabindex="-1">
         <svg viewBox="0 0 24 24">
           <polyline points="12 8 12 12 14 14" />
           <path d="M3.05 11a9 9 0 1 0 .5-4.5" />
@@ -450,8 +453,9 @@
                         Settings
                       </a>
                     </li>
-                    <li>
-                      <a href="" onclick="manualShowModal(); return false;" style="text-decoration:none;color:inherit;">
+                    {# Guide — oculto por el momento; quitar display:none para reactivarlo. #}
+                    <li style="display:none" aria-hidden="true">
+                      <a href="" onclick="manualShowModal(); return false;" style="text-decoration:none;color:inherit;" tabindex="-1">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                           <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -925,6 +929,11 @@
         overlay.classList.remove('open');
         document.body.style.overflow = '';
       }
+      // Exposed so other pages (e.g. the analysis screen's gear button) can
+      // open this same account modal directly at a given panel, without
+      // duplicating the iframe/overlay logic above.
+      window.xpOpenAccountModal = open;
+
       btn.addEventListener('click', function() { open(); });
       closeBt && closeBt.addEventListener('click', close);
       overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });

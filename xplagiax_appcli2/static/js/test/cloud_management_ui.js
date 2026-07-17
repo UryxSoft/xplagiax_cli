@@ -135,20 +135,29 @@ function openCloudRenameModal(item, type) {
 
     const modal = document.getElementById('cloud-rename-modal');
     const input = document.getElementById('cloud-rename-input');
-    const currentName = document.getElementById('cloud-current-name');
 
     if (!modal || !input) return;
 
     const name = item.name || item.title || '';
     input.value = name;
-    if (currentName) currentName.textContent = name;
+
+    if (typeof populateRenameHero === 'function') {
+        populateRenameHero('cloud-rename-hero', name, type, item);
+    }
 
     modal.classList.add('active');
     if (typeof wireRenameValidation === 'function') {
-        wireRenameValidation('cloud-rename-input', 'cloud-rename-error', 'confirm-cloud-rename', () => name);
+        wireRenameValidation('cloud-rename-input', 'cloud-rename-error', 'confirm-cloud-rename', () => name,
+            (result, curName, rawValue) => {
+                if (typeof updateRenameExtras === 'function') updateRenameExtras('cloud-rename', result, curName, rawValue);
+            });
     }
-    input.focus();
-    input.select();
+    if (typeof selectRenameBasename === 'function') {
+        selectRenameBasename(input, name, type);
+    } else {
+        input.focus();
+        input.select();
+    }
 }
 
 function closeCloudRenameModal() {
@@ -189,6 +198,10 @@ async function confirmCloudRename() {
 
     const bodyKey = renameTargetType === 'folder' ? 'folder_id' : 'file_id';
 
+    const btn = document.getElementById('confirm-cloud-rename');
+    const originalBtnHtml = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...'; }
+
     try {
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -198,17 +211,21 @@ async function confirmCloudRename() {
 
         const result2 = await response.json();
         if (result2.success) {
+            if (btn) btn.innerHTML = '<i class="bi bi-check-lg"></i> Renamed!';
             showToast('Renamed successfully', 'success');
             await sm.loadStorageContent(sm.currentStorage, sm.cloudFolderId);
+            setTimeout(closeCloudRenameModal, 500);
+            return;
         } else {
             showToast(result2.error || 'Failed to rename', 'error');
+            if (btn) { btn.disabled = false; btn.innerHTML = originalBtnHtml; }
+            return;
         }
     } catch (error) {
         console.error('Rename error:', error);
         showToast('Failed to rename', 'error');
+        if (btn) { btn.disabled = false; btn.innerHTML = originalBtnHtml; }
     }
-
-    closeCloudRenameModal();
 }
 
 
@@ -232,8 +249,9 @@ function openCloudDeleteModal(item, type) {
     if (!modal) return;
 
     const name = item.name || item.title || 'this item';
+    if (typeof populateRenameHero === 'function') populateRenameHero('cloud-delete-hero', name, type, item);
 
-    if (title) title.textContent = `Delete "${truncateText(name, 30)}"?`;
+    if (title) title.textContent = 'Delete this item?';
     if (message) message.textContent = `This will move ${type === 'folder' ? 'the folder' : 'the file'} to trash.`;
 
     if (folderWarning) {
@@ -283,6 +301,8 @@ let moveTargetType = null;
 let pickerCurrentFolderId = null;
 let pickerBreadcrumbs = [{ id: null, name: 'Root' }];
 let selectedMoveDestination = null;
+let selectedMoveDestinationName = null;
+let pickerRawFolders = [];
 
 function openCloudFolderPicker(item, type) {
     moveTarget = item;
@@ -290,19 +310,38 @@ function openCloudFolderPicker(item, type) {
     pickerCurrentFolderId = null;
     pickerBreadcrumbs = [{ id: null, name: 'Root' }];
     selectedMoveDestination = undefined;
+    selectedMoveDestinationName = null;
 
     const modal = document.getElementById('cloud-folder-picker-modal');
     const itemName = document.getElementById('move-item-name');
-    const itemIcon = document.getElementById('move-item-icon');
+    const itemIconBadge = document.getElementById('move-item-icon-badge');
+    const itemMeta = document.getElementById('move-item-meta');
     const confirmBtn = document.getElementById('confirm-cloud-move');
+    const searchInput = document.getElementById('picker-search-input');
 
     if (!modal) return;
 
-    if (itemName) itemName.textContent = item.name || item.title || 'Item';
-    if (itemIcon) {
-        itemIcon.className = type === 'folder' ? 'bi bi-folder-fill text-warning' : 'bi bi-file-earmark text-secondary';
+    const name = item.name || item.title || 'Item';
+    if (itemName) { itemName.textContent = name; itemName.title = name; }
+
+    if (itemIconBadge) {
+        if (type === 'folder') {
+            itemIconBadge.style.background = '#fef3c7';
+            itemIconBadge.innerHTML = '<i class="bi bi-folder-fill" style="color:#b45309;"></i>';
+            if (itemMeta) itemMeta.textContent = 'Folder';
+        } else if (typeof _nativeFileTypeInfo === 'function') {
+            const info = _nativeFileTypeInfo(name);
+            itemIconBadge.style.background = info.tagBg;
+            itemIconBadge.innerHTML = `<i class="bi ${info.icon}" style="color:${info.tagColor};"></i>`;
+            const size = item.size !== undefined && item.size !== null && typeof formatSize === 'function' ? formatSize(item.size) : null;
+            if (itemMeta) itemMeta.textContent = size ? `${info.label} File · ${size}` : `${info.label} File`;
+        }
     }
+
     if (confirmBtn) confirmBtn.disabled = true;
+    updatePickerMoveLabel();
+    hidePickerNewFolderRow();
+    if (searchInput) searchInput.value = '';
 
     modal.classList.add('active');
     loadPickerFolders(null);
@@ -315,18 +354,39 @@ function closeCloudFolderPicker() {
     moveTargetType = null;
 }
 
+function pickerSkeletonHtml() {
+    return `
+        <div class="picker-skeleton">
+            <div class="picker-skeleton-row"></div>
+            <div class="picker-skeleton-row"></div>
+            <div class="picker-skeleton-row"></div>
+            <div class="picker-skeleton-row"></div>
+        </div>
+    `;
+}
+
 async function loadPickerFolders(folderId) {
     pickerCurrentFolderId = folderId;
     // Poka-Yoke: navigating resets any prior selection — a destination
     // picked at a different level no longer applies to the new view.
     selectedMoveDestination = undefined;
+    selectedMoveDestinationName = null;
     const confirmBtn = document.getElementById('confirm-cloud-move');
     if (confirmBtn) confirmBtn.disabled = true;
+    updatePickerMoveLabel();
+    updatePickerDestinationSummary();
+    hidePickerNewFolderRow();
+
+    const upBtn = document.getElementById('picker-up-btn');
+    if (upBtn) upBtn.disabled = pickerBreadcrumbs.length <= 1;
+
+    const searchInput = document.getElementById('picker-search-input');
+    if (searchInput) searchInput.value = '';
 
     const container = document.getElementById('picker-folder-list');
     if (!container || !window.storageManager) return;
 
-    container.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-arrow-repeat spin"></i> Loading...</div>';
+    container.innerHTML = pickerSkeletonHtml();
 
     try {
         const sm = window.storageManager;
@@ -340,7 +400,8 @@ async function loadPickerFolders(folderId) {
         const response = await fetch(url);
         const data = await response.json();
 
-        renderPickerFolders(data.folders || []);
+        pickerRawFolders = data.folders || [];
+        renderPickerFolders(pickerRawFolders);
         renderPickerBreadcrumbs();
     } catch (error) {
         console.error('Error loading folders:', error);
@@ -364,23 +425,24 @@ function renderPickerFolders(folders) {
     // currently being browsed (nothing is auto-selected just from viewing).
     // Blocked when we've navigated into the very folder being moved.
     const isSelfFolder = moveTargetType === 'folder' && moveTarget && String(pickerCurrentFolderId) === String(moveTarget.id);
+    const currentFolderName = pickerBreadcrumbs.length ? pickerBreadcrumbs[pickerBreadcrumbs.length - 1].name : 'Root';
     const currentOptionHtml = isSelfFolder
         ? `<div class="folder-picker-item folder-picker-item--disabled" title="Cannot move a folder into itself">
-               <i class="bi bi-slash-circle text-muted"></i>
-               <span class="flex-grow-1 text-muted">Cannot move here (same folder)</span>
+               <div class="folder-picker-item-icon folder-picker-item-icon--disabled"><i class="bi bi-slash-circle"></i></div>
+               <span class="folder-picker-item-name flex-grow-1">Cannot move here (same folder)</span>
            </div>`
         : `<div class="folder-picker-item folder-picker-item--current">
-               <i class="bi bi-check2-circle text-primary"></i>
-               <span class="flex-grow-1">Move to this folder</span>
+               <div class="folder-picker-item-icon folder-picker-item-icon--current"><i class="bi bi-check2-circle"></i></div>
+               <span class="folder-picker-item-name flex-grow-1">Move to this folder</span>
            </div>`;
 
     const subfoldersHtml = filteredFolders.length === 0
-        ? '<div class="text-center text-muted py-3 small"><i class="bi bi-folder"></i> No subfolders here</div>'
+        ? `<div class="picker-empty-state"><i class="bi bi-folder2-open"></i><p>This folder doesn't contain any subfolders.</p></div>`
         : filteredFolders.map(folder => `
         <div class="folder-picker-item" data-id="${folder.id}" data-name="${folder.name}">
-            <i class="bi bi-folder-fill text-warning"></i>
-            <span class="flex-grow-1">${folder.name}</span>
-            <i class="bi bi-chevron-right text-muted"></i>
+            <div class="folder-picker-item-icon"><i class="bi bi-folder-fill"></i></div>
+            <span class="folder-picker-item-name flex-grow-1">${folder.name}</span>
+            <i class="bi bi-chevron-right folder-picker-item-arrow"></i>
         </div>
     `).join('');
 
@@ -393,7 +455,10 @@ function renderPickerFolders(folders) {
             container.querySelectorAll('.folder-picker-item').forEach(i => i.classList.remove('selected'));
             currentOption.classList.add('selected');
             selectedMoveDestination = pickerCurrentFolderId;
+            selectedMoveDestinationName = currentFolderName;
             document.getElementById('confirm-cloud-move').disabled = false;
+            updatePickerMoveLabel();
+            updatePickerDestinationSummary();
         });
     }
 
@@ -411,7 +476,10 @@ function renderPickerFolders(folders) {
                 container.querySelectorAll('.folder-picker-item').forEach(i => i.classList.remove('selected'));
                 item.classList.add('selected');
                 selectedMoveDestination = id;
+                selectedMoveDestinationName = name;
                 document.getElementById('confirm-cloud-move').disabled = false;
+                updatePickerMoveLabel();
+                updatePickerDestinationSummary();
             }
         });
 
@@ -425,15 +493,96 @@ function renderPickerFolders(folders) {
     });
 }
 
+// Client-side filter over the already-loaded current level (not a deep
+// recursive search across the whole tree — there's no endpoint for that).
+function filterPickerFolders(query) {
+    const q = (query || '').trim().toLowerCase();
+    if (!q) { renderPickerFolders(pickerRawFolders); return; }
+    renderPickerFolders(pickerRawFolders.filter(f => (f.name || '').toLowerCase().includes(q)));
+}
+
+function updatePickerMoveLabel() {
+    const label = document.getElementById('confirm-cloud-move-label');
+    if (label) label.textContent = selectedMoveDestinationName ? `Move to "${truncateText(selectedMoveDestinationName, 24)}"` : 'Move Here';
+}
+
+function updatePickerDestinationSummary() {
+    const summary = document.getElementById('picker-destination-summary');
+    const nameEl = document.getElementById('picker-destination-name');
+    if (!summary) return;
+    if (selectedMoveDestinationName) {
+        if (nameEl) nameEl.textContent = selectedMoveDestinationName;
+        summary.classList.remove('d-none');
+    } else {
+        summary.classList.add('d-none');
+    }
+}
+
+function hidePickerNewFolderRow() {
+    const row = document.getElementById('picker-new-folder-row');
+    const input = document.getElementById('picker-new-folder-input');
+    if (row) row.classList.add('d-none');
+    if (input) input.value = '';
+}
+
+function togglePickerNewFolderRow() {
+    const row = document.getElementById('picker-new-folder-row');
+    const input = document.getElementById('picker-new-folder-input');
+    if (!row) return;
+    const willShow = row.classList.contains('d-none');
+    row.classList.toggle('d-none', !willShow);
+    if (willShow && input) input.focus();
+    else if (input) input.value = '';
+}
+
+async function createFolderFromPicker() {
+    const input = document.getElementById('picker-new-folder-input');
+    const name = input?.value?.trim();
+    if (!name) { input?.focus(); return; }
+    if (!window.storageManager) return;
+
+    const confirmBtn = document.getElementById('picker-new-folder-confirm');
+    if (confirmBtn) confirmBtn.disabled = true;
+
+    try {
+        const sm = window.storageManager;
+        const response = await fetch(`/x_integ/storage/folder/create/${sm.currentStorage}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, parent_id: pickerCurrentFolderId })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showToast('Folder created', 'success');
+            hidePickerNewFolderRow();
+            await loadPickerFolders(pickerCurrentFolderId);
+        } else {
+            showToast(result.error || 'Failed to create folder', 'error');
+        }
+    } catch (error) {
+        console.error('Create folder error:', error);
+        showToast('Failed to create folder', 'error');
+    } finally {
+        if (confirmBtn) confirmBtn.disabled = false;
+    }
+}
+
+function navigatePickerUp() {
+    if (pickerBreadcrumbs.length <= 1) return;
+    pickerBreadcrumbs = pickerBreadcrumbs.slice(0, -1);
+    const target = pickerBreadcrumbs[pickerBreadcrumbs.length - 1];
+    loadPickerFolders(target.id);
+}
+
 function renderPickerBreadcrumbs() {
     const container = document.getElementById('picker-breadcrumbs');
     if (!container) return;
 
     container.innerHTML = pickerBreadcrumbs.map((crumb, index) => {
         const isLast = index === pickerBreadcrumbs.length - 1;
-        const icon = index === 0 ? '<i class="bi bi-house"></i> ' : '';
+        const icon = index === 0 ? '<i class="bi bi-house-fill"></i> ' : '';
         return `<span class="picker-crumb ${isLast ? 'active' : ''}" data-index="${index}">${icon}${crumb.name}</span>`;
-    }).join(' <i class="bi bi-chevron-right text-muted" style="font-size: 0.7rem;"></i> ');
+    }).join('<i class="bi bi-chevron-right picker-crumb-sep"></i>');
 
     // Add click handlers for breadcrumb navigation
     container.querySelectorAll('.picker-crumb').forEach(crumb => {
@@ -452,9 +601,63 @@ async function confirmCloudMove() {
     if (!moveTarget || !window.storageManager || selectedMoveDestination === undefined) return;
 
     const sm = window.storageManager;
-    await sm.moveCloudItem(moveTarget.id, moveTargetType, selectedMoveDestination);
-    closeCloudFolderPicker();
+    const btn = document.getElementById('confirm-cloud-move');
+    const originalBtnHtml = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Moving...'; }
+
+    const success = await sm.moveCloudItem(moveTarget.id, moveTargetType, selectedMoveDestination);
+
+    if (success) {
+        if (btn) btn.innerHTML = '<i class="bi bi-check-lg"></i> Moved!';
+        setTimeout(closeCloudFolderPicker, 500);
+    } else if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHtml;
+    }
 }
+
+// Toolbar wiring for the folder picker: search-as-you-type, up-one-level,
+// and inline "new folder" creation (Enter confirms, Escape cancels).
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('picker-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(function () {
+            filterPickerFolders(this.value);
+        }, 200));
+    }
+
+    const upBtn = document.getElementById('picker-up-btn');
+    if (upBtn) upBtn.addEventListener('click', navigatePickerUp);
+
+    const newFolderBtn = document.getElementById('picker-new-folder-btn');
+    if (newFolderBtn) newFolderBtn.addEventListener('click', togglePickerNewFolderRow);
+
+    const newFolderCancel = document.getElementById('picker-new-folder-cancel');
+    if (newFolderCancel) newFolderCancel.addEventListener('click', hidePickerNewFolderRow);
+
+    const newFolderConfirm = document.getElementById('picker-new-folder-confirm');
+    if (newFolderConfirm) newFolderConfirm.addEventListener('click', createFolderFromPicker);
+
+    const newFolderInput = document.getElementById('picker-new-folder-input');
+    if (newFolderInput) {
+        newFolderInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); createFolderFromPicker(); }
+            else if (e.key === 'Escape') { e.preventDefault(); hidePickerNewFolderRow(); }
+        });
+    }
+
+    // Enter confirms the move when a valid destination is selected.
+    const moveModalEl = document.getElementById('cloud-folder-picker-modal');
+    if (moveModalEl) {
+        moveModalEl.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            const active = document.activeElement;
+            if (active && (active.id === 'picker-search-input' || active.id === 'picker-new-folder-input')) return;
+            const confirmBtn = document.getElementById('confirm-cloud-move');
+            if (confirmBtn && !confirmBtn.disabled) { e.preventDefault(); confirmBtn.click(); }
+        });
+    }
+});
 
 // ============================================================
 // CLOUD CREATE FOLDER MODAL
@@ -700,6 +903,104 @@ document.addEventListener('DOMContentLoaded', function () {
 let shareTarget = null;
 let shareTargetType = null;
 
+// ── Multi-email pills ────────────────────────────────────────
+// Los destinatarios se acumulan como pills de color (avatar = inicial del
+// email); el color sale de un hash del email para que sea estable.
+let sharePillEmails = [];
+
+const SHARE_PILL_COLORS = [
+    '#064CDB', '#0e7490', '#7c3aed', '#be185d', '#b45309',
+    '#15803d', '#c2410c', '#4338ca', '#0f766e', '#a21caf',
+];
+
+function sharePillColor(email) {
+    let hash = 0;
+    for (let i = 0; i < email.length; i++) {
+        hash = ((hash << 5) - hash + email.charCodeAt(i)) | 0;
+    }
+    return SHARE_PILL_COLORS[Math.abs(hash) % SHARE_PILL_COLORS.length];
+}
+
+function renderSharePills() {
+    const box = document.getElementById('share-pillbox');
+    const input = document.getElementById('share-email-input');
+    if (!box || !input) return;
+    box.querySelectorAll('.share-pill').forEach(p => p.remove());
+    sharePillEmails.forEach(email => {
+        const pill = document.createElement('span');
+        pill.className = 'share-pill';
+        pill.dataset.email = email;
+        pill.style.setProperty('--pill-color', sharePillColor(email));
+        pill.title = 'Click to edit';
+
+        const avatar = document.createElement('span');
+        avatar.className = 'share-pill-avatar';
+        avatar.textContent = (email[0] || '?');
+
+        const text = document.createElement('span');
+        text.className = 'share-pill-text';
+        text.textContent = email;
+
+        const x = document.createElement('button');
+        x.type = 'button';
+        x.className = 'share-pill-x';
+        x.setAttribute('aria-label', 'Remove ' + email);
+        x.innerHTML = '<i class="bi bi-x"></i>';
+        x.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeSharePill(email);
+        });
+
+        // Editable: click en la pill devuelve el email al input para corregirlo.
+        pill.addEventListener('click', () => {
+            removeSharePill(email);
+            input.value = email;
+            input.focus();
+        });
+
+        pill.append(avatar, text, x);
+        box.insertBefore(pill, input);
+    });
+}
+
+function addSharePill(raw) {
+    const input = document.getElementById('share-email-input');
+    const errorEl = document.getElementById('cloud-share-error');
+    const box = document.getElementById('share-pillbox');
+    const email = (raw || '').trim().toLowerCase().replace(/[,;]+$/, '');
+    if (!email) return false;
+    const valid = (typeof isValidEmail === 'function')
+        ? isValidEmail(email)
+        : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!valid) {
+        if (box) box.classList.add('is-invalid');
+        if (errorEl) {
+            errorEl.textContent = `"${email}" is not a valid email address`;
+            errorEl.classList.remove('d-none');
+            errorEl.style.display = 'block';
+        }
+        return false;
+    }
+    if (box) box.classList.remove('is-invalid');
+    if (errorEl) { errorEl.classList.add('d-none'); errorEl.style.display = ''; }
+    if (!sharePillEmails.includes(email)) {
+        sharePillEmails.push(email);
+        renderSharePills();
+    }
+    if (input) input.value = '';
+    return true;
+}
+
+function removeSharePill(email) {
+    sharePillEmails = sharePillEmails.filter(e => e !== email);
+    renderSharePills();
+}
+
+function clearSharePills() {
+    sharePillEmails = [];
+    renderSharePills();
+}
+
 function openCloudShareModal(item, type) {
     shareTarget = item;
     shareTargetType = type;
@@ -714,6 +1015,7 @@ function openCloudShareModal(item, type) {
     if (itemName) itemName.textContent = item.name || 'Item';
     if (emailInput) emailInput.value = '';
     if (messageInput) messageInput.value = '';
+    clearSharePills();
 
     modal.classList.add('active');
     loadCollaborators(item.id);
@@ -754,6 +1056,11 @@ async function loadCollaborators(fileId) {
                     </button>
                 </div>
             `).join('');
+        } else if (data.warning) {
+            // Provider couldn't answer this query (e.g. Dropbox errors on
+            // files with no sharing configured) — be honest about that
+            // instead of implying we confirmed no one has access.
+            container.innerHTML = '<div class="text-muted small text-center py-2"><i class="bi bi-info-circle"></i> Unable to load current collaborators for this file</div>';
         } else {
             container.innerHTML = '<div class="text-muted small text-center py-2">No one else has access</div>';
         }
@@ -768,50 +1075,73 @@ async function confirmCloudShare() {
 
     const emailInput = document.getElementById('share-email-input');
     const errorEl = document.getElementById('cloud-share-error');
-    const email = emailInput?.value?.trim();
+    const box = document.getElementById('share-pillbox');
     const role = document.getElementById('share-role-select')?.value || 'reader';
     const notify = document.getElementById('share-notify-check')?.checked ?? true;
     const message = document.getElementById('share-message-input')?.value?.trim() || '';
 
     const showError = (msg) => {
-        if (emailInput) emailInput.classList.add('is-invalid');
-        if (errorEl) { errorEl.textContent = msg; errorEl.classList.remove('d-none'); }
+        if (box) box.classList.add('is-invalid');
+        if (errorEl) {
+            errorEl.textContent = msg;
+            errorEl.classList.remove('d-none');
+            errorEl.style.display = 'block';
+        }
     };
 
-    if (!email || (typeof isValidEmail === 'function' && !isValidEmail(email))) {
-        showError(email ? 'Please enter a valid email address' : 'Please enter an email address');
+    // Lo que quedó escrito en el input también cuenta (sin obligar a Enter).
+    const pending = emailInput?.value?.trim();
+    if (pending && !addSharePill(pending)) return;   // inválido → error ya visible
+
+    const emails = [...sharePillEmails];
+    if (!emails.length) {
+        showError('Please add at least one email address');
         return;
     }
-    if (emailInput) emailInput.classList.remove('is-invalid');
-    if (errorEl) errorEl.classList.add('d-none');
+    if (box) box.classList.remove('is-invalid');
+    if (errorEl) { errorEl.classList.add('d-none'); errorEl.style.display = ''; }
 
     const sm = window.storageManager;
+    const shareBtn = document.getElementById('confirm-cloud-share');
+    if (shareBtn) shareBtn.disabled = true;
 
-    try {
-        const response = await fetch(`/x_integ/storage/share/${sm.currentStorage}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                file_id: shareTarget.id,
-                email,
-                role,
-                notify,
-                message
-            })
-        });
-
-        const result = await response.json();
-        if (result.success) {
-            showToast('Shared successfully!', 'success');
-            document.getElementById('share-email-input').value = '';
-            loadCollaborators(shareTarget.id);
-        } else {
-            showToast(result.error || 'Failed to share', 'error');
+    // Un POST por destinatario; se reporta el resultado agregado y las pills
+    // que fallaron se conservan para reintentar.
+    const failed = [];
+    for (const email of emails) {
+        try {
+            const response = await fetch(`/x_integ/storage/share/${sm.currentStorage}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    file_id: shareTarget.id,
+                    email,
+                    role,
+                    notify,
+                    message
+                })
+            });
+            const result = await response.json();
+            if (!result.success) failed.push({ email, error: result.error });
+        } catch (error) {
+            console.error('Share error:', email, error);
+            failed.push({ email, error: 'network error' });
         }
-    } catch (error) {
-        console.error('Share error:', error);
-        showToast('Failed to share', 'error');
     }
+
+    if (shareBtn) shareBtn.disabled = false;
+
+    const okCount = emails.length - failed.length;
+    if (!failed.length) {
+        showToast(okCount === 1 ? 'Shared successfully!' : `Shared with ${okCount} people!`, 'success');
+        clearSharePills();
+    } else {
+        if (okCount > 0) showToast(`Shared with ${okCount} of ${emails.length}`, 'warning');
+        showError('Could not share with: ' + failed.map(f => f.email).join(', '));
+        sharePillEmails = failed.map(f => f.email);
+        renderSharePills();
+    }
+    if (okCount > 0) loadCollaborators(shareTarget.id);
 }
 
 async function revokeAccess(permissionId, email) {
@@ -992,12 +1322,56 @@ document.addEventListener('DOMContentLoaded', function () {
             const email = this.value.trim().toLowerCase();
             const errorEl = document.getElementById('cloud-share-error');
             const hintEl = document.getElementById('cloud-share-already-has-access');
-            this.classList.remove('is-invalid');
-            if (errorEl) errorEl.classList.add('d-none');
+            const box = document.getElementById('share-pillbox');
+            if (box) box.classList.remove('is-invalid');
+            if (errorEl) { errorEl.classList.add('d-none'); errorEl.style.display = ''; }
 
             const match = email && document.querySelector(`#collaborators-list [data-email="${CSS.escape(email)}" i]`);
             if (hintEl) hintEl.classList.toggle('d-none', !match);
         }, 300));
+
+        // Pills: Enter/coma/; confirman el email; Backspace con el input vacío
+        // recupera la última pill para editarla; blur confirma lo pendiente.
+        shareEmailInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+                e.preventDefault();
+                addSharePill(this.value);
+            } else if (e.key === 'Backspace' && !this.value && sharePillEmails.length) {
+                const last = sharePillEmails[sharePillEmails.length - 1];
+                removeSharePill(last);
+                this.value = last;
+                e.preventDefault();
+            }
+        });
+        shareEmailInput.addEventListener('blur', function () {
+            if (this.value.trim()) addSharePill(this.value);
+        });
+        // Pegar una lista "a@x.com, b@y.com; c@z.com" crea una pill por email.
+        shareEmailInput.addEventListener('paste', function (e) {
+            const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+            if (/[,;\s]/.test(text.trim())) {
+                e.preventDefault();
+                text.split(/[,;\s]+/).forEach(part => part && addSharePill(part));
+            }
+        });
+    }
+
+    // Click en cualquier parte de la caja → enfocar el input de email.
+    const sharePillbox = document.getElementById('share-pillbox');
+    if (sharePillbox) {
+        sharePillbox.addEventListener('click', function (e) {
+            if (e.target === this) shareEmailInput?.focus();
+        });
+    }
+
+    // Icono del selector de permiso acompaña la opción elegida (sin emojis).
+    const roleSelect = document.getElementById('share-role-select');
+    if (roleSelect) {
+        roleSelect.addEventListener('change', function () {
+            const icon = document.getElementById('share-role-icon');
+            const opt = this.options[this.selectedIndex];
+            if (icon && opt) icon.className = 'bi ' + (opt.dataset.icon || 'bi-eye') + ' share-role-icon';
+        });
     }
 
     // Link toggle

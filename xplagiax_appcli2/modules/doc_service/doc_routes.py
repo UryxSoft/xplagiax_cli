@@ -3,6 +3,7 @@ Copyright (c) 2025 - present URYX TECHNOLOGIES SRL
 """
 import json
 import os
+import re
 import shutil
 import time
 import logging
@@ -4311,19 +4312,64 @@ def history_save():
 def history_list():
     if not _history_allowed():
         return jsonify({'items': [], 'allowed': False}), 200
-    from modules.models.model import AnalysisHistory
+    from modules.models.model import AnalysisHistory, AnalysisShare, Users
+    _ensure_analysis_shares_table()
     rows = (AnalysisHistory.query
             .filter_by(user_id=current_user.id)
             .order_by(AnalysisHistory.created_at.desc())
             .limit(HISTORY_MAX_PER_USER).all())
-    return jsonify({'items': [r.to_summary() for r in rows], 'allowed': True}), 200
+    items = []
+    try:
+        own_ids = [r.id for r in rows]
+        shares_by_analysis = {}
+        if own_ids:
+            for s in AnalysisShare.query.filter(AnalysisShare.analysis_id.in_(own_ids)).all():
+                shares_by_analysis.setdefault(s.analysis_id, []).append(s.to_dict())
+        for r in rows:
+            d = r.to_summary()
+            if shares_by_analysis.get(r.id):
+                d['sharedWith'] = shares_by_analysis[r.id]
+            items.append(d)
+
+        # Análisis que OTROS usuarios compartieron conmigo (siguen viviendo en la
+        # fila del dueño: si él la borra, el join deja de devolverla — cascade real).
+        incoming = (db.session.query(AnalysisShare, AnalysisHistory)
+                    .join(AnalysisHistory, AnalysisShare.analysis_id == AnalysisHistory.id)
+                    .filter(AnalysisShare.shared_with_id == current_user.id)
+                    .order_by(AnalysisHistory.created_at.desc())
+                    .limit(HISTORY_MAX_PER_USER).all())
+        owner_ids = {h.user_id for _, h in incoming}
+        owners = {u.id: u.email for u in Users.query.filter(Users.id.in_(owner_ids)).all()} if owner_ids else {}
+        for s, h in incoming:
+            d = h.to_summary()
+            d['shared'] = True
+            d['sharedBy'] = owners.get(h.user_id, 'another user')
+            items.append(d)
+        items.sort(key=lambda x: x.get('ts') or 0, reverse=True)
+    except Exception:
+        # Si la tabla de shares aún no existe (primer despliegue), el historial
+        # propio sigue funcionando sin la capa de compartidos.
+        logger.warning('history_list: shares layer unavailable', exc_info=True)
+        items = [r.to_summary() for r in rows]
+    return jsonify({'items': items, 'allowed': True}), 200
 
 
 @x_doc.route('/history/<hid>', methods=['GET'])
 @login_required
 def history_get(hid):
-    from modules.models.model import AnalysisHistory
+    from modules.models.model import AnalysisHistory, AnalysisShare
     r = AnalysisHistory.query.filter_by(user_id=current_user.id, history_id=hid).first()
+    if not r:
+        # Receptor de un share: puede abrir/visualizar el análisis compartido.
+        try:
+            _ensure_analysis_shares_table()
+            r = (db.session.query(AnalysisHistory)
+                 .join(AnalysisShare, AnalysisShare.analysis_id == AnalysisHistory.id)
+                 .filter(AnalysisHistory.history_id == hid,
+                         AnalysisShare.shared_with_id == current_user.id)
+                 .first())
+        except Exception:
+            r = None
     if not r:
         return jsonify({'error': 'Not found.'}), 404
     return jsonify({'item': r.to_full()}), 200
@@ -4332,9 +4378,15 @@ def history_get(hid):
 @x_doc.route('/history/<hid>', methods=['DELETE'])
 @login_required
 def history_delete(hid):
-    from modules.models.model import AnalysisHistory
+    from modules.models.model import AnalysisHistory, AnalysisShare
     r = AnalysisHistory.query.filter_by(user_id=current_user.id, history_id=hid).first()
     if r:
+        # Cascade explícito: al borrar el dueño, desaparece para todos los receptores.
+        try:
+            AnalysisShare.query.filter_by(analysis_id=r.id).delete(synchronize_session=False)
+        except Exception:
+            db.session.rollback()
+            r = AnalysisHistory.query.filter_by(user_id=current_user.id, history_id=hid).first()
         db.session.delete(r)
         db.session.commit()
     return jsonify({'ok': True}), 200
@@ -4343,10 +4395,264 @@ def history_delete(hid):
 @x_doc.route('/history', methods=['DELETE'])
 @login_required
 def history_clear():
-    from modules.models.model import AnalysisHistory
+    from modules.models.model import AnalysisHistory, AnalysisShare
+    ids = [r.id for r in AnalysisHistory.query.filter_by(user_id=current_user.id).all()]
+    if ids:
+        # Cascade explícito (además del FK): el borrado del dueño hace desaparecer
+        # el análisis también para todos los receptores.
+        AnalysisShare.query.filter(AnalysisShare.analysis_id.in_(ids)).delete(synchronize_session=False)
     AnalysisHistory.query.filter_by(user_id=current_user.id).delete()
     db.session.commit()
     return jsonify({'ok': True}), 200
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Compartir análisis (historial) — con usuarios de la plataforma (aparece en su
+# historial como "shared") o con correos externos (email HTML + PDF adjunto).
+# Solo planes de pago (mismo gate que el historial: no Starter).
+# ════════════════════════════════════════════════════════════════════════════
+_SHARES_TABLE_READY = False
+
+
+def _ensure_analysis_shares_table():
+    """Auto-migración idempotente: crea analysis_shares si falta (el proyecto usa
+    db.create_all() al arrancar, pero despliegues ya corriendo no la tendrían)."""
+    global _SHARES_TABLE_READY
+    if _SHARES_TABLE_READY:
+        return
+    try:
+        from modules.models.model import AnalysisShare
+        AnalysisShare.__table__.create(bind=db.engine, checkfirst=True)
+        _SHARES_TABLE_READY = True
+    except Exception:
+        db.session.rollback()
+        logger.warning('Could not ensure analysis_shares table', exc_info=True)
+
+
+_XPA_BRAND = {'primary': '#064CDB', 'ink': '#0f172a', 'muted': '#64748b',
+              'ai': '#ef4444', 'plag': '#f59e0b', 'ok': '#10b981', 'bg': '#f8fafc'}
+
+
+def _share_pdf_bytes(entry, sender_email):
+    """PDF resumen del análisis (reportlab): cabecera de marca, métricas,
+    overview y extracto del texto analizado. Devuelve bytes."""
+    import io
+    from reportlab.lib.pagesizes import LETTER
+    from reportlab.lib.units import mm
+    from reportlab.lib.colors import HexColor
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
+                                    TableStyle, HRFlowable)
+
+    B = _XPA_BRAND
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=LETTER,
+                            leftMargin=18 * mm, rightMargin=18 * mm,
+                            topMargin=16 * mm, bottomMargin=16 * mm,
+                            title='XplagiaX Analysis Report')
+    ss = getSampleStyleSheet()
+    h1 = ParagraphStyle('xh1', parent=ss['Title'], fontSize=17, leading=21,
+                        textColor=HexColor(B['ink']), alignment=0, spaceAfter=2)
+    sub = ParagraphStyle('xsub', parent=ss['Normal'], fontSize=9, leading=12,
+                         textColor=HexColor(B['muted']))
+    lbl = ParagraphStyle('xlbl', parent=ss['Normal'], fontSize=8, leading=10,
+                         textColor=HexColor(B['muted']))
+    body = ParagraphStyle('xbody', parent=ss['Normal'], fontSize=9.5, leading=14,
+                          textColor=HexColor('#334155'))
+
+    def _pct(v):
+        return '—' if v is None else f'{int(v)}%'
+
+    story = [
+        Paragraph('XplagiaX — Analysis Report', h1),
+        Paragraph(f'Shared by {sender_email} · '
+                  f'{datetime.utcnow().strftime("%b %d, %Y")}', sub),
+        Spacer(1, 6), HRFlowable(width='100%', color=HexColor(B['primary']), thickness=2),
+        Spacer(1, 10),
+        Paragraph(entry.title or 'Untitled analysis',
+                  ParagraphStyle('xt', parent=body, fontSize=12, leading=16,
+                                 textColor=HexColor(B['ink']), spaceAfter=8)),
+    ]
+
+    cells = [
+        [Paragraph('AI CONTENT', lbl), Paragraph('SIMILARITY', lbl), Paragraph('CITATION QUALITY', lbl)],
+        [Paragraph(f'<font color="{B["ai"]}" size="16"><b>{_pct(entry.ai_pct)}</b></font>', body),
+         Paragraph(f'<font color="{B["plag"]}" size="16"><b>{_pct(entry.overall)}</b></font>', body),
+         Paragraph(f'<font color="{B["primary"]}" size="16"><b>'
+                   f'{"—" if entry.cit_score is None else str(int(entry.cit_score)) + "/100"}</b></font>', body)],
+    ]
+    metrics = Table(cells, colWidths=[58 * mm] * 3)
+    metrics.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), HexColor(B['bg'])),
+        ('BOX', (0, 0), (-1, -1), 0.75, HexColor('#e2e8f0')),
+        ('INNERGRID', (0, 0), (-1, -1), 0.75, HexColor('#e2e8f0')),
+        ('TOPPADDING', (0, 0), (-1, 0), 7), ('BOTTOMPADDING', (0, 1), (-1, 1), 9),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    story += [metrics, Spacer(1, 14),
+              Paragraph('<b>Overview</b>', ParagraphStyle('xo', parent=body, textColor=HexColor(B['ink']))),
+              Spacer(1, 3)]
+
+    ai_pct = entry.ai_pct
+    if ai_pct is None:
+        overview = 'This document was analyzed with XplagiaX AI TestPro.'
+    elif ai_pct >= 50:
+        overview = (f'High AI concentration: {ai_pct}% of the analyzed content shows '
+                    'AI-characteristic patterns (word-weighted across sections).')
+    elif ai_pct >= 25:
+        overview = f'Mixed content: approximately {ai_pct}% of the text shows AI-characteristic patterns.'
+    else:
+        overview = f'Predominantly human-written: only {ai_pct}% shows AI-characteristic patterns.'
+    if entry.overall is not None:
+        overview += f' Similarity to existing sources: {int(entry.overall)}%.'
+    story.append(Paragraph(overview, body))
+
+    text = (entry.text or '').strip()
+    if text:
+        excerpt = text[:6000]
+        story += [Spacer(1, 12),
+                  Paragraph('<b>Analyzed text' + (' (excerpt)' if len(text) > 6000 else '') + '</b>',
+                            ParagraphStyle('xa', parent=body, textColor=HexColor(B['ink']))),
+                  Spacer(1, 3)]
+        for para in excerpt.split('\n'):
+            para = para.strip()
+            if para:
+                safe = para.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                story.append(Paragraph(safe, body))
+                story.append(Spacer(1, 4))
+
+    story += [Spacer(1, 14), HRFlowable(width='100%', color=HexColor('#e2e8f0'), thickness=0.75),
+              Spacer(1, 4),
+              Paragraph('Generated by XplagiaX · AI TestPro & FinderX — this report was shared '
+                        f'with you by {sender_email}.', lbl)]
+    doc.build(story)
+    return buf.getvalue()
+
+
+def _share_email_html(entry, sender_email):
+    """Cuerpo HTML del correo (CSS inline, colores de la app): overview + remitente."""
+    B = _XPA_BRAND
+
+    def _pct(v, unit='%'):
+        return '—' if v is None else f'{int(v)}{unit}'
+
+    def _tile(label, value, color):
+        return (f'<td style="padding:14px 16px;background:{B["bg"]};border:1px solid #e2e8f0;'
+                f'border-radius:10px;text-align:center;">'
+                f'<div style="font-size:11px;font-weight:700;color:{B["muted"]};'
+                f'text-transform:uppercase;letter-spacing:.06em;">{label}</div>'
+                f'<div style="font-size:24px;font-weight:800;color:{color};margin-top:4px;">{value}</div></td>')
+
+    title = (entry.title or 'Untitled analysis').replace('<', '&lt;')
+    preview = (entry.text or '')[:220].replace('<', '&lt;')
+    return f"""
+<div style="margin:0;padding:24px;background:#eef2f7;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
+    <div style="background:{B['primary']};padding:20px 26px;">
+      <div style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:.02em;">XplagiaX</div>
+      <div style="color:rgba(255,255,255,.75);font-size:12px;margin-top:2px;">AI TestPro · FinderX — Analysis Report</div>
+    </div>
+    <div style="padding:26px;">
+      <p style="margin:0 0 6px;font-size:13px;color:{B['muted']};">
+        <b style="color:{B['ink']};">{sender_email}</b> shared an analysis with you.</p>
+      <h2 style="margin:0 0 14px;font-size:17px;line-height:1.35;color:{B['ink']};">{title}</h2>
+      <table role="presentation" width="100%" cellspacing="8" cellpadding="0" style="border-collapse:separate;">
+        <tr>
+          {_tile('AI Content', _pct(entry.ai_pct), B['ai'])}
+          {_tile('Similarity', _pct(entry.overall), B['plag'])}
+          {_tile('Citations', _pct(entry.cit_score, '/100'), B['primary'])}
+        </tr>
+      </table>
+      <div style="margin-top:16px;padding:14px 16px;background:{B['bg']};border-left:3px solid {B['primary']};
+                  border-radius:0 10px 10px 0;font-size:13px;line-height:1.55;color:#334155;">
+        <b style="color:{B['ink']};">Overview.</b> {preview}…
+      </div>
+      <p style="margin:18px 0 0;font-size:12.5px;line-height:1.6;color:{B['muted']};">
+        The full report is attached as a PDF. It includes the section-by-section metrics
+        and the analyzed text.</p>
+    </div>
+    <div style="padding:14px 26px;background:{B['bg']};border-top:1px solid #e2e8f0;">
+      <p style="margin:0;font-size:11px;color:{B['muted']};">
+        Sent via XplagiaX on behalf of {sender_email}. If you weren't expecting this email you can ignore it.</p>
+    </div>
+  </div>
+</div>"""
+
+
+@x_doc.route('/history/<hid>/share', methods=['POST'])
+@login_required
+def history_share(hid):
+    if not _history_allowed():
+        return jsonify({'error': 'Sharing is available on paid plans only.', 'allowed': False}), 403
+    from modules.models.model import AnalysisHistory, AnalysisShare, Users
+    _ensure_analysis_shares_table()
+
+    entry = AnalysisHistory.query.filter_by(user_id=current_user.id, history_id=hid).first()
+    if not entry:
+        return jsonify({'error': 'Analysis not found.'}), 404
+
+    data = request.get_json(silent=True) or {}
+    raw_emails = data.get('emails') or []
+    emails, seen = [], set()
+    for e in raw_emails:
+        e = str(e or '').strip().lower()
+        if e and e not in seen and re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', e):
+            seen.add(e)
+            emails.append(e)
+    if not emails:
+        return jsonify({'error': 'No valid email addresses.'}), 400
+    if len(emails) > 20:
+        return jsonify({'error': 'Too many recipients (max 20).'}), 400
+
+    results = []
+    pdf_bytes = None
+    for email in emails:
+        if email == (current_user.email or '').lower():
+            results.append({'email': email, 'status': 'skipped', 'reason': 'own account'})
+            continue
+        target = Users.query.filter_by(email=email).first()
+        existing = AnalysisShare.query.filter_by(analysis_id=entry.id, email=email).first()
+        if existing:
+            results.append({'email': email, 'status': 'already_shared'})
+            continue
+        share = AnalysisShare(analysis_id=entry.id, owner_id=current_user.id,
+                              shared_with_id=target.id if target else None, email=email)
+        db.session.add(share)
+        if target:
+            results.append({'email': email, 'status': 'shared'})
+        else:
+            # Externo: email HTML profesional + PDF adjunto (best-effort por destinatario).
+            try:
+                from flask_mail import Message
+                from settings.connections import mail
+                if pdf_bytes is None:
+                    pdf_bytes = _share_pdf_bytes(entry, current_user.email)
+                msg = Message(f'{current_user.email} shared an XplagiaX analysis with you',
+                              recipients=[email])
+                msg.html = _share_email_html(entry, current_user.email)
+                msg.attach('xplagiax-analysis-report.pdf', 'application/pdf', pdf_bytes)
+                mail.send(msg)
+                results.append({'email': email, 'status': 'emailed'})
+            except Exception:
+                logger.exception('share email failed for %s', email)
+                db.session.expunge(share)
+                results.append({'email': email, 'status': 'error', 'reason': 'email delivery failed'})
+    db.session.commit()
+    shares = AnalysisShare.query.filter_by(analysis_id=entry.id).all()
+    return jsonify({'ok': True, 'results': results,
+                    'shares': [s.to_dict() for s in shares]}), 200
+
+
+@x_doc.route('/history/<hid>/shares', methods=['GET'])
+@login_required
+def history_shares(hid):
+    from modules.models.model import AnalysisHistory, AnalysisShare
+    _ensure_analysis_shares_table()
+    entry = AnalysisHistory.query.filter_by(user_id=current_user.id, history_id=hid).first()
+    if not entry:
+        return jsonify({'error': 'Analysis not found.'}), 404
+    shares = AnalysisShare.query.filter_by(analysis_id=entry.id).all()
+    return jsonify({'shares': [s.to_dict() for s in shares]}), 200
 
 
 # ════════════════════════════════════════════════════════════════════════════

@@ -831,6 +831,10 @@ body.xp-file-preview .mode-switch-container {
 .xpa-mt .analysis-table tr.score-low td:first-child{border-left:4px solid #ef4444}
 .xpa-mt .analysis-table tr.score-medium td:first-child{border-left:4px solid #f59e0b}
 .xpa-mt .analysis-table tr.score-high td:first-child{border-left:4px solid #10b981}
+/* "Show more" por sección: texto completo expandible dentro de la fila. */
+.xpa-mt .xpa-sec-full{font-size:11px;color:#475569;line-height:1.55;margin-top:4px;white-space:pre-wrap;word-break:break-word}
+.xpa-mt .xpa-sec-more{background:none;border:none;padding:0;margin-top:4px;display:inline-block;font-size:10px;font-weight:700;color:#064CDB;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.xpa-mt .xpa-sec-more:hover{color:#0f172a}
 .xpa-mt .insight-box{background:#f8fafc;border:1px solid #e6ebf2;padding:16px;border-radius:12px;margin-bottom:20px}
 .xpa-mt .insight-box p{font-size:13px;line-height:1.5;color:#475569;margin:0}
 .xpa-mt .references-list{margin-top:20px}
@@ -1475,7 +1479,13 @@ body.xp-file-preview .mode-switch-container {
     }
 
     gearBtn.addEventListener('click', function () {
-        overlay.classList.contains('iw-settings-open') ? closeSettings() : openSettings();
+        // Opens the account modal (Settings > AI & Automation) instead of
+        // the old in-page iw-settings-overlay panel.
+        if (typeof window.xpOpenAccountModal === 'function') {
+            window.xpOpenAccountModal('ai');
+        } else {
+            overlay.classList.contains('iw-settings-open') ? closeSettings() : openSettings();
+        }
     });
     closeBtn.addEventListener('click', closeSettings);
     overlay.addEventListener('click', function (e) {
@@ -3073,6 +3083,8 @@ body.xp-file-preview .mode-switch-container {
                 return;
             }
             this._analyzedText = text;   // guardado para similitud real con fuentes
+            this._analyzedTypes = types.slice();       // para "Re-analyze"
+            this._analyzedHtmlViewUrl = htmlViewUrl;   // idem (vista documento)
             const wantAi = types.includes('detect_ai');
             const wantSource = types.includes('search_source');
             // FinderX ya incluye análisis de citas; al pedir FinderX poblamos también
@@ -3169,8 +3181,6 @@ body.xp-file-preview .mode-switch-container {
                 throw new Error('Unexpected response from analysis service.');
             }
 
-            const aiScore = Math.round(data.ai_percentage);
-            const humanScore = Math.round(data.human_percentage);
             const wordCount = apiData.word_count || text.trim().split(/\s+/).length;
             const detectedModel = data.detected_model || null;
 
@@ -3182,11 +3192,37 @@ body.xp-file-preview .mode-switch-container {
                 patterns.push(isAI ? 'AI-characteristic patterns' : 'Human writing markers');
                 return {
                     type: isAI ? 'ai' : 'human',
-                    text: (seg.text || '').trim().slice(0, 280),
+                    // Texto COMPLETO del segmento — antes se truncaba a 280 chars y el
+                    // subrayado (que localiza cada bloque por su texto) dejaba sin
+                    // pintar todo lo que quedara después del corte; la columna
+                    // "Words" también contaba solo las palabras del texto truncado.
+                    text: (seg.text || '').trim(),
                     confidence: Math.round(seg.score),
                     patterns
                 };
             });
+
+            // ── Global AI% verificable a partir de los MISMOS segmentos que se
+            // muestran en la tabla: media ponderada por palabras de la probabilidad
+            // de IA de cada segmento → Σ(palabras_i × probIA_i) / Σ(palabras_i).
+            // (El conteo simple "segmentos IA / segmentos totales" ignora el tamaño:
+            // un título de 8 palabras pesaría igual que un párrafo de 200.)
+            // probIA_i usa la misma convención que la tabla: score si el segmento es
+            // IA, (100 − score) si es humano. Sin segmentos → valor del servicio.
+            let aiScore, humanScore;
+            const segWords = blocks.map(b => b.text.split(/\s+/).filter(Boolean).length);
+            const totalSegWords = segWords.reduce((a, n) => a + n, 0);
+            if (totalSegWords > 0) {
+                const weighted = blocks.reduce((acc, b, i) => {
+                    const aiProb = b.type === 'ai' ? b.confidence : Math.max(0, 100 - b.confidence);
+                    return acc + segWords[i] * aiProb;
+                }, 0);
+                aiScore = Math.round(weighted / totalSegWords);
+                humanScore = 100 - aiScore;
+            } else {
+                aiScore = Math.round(data.ai_percentage);
+                humanScore = Math.round(data.human_percentage);
+            }
 
             let message;
             if (aiScore >= 60) {
@@ -4429,15 +4465,26 @@ body.xp-file-preview .mode-switch-container {
             if (!ai) return '<div class="empty-state"><p>AI detection not run</p><small>Select “AI detection” and analyze.</small></div>';
             const aiPct = Math.round(ai.ai_score);
             const blocks = Array.isArray(ai.blocks) ? ai.blocks : [];
+            const PREVIEW_LEN = 56;
             const rows = blocks.map((b, i) => {
                 const isAI = b.type === 'ai';
                 const aiProb = isAI ? b.confidence : Math.max(0, 100 - b.confidence);
                 const cls = aiProb >= 50 ? 'score-low' : aiProb >= 25 ? 'score-medium' : 'score-high';
                 const col = aiProb >= 50 ? '#f87171' : aiProb >= 25 ? '#fbbf24' : '#34d399';
-                const words = (b.text || '').trim().split(/\s+/).filter(Boolean).length;
-                const preview = this._escapeHtml((b.text || '').slice(0, 56));
+                const fullText = (b.text || '').trim();
+                const words = fullText.split(/\s+/).filter(Boolean).length;
+                const needsMore = fullText.length > PREVIEW_LEN;
+                const preview = this._escapeHtml(fullText.slice(0, PREVIEW_LEN));
+                // "Show more": expande el texto COMPLETO de la sección dentro de la
+                // fila, sin disparar el click de "localizar en el texto" de la fila.
+                const moreBtn = needsMore
+                    ? `<button type="button" class="xpa-sec-more" data-sec-toggle aria-expanded="false">Show more</button>`
+                    : '';
+                const fullDiv = needsMore
+                    ? `<div class="xpa-sec-full" hidden>${this._escapeHtml(fullText)}</div>`
+                    : '';
                 return `<tr class="${cls}" data-ai-focus="${i}" tabindex="0" role="button" aria-label="Locate this section in the text">
-                    <td>Section ${i + 1}<div style="font-size:10px;color:#94a3b8;margin-top:2px;">${preview}…</div></td>
+                    <td>Section ${i + 1}<div style="font-size:10px;color:#94a3b8;margin-top:2px;"><span class="xpa-sec-preview">${preview}${needsMore ? '…' : ''}</span>${fullDiv}${moreBtn}</div></td>
                     <td style="text-align:right;">${words}</td>
                     <td style="text-align:right;color:${col};font-weight:700;">${aiProb}%</td>
                 </tr>`;
@@ -4447,12 +4494,16 @@ body.xp-file-preview .mode-switch-container {
             return `
             <h2>AI Detection Analysis</h2>
             <div class="ai-probability" style="padding:18px;gap:18px;">
-                <div style="width:96px;height:96px;flex-shrink:0;">${this._mtGauge(aiPct, col)}</div>
-                <div class="probability-label"><strong>${lbl}</strong><p>${aiPct}% of the analyzed content shows AI-characteristic patterns.</p></div>
+                <div style="width:96px;height:96px;flex-shrink:0;" data-tip="Overall AI score: the word-weighted average of each section's AI probability — sections with more words count proportionally more.">${this._mtGauge(aiPct, col)}</div>
+                <div class="probability-label"><strong data-tip="Verdict based on the overall score: 50%+ is high AI concentration, 25–49% is mixed, below 25% is predominantly human.">${lbl}</strong><p>${aiPct}% of the analyzed content shows AI-characteristic patterns.</p></div>
             </div>
             <div class="section-breakdown">
-                <h4>Section-by-Section Analysis</h4>
-                <table class="analysis-table"><thead><tr><th>Section</th><th style="text-align:right;">Words</th><th style="text-align:right;">AI Prob.</th></tr></thead>
+                <h4 data-tip="Your text is split into sections and each one is scored independently — click a row to locate that section in the text panel.">Section-by-Section Analysis</h4>
+                <table class="analysis-table"><thead><tr>
+                    <th><span data-tip="A contiguous chunk of your text, in the order it appears. Click the row to highlight it in the text panel.">Section</span></th>
+                    <th style="text-align:right;"><span data-tip="Number of words in this section.">Words</span></th>
+                    <th style="text-align:right;"><span data-tip="Likelihood that this section was machine-generated: red 50%+, amber 25–49%, green below 25% (mostly human).">AI Prob.</span></th>
+                </tr></thead>
                 <tbody>${rows || '<tr><td colspan="3" style="text-align:center;color:#94a3b8;">No segments</td></tr>'}</tbody></table>
             </div>`;
         }
@@ -5161,14 +5212,34 @@ body.xp-file-preview .mode-switch-container {
             overlay.addEventListener('click', e => {
                 const b = e.target.closest('[data-goto]');
                 if (b) { e.preventDefault(); go(b.dataset.goto); }
+                // "Show more/less" de las filas de sección — no debe disparar el
+                // click de la fila (que localiza la sección en el panel de texto).
+                const more = e.target.closest('[data-sec-toggle]');
+                if (more) {
+                    e.stopPropagation();
+                    const cell = more.parentElement;
+                    const full = cell.querySelector('.xpa-sec-full');
+                    const prev = cell.querySelector('.xpa-sec-preview');
+                    const expanded = more.getAttribute('aria-expanded') === 'true';
+                    if (full) full.hidden = expanded;
+                    if (prev) prev.hidden = !expanded;
+                    more.setAttribute('aria-expanded', String(!expanded));
+                    more.textContent = expanded ? 'Show more' : 'Show less';
+                }
             });
             // Card -> locate the matching finding in the text panel (and back, below).
             // Same wiring for the three kinds: citations, AI-flagged sections, plagiarism segments.
             [['data-cite-focus', 'cite', 'citeFocus'], ['data-ai-focus', 'ai', 'aiFocus'], ['data-plag-focus', 'plag', 'plagFocus']].forEach(([attr, kind, dsKey]) => {
                 overlay.querySelectorAll(`[${attr}]`).forEach(elc => {
-                    const jump = () => this._focusFinding(kind, elc.dataset[dsKey]);
+                    // Ignorar interacciones que nacen en el botón "Show more" de la
+                    // fila (el tr es ancestro del botón: su listener dispararía antes
+                    // de que el toggle delegado del overlay pueda frenarlo).
+                    const jump = (ev) => {
+                        if (ev && ev.target && ev.target.closest && ev.target.closest('[data-sec-toggle]')) return;
+                        this._focusFinding(kind, elc.dataset[dsKey]);
+                    };
                     elc.addEventListener('click', jump);
-                    elc.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); jump(); } });
+                    elc.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { if (ev.target.closest && ev.target.closest('[data-sec-toggle]')) return; ev.preventDefault(); jump(ev); } });
                 });
             });
             const textEl = overlay.querySelector('#aiSplitTextContent');
@@ -5223,7 +5294,12 @@ body.xp-file-preview .mode-switch-container {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
                 }).then(async res => {
-                    if (res.ok) return;
+                    if (res.ok) {
+                        // Guardar el id: lo necesita el botón "Share analysis" del topbar.
+                        const d = await res.json().catch(() => null);
+                        if (d && d.id) this._lastHistoryId = d.id;
+                        return;
+                    }
                     if (res.status === 403) {
                         console.info('[history] no guardado: el plan no incluye historial de análisis');
                     } else {
@@ -5291,6 +5367,15 @@ body.xp-file-preview .mode-switch-container {
                         ${ai ? `<span class="ai-split-meta-chip" style="color:${aiColor};border-color:${aiColor}33;background:${aiColor}0d">${aiPct}% AI</span>` : ''}
                         ${source ? `<span class="ai-split-meta-chip" style="color:${srcLbl.color};border-color:${srcLbl.color}33;background:${srcLbl.color}0d">${overall}% match</span>` : ''}
                     </div>
+                    <button class="ai-split-new-btn" id="aiSplitReanalyzeBtn" type="button" title="Run the same analysis again on this text (uses 1 analysis credit)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        Re-analyze
+                    </button>
+                    ${(typeof currentUserData !== 'undefined' && currentUserData.plan !== 'Starter') ? `
+                    <button class="ai-split-new-btn" id="aiSplitShareBtn" type="button" title="Share this analysis with other users by email">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        Share analysis
+                    </button>` : ''}
                     <button class="ai-split-new-btn" id="aiSplitNewBtn" type="button">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         New Analysis
@@ -5367,6 +5452,28 @@ body.xp-file-preview .mode-switch-container {
             });
 
             document.getElementById('aiSplitNewBtn').addEventListener('click', () => this._exitSplitMode(true));
+
+            // Re-analyze: cierra la vista y repite el MISMO análisis sobre el mismo
+            // texto (recalcula). Consume 1 crédito igual que cualquier análisis.
+            const reBtn = document.getElementById('aiSplitReanalyzeBtn');
+            if (reBtn) reBtn.addEventListener('click', () => {
+                const txt = this._analyzedText, types = this._analyzedTypes, hv = this._analyzedHtmlViewUrl;
+                if (!txt || !types || !types.length) return;
+                this._exitSplitMode(false);
+                setTimeout(() => this.runAnalysesOnText(txt, types, hv), 60);
+            });
+
+            // Share analysis (solo planes de pago — el botón no se renderiza en Starter).
+            const shareBtn = document.getElementById('aiSplitShareBtn');
+            if (shareBtn) shareBtn.addEventListener('click', () => {
+                if (!this._lastHistoryId) {
+                    this.showError('This analysis has not been saved to history yet — try again in a moment.');
+                    return;
+                }
+                if (typeof window.xpaShareAnalysis === 'function') {
+                    window.xpaShareAnalysis(this._lastHistoryId, this._historyTitle(text));
+                }
+            });
             this._initSplitResizer();
 
             // Guardar en el historial (texto + resultados) — salvo si venimos de reabrir
@@ -5814,9 +5921,9 @@ body.xp-file-preview .mode-switch-container {
 
         // ── Constantes/paleta compartidas del resaltado unificado (AI + Plagio + Citas) ──
         _HL_KIND() {
-            return { ai: { c: '#ef4444', label: 'AI-generated' }, plag: { c: '#f59e0b', label: 'Plagiarism' }, cit: { c: '#064CDB', label: 'Citation' } };
+            return { ai: { c: '#ef4444', label: 'AI-generated' }, hum: { c: '#10b981', label: 'Human-written' }, plag: { c: '#f59e0b', label: 'Plagiarism' }, cit: { c: '#064CDB', label: 'Citation' } };
         }
-        _HL_ORDER() { return ['ai', 'plag', 'cit']; }
+        _HL_ORDER() { return ['ai', 'hum', 'plag', 'cit']; }
 
         // ── Búsqueda robusta entre conversores: índice de texto NORMALIZADO ──
         // El texto extraído y la vista HTML del documento vienen de conversores
@@ -5898,16 +6005,27 @@ body.xp-file-preview .mode-switch-container {
             // búsquedas de los tres análisis (más rápido que una regex por fragmento).
             const IDX = this._buildNormIndex(full);
 
-            // AI: coincidencia tolerante a espacios; sólo bloques marcados como IA.
+            // AI: coincidencia tolerante a espacios. TODOS los bloques se pintan —
+            // rojo los marcados IA, verde los humanos (antes los humanos quedaban
+            // sin subrayar y parecía que "faltaba texto").
             if (ai && Array.isArray(ai.blocks)) {
                 let cursor = 0;
                 ai.blocks.forEach((b, aiIdx) => {
                     const frag = String(b.text || '').trim();
                     if (!frag) return;
-                    const m = this._normFindBest(IDX, frag, cursor);
+                    let m = this._normFindBest(IDX, frag, cursor);
+                    // Los segmentos vienen EN ORDEN del propio texto analizado; si no
+                    // aparece desde el cursor (p. ej. solape raro), reintentar desde 0.
+                    if (!m && cursor > 0) m = this._normFindBest(IDX, frag, 0);
                     if (!m) return;
-                    const end = Math.min(len, m.index + m.length);
-                    if (String(b.type || '').toLowerCase() === 'ai') ranges.push({ start: m.index, end, kind: 'ai', aiIdx });
+                    let end = Math.min(len, m.index + m.length);
+                    // _normFindBest puede degradar a prefijo (120/60/30 chars): el
+                    // hallazgo se ancla bien pero cubriría solo el arranque. Como el
+                    // segmento es un tramo contiguo del MISMO texto, extender al largo
+                    // real del fragmento no puede pintar texto ajeno.
+                    if (m.length < frag.length * 0.9) end = Math.min(len, m.index + frag.length);
+                    const isAI = String(b.type || '').toLowerCase() === 'ai';
+                    ranges.push({ start: m.index, end, kind: isAI ? 'ai' : 'hum', aiIdx });
                     cursor = end;
                 });
             }
@@ -6017,7 +6135,8 @@ body.xp-file-preview .mode-switch-container {
                 if (!cov.length) continue;
                 const kinds = order.filter(k => cov.some(r => r.kind === k));
                 const citR = cov.find(r => r.kind === 'cit');
-                const aiR = cov.find(r => r.kind === 'ai');
+                // 'hum' comparte índice de tabla con 'ai' (misma tabla de secciones).
+                const aiR = cov.find(r => r.kind === 'ai') || cov.find(r => r.kind === 'hum');
                 const plagR = cov.find(r => r.kind === 'plag');
                 pieces.push({
                     start: a, end: b, kinds,

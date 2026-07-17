@@ -423,8 +423,13 @@ def get_shared_users(provider, file_id):
         shared_users = fetch_shared_users_from_provider(provider, file_id, token_info['access_token'])
         return jsonify({'shared_users': shared_users})
     except Exception as e:
-        print(f"Error obteniendo usuarios compartidos de {provider}: {e}")
-        return jsonify({'error': str(e)}), 500
+        # Best-effort lookup: providers routinely error on this call for a
+        # file that simply isn't shared with anyone yet (e.g. Dropbox's
+        # sharing/list_file_members raises SharingFileAccessError instead of
+        # returning an empty list). That's not a server failure — degrade to
+        # "unknown collaborators" instead of a 500 that breaks the Share modal.
+        print(f"No se pudo obtener usuarios compartidos de {provider} para {file_id}: {e}")
+        return jsonify({'shared_users': [], 'warning': 'Could not determine current collaborators'})
 
 def fetch_shared_users_from_provider(provider, file_id, access_token):
     """Obtener usuarios compartidos según el proveedor"""

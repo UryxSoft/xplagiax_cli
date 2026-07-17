@@ -2904,3 +2904,179 @@
 .progress-bar.error .error-icon {
   display: block !important;
 }
+
+/* ════════════════════════════════════════════════════════════
+   CLOUD SHARE MODAL — rediseño
+   Banner del documento destacado, selector de permiso con icono
+   (sin emojis) y caja de pills multi-email editables.
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Documento a compartir ─────────────────────────────────── */
+.share-doc-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #eef4ff 0%, #f8faff 100%);
+  border: 1px solid #d8e4ff;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.share-doc-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #064CDB 0%, #3b82f6 100%);
+  color: #fff;
+  font-size: 1.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(6, 76, 219, 0.28);
+}
+
+.share-doc-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.share-doc-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #064CDB;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-doc-sub {
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+
+/* ── Selector de permiso (sin emojis, icono a la izquierda) ── */
+.share-role-wrap {
+  position: relative;
+}
+
+.share-role-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #064CDB;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.share-role-select {
+  padding-left: 32px;
+  font-size: 0.86rem;
+}
+
+/* ── Pillbox multi-email ───────────────────────────────────── */
+.share-pillbox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  min-height: 44px;
+  background: #fff;
+  border: 1px solid #d7dce3;
+  border-radius: 10px;
+  cursor: text;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.share-pillbox:focus-within {
+  border-color: #064CDB;
+  box-shadow: 0 0 0 3px rgba(6, 76, 219, 0.12);
+}
+
+.share-pillbox.is-invalid {
+  border-color: #dc3545;
+}
+
+.share-email-entry {
+  flex: 1;
+  min-width: 150px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.85rem;
+  padding: 4px 2px;
+  color: #1f2937;
+}
+
+.share-email-entry::placeholder {
+  color: #9ca3af;
+}
+
+/* Pill de destinatario: avatar con la inicial + email + quitar.
+   El color lo pone JS vía --pill-color (hash del email). */
+.share-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 3px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--pill-color, #064CDB);
+  /* fallback sólido primero; color-mix lo refina en navegadores modernos */
+  background: #eef4ff;
+  border: 1px solid #d8e4ff;
+  background: color-mix(in srgb, var(--pill-color, #064CDB) 12%, #fff);
+  border: 1px solid color-mix(in srgb, var(--pill-color, #064CDB) 35%, #fff);
+  max-width: 100%;
+  cursor: pointer;                 /* click en el texto = editar */
+  animation: sharePillIn 0.16s ease;
+}
+
+@keyframes sharePillIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.share-pill-avatar {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--pill-color, #064CDB);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-pill-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.share-pill-x {
+  border: none;
+  background: transparent;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+  padding: 0 3px;
+  font-size: 0.8rem;
+  line-height: 1;
+  border-radius: 50%;
+}
+
+.share-pill-x:hover {
+  opacity: 1;
+}

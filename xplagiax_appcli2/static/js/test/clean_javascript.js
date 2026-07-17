@@ -152,12 +152,14 @@ function openDeleteModal(id, type, name) {
     if (!modal) return;
 
     const displayName = name || (type === 'folder' ? 'this folder' : 'this document');
-    const shortName = typeof truncateText === 'function' ? truncateText(displayName, 40) : displayName;
+    const item = type === 'folder' ? folders.find(f => f.id === id) : documents.find(d => d.id === id);
+    if (typeof populateRenameHero === 'function') populateRenameHero('delete-hero', displayName, type, item);
+
     const titleEl = document.getElementById('deleteConfirmTitle');
     const textEl = document.getElementById('deleteConfirmText');
     const folderWarning = document.getElementById('deleteConfirmFolderWarning');
 
-    if (titleEl) titleEl.textContent = `Delete "${shortName}"?`;
+    if (titleEl) titleEl.textContent = 'Delete this item?';
     if (textEl) textEl.textContent = `This will move ${type === 'folder' ? 'the folder' : 'the file'} to Trash.`;
     if (folderWarning) folderWarning.classList.toggle('d-none', type !== 'folder');
 
@@ -654,6 +656,35 @@ async function loadRichHistory(item, type, provider) {
     }
 }
 
+// Manual tab switching for #richDetailsTabs — this page doesn't load the
+// Bootstrap JS bundle (only bootstrap-icons), so data-bs-toggle="tab" has
+// no listener behind it and Bootstrap's own CSS for hiding inactive panes
+// isn't present either (handled separately in clean_css.css). This mirrors
+// exactly what bootstrap.Tab would have toggled, with the app's own classes.
+function switchRichDetailsTab(targetSelector) {
+    const tabsContainer = document.getElementById('richDetailsTabs');
+    const contentContainer = document.getElementById('richDetailsContent');
+    if (!tabsContainer || !contentContainer) return;
+
+    tabsContainer.querySelectorAll('.nav-link').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.bsTarget === targetSelector);
+    });
+    contentContainer.querySelectorAll('.tab-pane').forEach(pane => {
+        const isTarget = `#${pane.id}` === targetSelector;
+        pane.classList.toggle('active', isTarget);
+        pane.classList.toggle('show', isTarget);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const tabsContainer = document.getElementById('richDetailsTabs');
+    if (tabsContainer) {
+        tabsContainer.querySelectorAll('.nav-link').forEach(btn => {
+            btn.addEventListener('click', () => switchRichDetailsTab(btn.dataset.bsTarget));
+        });
+    }
+});
+
 window.openRichDetails = function (item, type) {
     if (!item) return;
     const panel = document.getElementById('rich-details-offcanvas');
@@ -663,10 +694,22 @@ window.openRichDetails = function (item, type) {
         // 1. Header
         const iconContainer = document.getElementById('rich-details-icon');
         const title = item.original_filename || item.name || item.title || 'Unknown';
-        if (iconContainer) iconContainer.innerHTML = getFileIconSVG(title);
+        if (iconContainer) {
+            iconContainer.innerHTML = type === 'folder'
+                ? '<i class="bi bi-folder-fill" style="font-size: 1.05rem; color: #fbbf24;"></i>'
+                : getFileIconSVG(title);
+        }
 
         const titleEl = document.getElementById('rich-details-title');
         if (titleEl) titleEl.textContent = title;
+
+        const subtitleEl = document.getElementById('rich-details-subtitle');
+        if (subtitleEl) {
+            subtitleEl.textContent = type === 'folder' ? 'Folder' : (item.mime_type || title.split('.').pop().toUpperCase() || 'File');
+        }
+
+        const idEl = document.getElementById('rich-details-id');
+        if (idEl) idEl.textContent = item.id ? `ID #${item.id}` : '—';
 
         // 2. Details Tab
         const statusEl = document.getElementById('rich-panel-status');
@@ -768,8 +811,7 @@ window.openRichDetails = function (item, type) {
         panel.classList.add('active');
 
         // Reset to first tab
-        const firstTab = new bootstrap.Tab(document.querySelector('#richDetailsTabs button[data-bs-target="#details-pane"]'));
-        firstTab.show();
+        switchRichDetailsTab('#details-pane');
 
     } catch (e) {
         console.error("Error showing rich details:", e);
@@ -1183,44 +1225,162 @@ window.isValidEmail = isValidEmail;
 // Rename item
 
 // Wire live inline validation on a rename input: toggles is-invalid + inline
-// error text + disables the confirm button while the current value is invalid.
-function wireRenameValidation(inputId, errorId, confirmBtnId, getCurrentName) {
+// error text, disables the confirm button while invalid OR unchanged, trims
+// on blur, and (optionally) feeds a richer UI — checklist/counter/status
+// pill/preview — via onUpdate without duplicating the validation rules.
+function wireRenameValidation(inputId, errorId, confirmBtnId, getCurrentName, onUpdate) {
     const input = document.getElementById(inputId);
     const errorEl = document.getElementById(errorId);
     const confirmBtn = document.getElementById(confirmBtnId);
     if (!input) return;
 
     const check = () => {
-        const result = validateItemName(input.value, getCurrentName ? getCurrentName() : '');
+        const currentName = getCurrentName ? getCurrentName() : '';
+        const result = validateItemName(input.value, currentName);
         const hasError = !result.valid;
         input.classList.toggle('is-invalid', hasError);
         if (errorEl) {
             errorEl.textContent = hasError ? result.error : '';
             errorEl.classList.toggle('d-none', !hasError);
         }
-        if (confirmBtn) confirmBtn.disabled = hasError;
+        if (confirmBtn) confirmBtn.disabled = hasError || !!result.isNoop;
+        if (typeof onUpdate === 'function') onUpdate(result, currentName, input.value);
         return result;
     };
 
     input.oninput = check;
+    input.onblur = () => { input.value = input.value.trim(); check(); };
+    // Enter submits (if the rename is currently valid), Escape is already
+    // handled globally by the modal keydown trap.
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter' && confirmBtn && !confirmBtn.disabled) {
+            e.preventDefault();
+            confirmBtn.click();
+        }
+    };
     check();
+    return check;
 }
 
-function renameItem(id, type, currentName) {
+// Poka-Yoke UX extras shared by both rename modals — live checklist
+// (valid characters / length / extension preserved), a character counter,
+// a change-status pill and a "will become" preview. All derived straight
+// from validateItemName's own rules, not a second copy of them.
+function updateRenameExtras(prefix, result, currentName, rawValue) {
+    const trimmed = (rawValue || '').trim();
+
+    const counterEl = document.getElementById(`${prefix}-counter`);
+    if (counterEl) {
+        counterEl.textContent = `${rawValue.length} / 255`;
+        counterEl.classList.toggle('rename-counter--warn', rawValue.length > 230);
+    }
+
+    const statusEl = document.getElementById(`${prefix}-status`);
+    if (statusEl) {
+        statusEl.classList.remove('rename-status-pill--idle', 'rename-status-pill--dirty', 'rename-status-pill--restored');
+        if (trimmed === (currentName || '').trim()) {
+            const wasEdited = rawValue !== currentName;
+            statusEl.innerHTML = wasEdited
+                ? '<i class="bi bi-check-circle-fill"></i> Original name restored'
+                : '<i class="bi bi-dash-circle"></i> No changes';
+            statusEl.classList.add(wasEdited ? 'rename-status-pill--restored' : 'rename-status-pill--idle');
+        } else {
+            statusEl.innerHTML = '<i class="bi bi-circle-fill"></i> Unsaved changes';
+            statusEl.classList.add('rename-status-pill--dirty');
+        }
+    }
+
+    const checklistEl = document.getElementById(`${prefix}-checklist`);
+    if (checklistEl) {
+        const hasContent = trimmed.length > 0;
+        const setCheck = (key, ok) => {
+            const el = checklistEl.querySelector(`[data-check="${key}"]`);
+            if (!el) return;
+            const icon = el.querySelector('i');
+            el.classList.toggle('rename-check--ok', hasContent && ok);
+            el.classList.toggle('rename-check--bad', hasContent && !ok);
+            if (icon) icon.className = !hasContent ? 'bi bi-circle' : (ok ? 'bi bi-check-circle-fill' : 'bi bi-x-circle-fill');
+        };
+
+        setCheck('chars', hasContent && !/[\\/]/.test(trimmed));
+        setCheck('length', hasContent && trimmed.length <= 255);
+
+        // Extension-preserved is informational only (never blocks renaming —
+        // users do sometimes mean to change .txt to .md, etc.) and only
+        // shown when the current item actually has an extension.
+        const extEl = checklistEl.querySelector('[data-check="ext"]');
+        const dotIndex = (currentName || '').lastIndexOf('.');
+        const currentExt = dotIndex > 0 ? currentName.slice(dotIndex + 1).toLowerCase() : null;
+        if (currentExt) {
+            const newDotIndex = trimmed.lastIndexOf('.');
+            const newExt = newDotIndex > 0 ? trimmed.slice(newDotIndex + 1).toLowerCase() : null;
+            if (extEl) extEl.classList.remove('d-none');
+            setCheck('ext', newExt === currentExt);
+        } else if (extEl) {
+            extEl.classList.add('d-none');
+        }
+    }
+
+    const previewEl = document.getElementById(`${prefix}-preview`);
+    const previewText = document.getElementById(`${prefix}-preview-text`);
+    if (previewEl && previewText) {
+        const changed = result.valid && !result.isNoop;
+        previewEl.classList.toggle('d-none', !changed);
+        if (changed) previewText.textContent = result.trimmed;
+    }
+}
+
+// Fills the rename modal's file-context "hero" card (icon, name, type/size)
+// — reuses the same type→icon/color map as the documents list/card views.
+function populateRenameHero(prefix, name, type, item) {
+    const iconEl = document.getElementById(`${prefix}-hero-icon`);
+    const nameEl = document.getElementById(`${prefix}-hero-name`);
+    const metaEl = document.getElementById(`${prefix}-hero-meta`);
+    if (!iconEl) return;
+
+    if (nameEl) { nameEl.textContent = name; nameEl.title = name; }
+
+    if (type === 'folder') {
+        iconEl.style.background = '#fef3c7';
+        iconEl.innerHTML = '<i class="bi bi-folder-fill" style="color:#b45309;"></i>';
+        if (metaEl) metaEl.textContent = 'Folder';
+    } else {
+        const info = _nativeFileTypeInfo(name || '');
+        iconEl.style.background = info.tagBg;
+        iconEl.innerHTML = `<i class="bi ${info.icon}" style="color:${info.tagColor};"></i>`;
+        const size = item && item.size !== undefined && item.size !== null ? formatSize(item.size) : null;
+        if (metaEl) metaEl.textContent = size ? `${info.label} File · ${size}` : `${info.label} File`;
+    }
+}
+
+// Selects just the basename (excludes the extension) like Windows/macOS/
+// Google Drive do, so the user can't accidentally wipe out ".pdf" etc.
+function selectRenameBasename(input, name, type) {
+    input.focus();
+    const dotIndex = (name || '').lastIndexOf('.');
+    if (type === 'folder' || dotIndex <= 0) {
+        input.select();
+    } else {
+        input.setSelectionRange(0, dotIndex);
+    }
+}
+
+function renameItem(id, type, currentName, item) {
     activeRenameItem = { id, type, currentName };
     const modal = document.getElementById('rename-modal');
     const input = document.getElementById('rename-input');
-    const historyPreview = document.getElementById('rename-history-preview');
-    const currentNameDisplay = document.getElementById('current-name-display');
+    // The context-menu onclick only passes id/type/name (no full item), so
+    // look it up from the already-loaded lists for the hero card's size.
+    if (!item) item = type === 'folder' ? folders.find(f => f.id === id) : documents.find(d => d.id === id);
 
     if (modal && input) {
         input.value = currentName;
-        if (currentNameDisplay) currentNameDisplay.textContent = currentName;
-        if (historyPreview) historyPreview.classList.remove('d-none');
+        populateRenameHero('rename-hero', currentName, type, item);
         modal.classList.add('active');
-        wireRenameValidation('rename-input', 'rename-error', 'confirm-rename', () => activeRenameItem && activeRenameItem.currentName);
-        input.focus();
-        input.select();
+        wireRenameValidation('rename-input', 'rename-error', 'confirm-rename',
+            () => activeRenameItem && activeRenameItem.currentName,
+            (result, curName, rawValue) => updateRenameExtras('rename', result, curName, rawValue));
+        selectRenameBasename(input, currentName, type);
     }
 }
 
@@ -1236,6 +1396,10 @@ async function executeRename() {
     }
     if (result.isNoop) { closeModals(); return; }
 
+    const btn = document.getElementById('confirm-rename');
+    const originalBtnHtml = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...'; }
+
     try {
         const res = await fetch('/x_doc/rename', {
             method: 'POST',
@@ -1248,14 +1412,17 @@ async function executeRename() {
         });
         const data = await res.json();
         if (res.ok) {
+            if (btn) btn.innerHTML = '<i class="bi bi-check-lg"></i> Renamed!';
             showAlert('Renamed successfully', 'success');
-            closeModals();
             loadFolderContent(currentFolderId, false, true);
+            setTimeout(closeModals, 500);
         } else {
             showAlert(data.error || 'Error renaming', 'error');
+            if (btn) { btn.disabled = false; btn.innerHTML = originalBtnHtml; }
         }
     } catch (e) {
         showAlert('Network error', 'error');
+        if (btn) { btn.disabled = false; btn.innerHTML = originalBtnHtml; }
     }
 }
 

@@ -337,6 +337,16 @@
         if (e.aiPct != null || e.overall != null) return '#059669';
         return '#cbd5e1';
     }
+    // Color "aleatorio" pero DETERMINISTA por email (hash simple sobre una paleta
+    // fija) — así el avatar de cada persona conserva su color entre renders.
+    const _AV_PALETTE = ['#064CDB', '#7c3aed', '#0891b2', '#059669', '#d97706', '#dc2626', '#db2777', '#4f46e5'];
+    function _avColor(email) {
+        let h = 0;
+        const s = String(email || '');
+        for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+        return _AV_PALETTE[Math.abs(h) % _AV_PALETTE.length];
+    }
+    window._xpaAvColor = _avColor;
     // Searchable text blob per entry: title/preview plus score + date synonyms,
     // so queries like "citations", "today" or "80%" also surface matches.
     function _haystack(e) {
@@ -634,10 +644,23 @@
                     if (e.aiPct != null) { const c = e.aiPct>=50?'#dc2626':e.aiPct>=25?'#d97706':'#059669'; badges.push(`<span class="xpa-h-badge" style="color:${c};border-color:${c}33;background:${c}0d">${e.aiPct}% AI</span>`); }
                     if (e.overall != null) { const c = e.overall>=50?'#dc2626':e.overall>=25?'#d97706':'#059669'; badges.push(`<span class="xpa-h-badge" style="color:${c};border-color:${c}33;background:${c}0d">${e.overall}% Sim</span>`); }
                     if (e.cit != null) badges.push(`<span class="xpa-h-badge" style="color:#064CDB;border-color:#064CDB33;background:#064CDB0d">Cites: ${e.cit}</span>`);
+                    // Recibido de otro usuario: ícono distintivo + quién lo compartió.
+                    if (e.shared) badges.push(`<span class="xpa-h-badge xpa-h-badge-shared" title="Shared by ${_esc(e.sharedBy || '')}">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                        Shared · ${_esc(e.sharedBy || '')}</span>`);
+                    // Propio y compartido con otros: stack de avatares circulares con la
+                    // inicial de cada correo (colores deterministas por email).
+                    const stack = (!e.shared && Array.isArray(e.sharedWith) && e.sharedWith.length)
+                        ? `<span class="xpa-h-avstack" title="Shared with: ${_esc(e.sharedWith.map(s => s.email).join(', '))}">${
+                            e.sharedWith.slice(0, 4).map((s, n) =>
+                                `<span class="xpa-h-av" style="background:${_avColor(s.email)};z-index:${9 - n}">${_esc(s.initial || (s.email || '?')[0].toUpperCase())}</span>`).join('')
+                          }${e.sharedWith.length > 4 ? `<span class="xpa-h-av xpa-h-av-more">+${e.sharedWith.length - 4}</span>` : ''}</span>`
+                        : '';
                     html += `<div class="xpa-h-item" data-id="${e.id}" style="--risk-c:${rc};animation-delay:${delay}ms" role="option" tabindex="0" aria-label="${_esc(e.title)}">
                         <div class="xpa-h-item-r1">
                             <span class="xpa-h-dot"></span>
                             <span class="xpa-h-ititle">${_highlight(e.title, textTokens)}</span>
+                            ${stack}
                             <span class="xpa-h-itime">${_rel(e.ts)}</span>
                         </div>
                         <div class="xpa-h-item-r2">
@@ -647,10 +670,14 @@
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
                                     <span class="xpa-h-tip">Open analysis</span>
                                 </button>
+                                ${e.shared ? '' : `<button class="xpa-h-iact" type="button" data-action="share" aria-label="Share analysis">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                                    <span class="xpa-h-tip">Share analysis</span>
+                                </button>
                                 <button class="xpa-h-iact del" type="button" data-action="delete" aria-label="Delete entry">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                                     <span class="xpa-h-tip">Delete entry</span>
-                                </button>
+                                </button>`}
                             </div>
                         </div>
                     </div>`;
@@ -672,6 +699,11 @@
                             if (itemEl) itemEl.classList.add('active');
                             this._syncFooter(true);
                             this._openEntry(itemId);
+                        } else if (btn.dataset.action === 'share') {
+                            const entry = (this._items || []).find(x => x.id === itemId);
+                            if (typeof window.xpaShareAnalysis === 'function') {
+                                window.xpaShareAnalysis(itemId, entry ? entry.title : '');
+                            }
                         } else {
                             this._deleteEntry(itemId);
                         }
@@ -917,5 +949,201 @@
     }
 
     window._histCtrl = new HistoryModalCtrl();
+})();
+</script>
+
+<!-- ══ SHARE ANALYSIS (modal global — topbar del análisis y filas del historial) ══ -->
+<style>
+/* Badge "Shared · owner" en filas recibidas */
+.xpa-h-badge-shared{color:#7c3aed;border-color:#7c3aed33;background:#7c3aed0d;display:inline-flex;align-items:center;gap:4px}
+/* Stack de avatares (iniciales) en filas propias compartidas */
+.xpa-h-avstack{display:inline-flex;flex-shrink:0;padding-left:4px}
+.xpa-h-av{width:18px;height:18px;border-radius:50%;color:#fff;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:-6px;box-shadow:0 1px 3px rgba(15,23,42,.25)}
+.xpa-h-av-more{background:#64748b}
+/* Modal — mismo estándar visual del resto de modales de la app */
+.xpa-share-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:11000;display:none;align-items:center;justify-content:center}
+.xpa-share-overlay.open{display:flex}
+.xpa-share-card{position:relative;background:#fff;width:92%;max-width:480px;border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.2);animation:xpaShareIn .25s ease-out}
+@keyframes xpaShareIn{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+.xpa-share-head{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid #eef2f7}
+.xpa-share-head h2{margin:0;font-size:15px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:8px}
+.xpa-share-head h2 svg{color:#064CDB}
+.xpa-share-close{width:30px;height:30px;border:none;background:none;border-radius:50%;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px}
+.xpa-share-close:hover{background:#f1f5f9;color:#0f172a}
+.xpa-share-body{padding:20px 22px}
+.xpa-share-title{font-size:12px;color:#64748b;background:#f8fafc;border:1px solid #eef2f7;border-radius:10px;padding:9px 12px;margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xpa-share-lbl{display:block;font-size:12px;font-weight:600;color:#334155;margin-bottom:6px}
+/* Pill-box editable: pills + input inline */
+.xpa-share-pillbox{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:2px solid #e2e8f0;border-radius:10px;cursor:text;transition:border-color .15s}
+.xpa-share-pillbox:focus-within{border-color:#064CDB;box-shadow:0 0 0 3px rgba(6,76,219,.08)}
+.xpa-share-pillbox.is-invalid{border-color:#dc2626}
+.xpa-share-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px 3px 3px;border-radius:20px;background:#f1f5f9;font-size:12px;color:#0f172a;animation:xpaShareIn .15s ease-out}
+.xpa-share-pill-av{width:20px;height:20px;border-radius:50%;color:#fff;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.xpa-share-pill-x{border:none;background:none;color:#94a3b8;cursor:pointer;font-size:13px;line-height:1;padding:0 2px}
+.xpa-share-pill-x:hover{color:#dc2626}
+.xpa-share-pillbox input{flex:1;min-width:140px;border:none;outline:none;font-size:13px;padding:4px;background:transparent;color:#0f172a}
+.xpa-share-err{display:none;font-size:11.5px;color:#dc2626;margin-top:6px}
+.xpa-share-hint{font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.5}
+.xpa-share-results{margin-top:12px;display:none;flex-direction:column;gap:5px;font-size:12px}
+.xpa-share-results .ok{color:#059669}.xpa-share-results .warn{color:#d97706}.xpa-share-results .err{color:#dc2626}
+.xpa-share-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px;border-top:1px solid #eef2f7}
+.xpa-share-btn{border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.xpa-share-btn-sec{background:#f1f5f9;color:#334155}.xpa-share-btn-sec:hover{background:#e2e8f0}
+.xpa-share-btn-pri{background:#064CDB;color:#fff}.xpa-share-btn-pri:hover{background:#0540b8}
+.xpa-share-btn-pri:disabled{opacity:.5;cursor:not-allowed}
+</style>
+<div class="xpa-share-overlay" id="xpaShareOverlay" role="dialog" aria-modal="true" aria-labelledby="xpaShareTitle">
+  <div class="xpa-share-card">
+    <div class="xpa-share-head">
+      <h2 id="xpaShareTitle">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share analysis
+      </h2>
+      <button class="xpa-share-close" type="button" aria-label="Close">&#215;</button>
+    </div>
+    <div class="xpa-share-body">
+      <div class="xpa-share-title" id="xpaShareEntryTitle"></div>
+      <label class="xpa-share-lbl" for="xpaShareInput">Share with (emails)</label>
+      <div class="xpa-share-pillbox" id="xpaSharePillbox">
+        <input type="text" id="xpaShareInput" placeholder="Type an email and press Enter…" autocomplete="off">
+      </div>
+      <div class="xpa-share-err" id="xpaShareErr"></div>
+      <p class="xpa-share-hint">XplagiaX users will see this analysis in their history (marked as shared).
+      Non-users receive a professional email with the full report attached as a PDF.
+      If you delete this analysis, it disappears for everyone you shared it with.</p>
+      <div class="xpa-share-results" id="xpaShareResults"></div>
+    </div>
+    <div class="xpa-share-foot">
+      <button class="xpa-share-btn xpa-share-btn-sec" type="button" id="xpaShareCancel">Cancel</button>
+      <button class="xpa-share-btn xpa-share-btn-pri" type="button" id="xpaShareSend" disabled>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Share
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+    'use strict';
+    var overlay = document.getElementById('xpaShareOverlay');
+    if (!overlay) return;
+    var pillbox = document.getElementById('xpaSharePillbox');
+    var input = document.getElementById('xpaShareInput');
+    var errEl = document.getElementById('xpaShareErr');
+    var resEl = document.getElementById('xpaShareResults');
+    var sendBtn = document.getElementById('xpaShareSend');
+    var titleEl = document.getElementById('xpaShareEntryTitle');
+    var emails = [];
+    var currentId = null;
+
+    function avColor(e) { return (window._xpaAvColor ? window._xpaAvColor(e) : '#064CDB'); }
+    function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+    function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; pillbox.classList.add('is-invalid'); }
+    function clearErr() { errEl.style.display = 'none'; pillbox.classList.remove('is-invalid'); }
+
+    function renderPills() {
+        pillbox.querySelectorAll('.xpa-share-pill').forEach(function (p) { p.remove(); });
+        emails.slice().reverse().forEach(function (e) {
+            var pill = document.createElement('span');
+            pill.className = 'xpa-share-pill';
+            pill.innerHTML = '<span class="xpa-share-pill-av" style="background:' + avColor(e) + '">' +
+                e[0].toUpperCase() + '</span><span></span><button type="button" class="xpa-share-pill-x" aria-label="Remove">&#215;</button>';
+            pill.children[1].textContent = e;
+            pill.querySelector('.xpa-share-pill-x').addEventListener('click', function () {
+                emails = emails.filter(function (x) { return x !== e; });
+                renderPills();
+            });
+            pillbox.insertBefore(pill, pillbox.firstChild);
+        });
+        sendBtn.disabled = emails.length === 0;
+    }
+    function addEmail(raw) {
+        var e = String(raw || '').trim().toLowerCase().replace(/[,;]+$/, '');
+        if (!e) return;
+        if (!validEmail(e)) { showErr('"' + e + '" is not a valid email address.'); return; }
+        if (emails.indexOf(e) !== -1) { input.value = ''; return; }
+        if (emails.length >= 20) { showErr('Maximum 20 recipients.'); return; }
+        clearErr();
+        emails.push(e);
+        input.value = '';
+        renderPills();
+    }
+
+    pillbox.addEventListener('click', function () { input.focus(); });
+    input.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ',' || ev.key === ';') { ev.preventDefault(); addEmail(input.value); }
+        else if (ev.key === 'Backspace' && !input.value && emails.length) {
+            var last = emails[emails.length - 1];
+            emails.pop(); renderPills(); input.value = last;
+        }
+    });
+    input.addEventListener('blur', function () { if (input.value.trim()) addEmail(input.value); });
+    input.addEventListener('paste', function (ev) {
+        var text = (ev.clipboardData || window.clipboardData).getData('text') || '';
+        if (/[,;\s]/.test(text.trim())) {
+            ev.preventDefault();
+            text.split(/[,;\s]+/).forEach(function (p) { if (p) addEmail(p); });
+        }
+    });
+
+    function close() { overlay.classList.remove('open'); }
+    overlay.querySelector('.xpa-share-close').addEventListener('click', close);
+    document.getElementById('xpaShareCancel').addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && overlay.classList.contains('open')) close(); });
+
+    sendBtn.addEventListener('click', function () {
+        if (input.value.trim()) addEmail(input.value);
+        if (!emails.length || !currentId) return;
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<span style="width:12px;height:12px;border:2px solid #ffffff55;border-top-color:#fff;border-radius:50%;display:inline-block;animation:xpaShareSpin .7s linear infinite"></span> Sharing…';
+        fetch('/x_doc/history/' + encodeURIComponent(currentId) + '/share', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ emails: emails })
+        }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+          .then(function (res) {
+            sendBtn.innerHTML = 'Share';
+            sendBtn.disabled = false;
+            if (!res.ok) { showErr(res.d.error || 'Could not share the analysis.'); return; }
+            var LBL = { shared: ['ok', 'shared — will appear in their history'],
+                        emailed: ['ok', 'emailed with the PDF report'],
+                        already_shared: ['warn', 'was already shared'],
+                        skipped: ['warn', 'skipped (your own account)'],
+                        error: ['err', 'failed — email could not be delivered'] };
+            resEl.style.display = 'flex';
+            resEl.innerHTML = (res.d.results || []).map(function (x) {
+                var m = LBL[x.status] || ['warn', x.status];
+                return '<span class="' + m[0] + '"><b></b> — ' + m[1] + '</span>';
+            }).join('');
+            (res.d.results || []).forEach(function (x, i) {
+                var b = resEl.children[i] && resEl.children[i].querySelector('b');
+                if (b) b.textContent = x.email;
+            });
+            emails = []; renderPills();
+            // Refrescar el historial para que aparezca el stack de avatares.
+            if (window._histCtrl && typeof window._histCtrl._load === 'function') {
+                try { window._histCtrl._load(); } catch (e) {}
+            }
+        }).catch(function () {
+            sendBtn.innerHTML = 'Share'; sendBtn.disabled = false;
+            showErr('Network error — please try again.');
+        });
+    });
+
+    var st = document.createElement('style');
+    st.textContent = '@keyframes xpaShareSpin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(st);
+
+    window.xpaShareAnalysis = function (historyId, title) {
+        currentId = historyId;
+        emails = [];
+        renderPills();
+        clearErr();
+        resEl.style.display = 'none'; resEl.innerHTML = '';
+        input.value = '';
+        titleEl.textContent = title || 'Analysis';
+        overlay.classList.add('open');
+        setTimeout(function () { input.focus(); }, 60);
+    };
 })();
 </script>

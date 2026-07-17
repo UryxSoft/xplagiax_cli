@@ -576,31 +576,39 @@
 
         <!-- Stats Side Panel -->
         <div class="dm-side-panel hidden" id="stats-panel">
-            <div class="panel-header">
-                <h3 id="stats-panel-title">Storage Stats</h3>
-                <button class="panel-close" id="close-stats-panel"><i class="bi bi-x"></i></button>
+            <div class="panel-header xp-oc-head">
+                <div class="xp-oc-head-left">
+                    <div class="xp-oc-icon" id="stats-panel-icon-badge">
+                        <i class="bi bi-pie-chart-fill"></i>
+                    </div>
+                    <div>
+                        <h3 id="stats-panel-title" class="xp-oc-title">Storage Stats</h3>
+                        <div class="xp-oc-subtitle">Usage &amp; file distribution</div>
+                    </div>
+                </div>
+                <button class="panel-close xp-oc-close" id="close-stats-panel" aria-label="Close"><i class="bi bi-x"></i></button>
             </div>
-            <div class="panel-body">
-                <!-- Header Section -->
-                <div class="stats-header mb-4">
+            <div class="panel-body stats-panel-body">
+                <!-- Provider Section -->
+                <div class="stats-header">
                     <div class="provider-info d-flex align-items-center gap-3">
                         <div class="provider-icon-large" id="stats-provider-icon">
                             <i class="bi bi-hdd"></i>
                         </div>
-                        <div>
-                            <h5 class="mb-0" id="stats-provider-name">My Documents</h5>
-                            <small class="text-muted" id="stats-account-info">{{ current_user.email }}</small>
+                        <div class="overflow-hidden">
+                            <h5 class="mb-0 text-truncate" id="stats-provider-name">My Documents</h5>
+                            <small class="text-muted text-truncate d-block" id="stats-account-info">{{ current_user.email }}</small>
                         </div>
                     </div>
                 </div>
 
                 <!-- Storage Section -->
-                <div class="storage-section mb-4">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="fs-sm fw-bold">Storage Usage</span>
-                        <span class="fs-sm text-primary fw-bold" id="stats-percentage">0%</span>
+                <div class="storage-section">
+                    <div class="d-flex justify-content-between align-items-baseline mb-2">
+                        <span class="stats-card-label">Storage Usage</span>
+                        <span class="stats-percentage-value" id="stats-percentage">0%</span>
                     </div>
-                    <div class="progress" style="height: 10px; border-radius: 5px; background-color: #f0f2f5;">
+                    <div class="progress stats-progress-track">
                         <div class="progress-bar stats-progress-bar" role="progressbar" style="width: 0%"
                             id="stats-progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
@@ -609,8 +617,10 @@
 
                 <!-- Distribution Section -->
                 <div class="distribution-section">
-                    <h6 class="mb-3">File Distribution</h6>
-                    <div id="file-distribution-chart" style="width: 100%; height: 300px;"></div>
+                    <div class="stats-card-label mb-3">File Distribution</div>
+                    <div class="distribution-chart-card">
+                        <div id="file-distribution-chart" style="width: 100%; height: 280px;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -618,12 +628,17 @@
 
     <!-- Rich Details Offcanvas -->
     <div class="dm-side-panel hidden" id="rich-details-offcanvas" style="display: none;">
-        <div class="panel-header">
-            <div class="d-flex align-items-center overflow-hidden">
-                <div id="rich-details-icon" class="me-2"></div>
-                <h3 id="rich-details-title" class="text-truncate mb-0" style="max-width: 200px;">Details</h3>
+        <div class="panel-header xp-oc-head">
+            <div class="xp-oc-head-left overflow-hidden">
+                <div class="xp-oc-icon" id="rich-details-icon-badge">
+                    <span id="rich-details-icon"></span>
+                </div>
+                <div class="overflow-hidden">
+                    <h3 id="rich-details-title" class="xp-oc-title text-truncate" style="max-width: 220px;">Details</h3>
+                    <div class="xp-oc-subtitle" id="rich-details-subtitle">—</div>
+                </div>
             </div>
-            <button class="panel-close" onclick="closeRichDetails()"><i class="bi bi-x"></i></button>
+            <button class="panel-close xp-oc-close" onclick="closeRichDetails()" aria-label="Close"><i class="bi bi-x"></i></button>
         </div>
 
         <!-- Tabs -->
@@ -705,6 +720,10 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="xp-oc-foot">
+            <span class="xp-oc-count" id="rich-details-id">—</span>
         </div>
     </div>
 
@@ -1354,10 +1373,21 @@
             <h2><i class="bi bi-exclamation-triangle text-danger"></i> Confirm Delete</h2>
             <button class="modal-close" aria-label="Close"><i class="bi bi-x"></i></button>
         </div>
-        <div class="modal-body text-center py-4">
-            <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
-            <h5 class="mt-3" id="deleteConfirmTitle">Delete Item?</h5>
-            <p class="text-muted" id="deleteConfirmText">This will move the item to Trash.</p>
+        <div class="modal-body">
+            <div class="rename-hero-card">
+                <div class="rename-hero-icon" id="delete-hero-icon"></div>
+                <div class="rename-hero-info">
+                    <div class="rename-hero-name text-truncate" id="delete-hero-name"></div>
+                    <div class="rename-hero-meta" id="delete-hero-meta"></div>
+                </div>
+            </div>
+            <div class="delete-warning-block">
+                <i class="bi bi-exclamation-triangle"></i>
+                <div>
+                    <div class="delete-warning-title" id="deleteConfirmTitle">Delete this item?</div>
+                    <p class="delete-warning-text" id="deleteConfirmText">This will move the item to Trash.</p>
+                </div>
+            </div>
             <div class="alert alert-warning d-none" id="deleteConfirmFolderWarning"><i class="bi bi-info-circle"></i> The folder and everything inside it will be moved to Trash.</div>
             <div class="alert alert-info" id="deleteConfirmRestoreInfo"><i class="bi bi-recycle"></i> You can restore this from Trash.</div>
         </div>
@@ -1453,13 +1483,33 @@
             <button class="modal-close" aria-label="Close"><i class="bi bi-x"></i></button>
         </div>
         <div class="modal-body">
-            <div class="mb-3">
+            <div class="rename-hero-card">
+                <div class="rename-hero-icon" id="rename-hero-icon"></div>
+                <div class="rename-hero-info">
+                    <div class="rename-hero-name text-truncate" id="rename-hero-name"></div>
+                    <div class="rename-hero-meta" id="rename-hero-meta"></div>
+                </div>
+            </div>
+
+            <div class="mb-1">
                 <label class="form-label">New Name</label>
                 <input type="text" class="form-control" id="rename-input" placeholder="Enter new name..." maxlength="255" autocomplete="off">
                 <div class="invalid-feedback d-none" id="rename-error"></div>
             </div>
-            <div id="rename-history-preview" class="small text-muted d-none">
-                <i class="bi bi-clock-history"></i> Current name: <span id="current-name-display"></span>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="rename-status-pill rename-status-pill--idle" id="rename-status"><i class="bi bi-dash-circle"></i> No changes</span>
+                <span class="rename-counter" id="rename-counter">0 / 255</span>
+            </div>
+
+            <div class="rename-checklist" id="rename-checklist">
+                <span class="rename-check" data-check="chars"><i class="bi bi-circle"></i> Valid characters</span>
+                <span class="rename-check" data-check="length"><i class="bi bi-circle"></i> Length OK</span>
+                <span class="rename-check" data-check="ext"><i class="bi bi-circle"></i> Extension preserved</span>
+            </div>
+
+            <div class="rename-preview d-none" id="rename-preview">
+                <i class="bi bi-arrow-right-short"></i> Will be renamed to <span class="rename-preview-new" id="rename-preview-text"></span>
             </div>
         </div>
         <div class="modal-footer">
@@ -1587,21 +1637,49 @@
 <!-- Cloud Folder Picker Modal -->
 <div class="upload-modal" id="cloud-folder-picker-modal">
     <div class="modal-overlay" onclick="closeCloudFolderPicker()"></div>
-    <div class="modal-content">
+    <div class="modal-content modal-content-picker">
         <div class="modal-header">
             <h2><i class="bi bi-folder-symlink text-primary"></i> Move to Folder</h2><button class="modal-close"
                 onclick="closeCloudFolderPicker()" aria-label="Close"><i class="bi bi-x"></i></button>
         </div>
         <div class="modal-body">
-            <div class="move-item-info mb-3 p-2 bg-light rounded d-flex align-items-center gap-2"><i
-                    class="bi bi-file-earmark" id="move-item-icon"></i><span id="move-item-name">Item</span></div>
-            <div class="folder-picker-breadcrumbs mb-2" id="picker-breadcrumbs"><span class="picker-crumb active"
-                    data-id="null"><i class="bi bi-house"></i> Root</span></div>
-            <div class="folder-picker-list" id="picker-folder-list" style="max-height: 300px; overflow-y: auto;"></div>
+            <div class="move-item-info">
+                <div class="move-item-icon" id="move-item-icon-badge"><i class="bi bi-file-earmark" id="move-item-icon"></i></div>
+                <div class="move-item-details">
+                    <div class="move-item-name text-truncate" id="move-item-name">Item</div>
+                    <div class="move-item-meta" id="move-item-meta"></div>
+                </div>
+            </div>
+
+            <div class="picker-toolbar">
+                <div class="picker-search">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="picker-search-input" placeholder="Search this folder...">
+                </div>
+                <button type="button" class="picker-toolbar-btn" id="picker-up-btn" title="Up one level" disabled><i class="bi bi-arrow-up"></i></button>
+                <button type="button" class="picker-toolbar-btn" id="picker-new-folder-btn" title="New folder"><i class="bi bi-folder-plus"></i></button>
+            </div>
+
+            <div class="picker-new-folder-row d-none" id="picker-new-folder-row">
+                <i class="bi bi-folder-plus text-primary"></i>
+                <input type="text" id="picker-new-folder-input" placeholder="Folder name..." maxlength="255" autocomplete="off">
+                <button type="button" class="picker-inline-btn picker-inline-btn--confirm" id="picker-new-folder-confirm" title="Create"><i class="bi bi-check-lg"></i></button>
+                <button type="button" class="picker-inline-btn" id="picker-new-folder-cancel" title="Cancel"><i class="bi bi-x-lg"></i></button>
+            </div>
+
+            <div class="folder-picker-breadcrumbs" id="picker-breadcrumbs"><span class="picker-crumb active"
+                    data-index="0"><i class="bi bi-house-fill"></i> Root</span></div>
+
+            <div class="folder-picker-list" id="picker-folder-list"></div>
+
+            <div class="picker-destination-summary d-none" id="picker-destination-summary">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Destination: <strong id="picker-destination-name"></strong></span>
+            </div>
         </div>
         <div class="modal-footer"><button type="button" class="btn-secondary"
-                onclick="closeCloudFolderPicker()">Cancel</button><button type="button" class="btn-primary"
-                id="confirm-cloud-move" disabled>Move Here</button></div>
+                onclick="closeCloudFolderPicker()"><i class="bi bi-x-square"></i> Cancel</button><button type="button" class="btn-primary"
+                id="confirm-cloud-move" disabled><i class="bi bi-arrow-right-circle"></i> <span id="confirm-cloud-move-label">Move Here</span></button></div>
     </div>
 </div>
 
@@ -1613,9 +1691,21 @@
             <h2><i class="bi bi-exclamation-triangle text-danger"></i> Confirm Delete</h2><button class="modal-close"
                 onclick="closeCloudDeleteModal()" aria-label="Close"><i class="bi bi-x"></i></button>
         </div>
-        <div class="modal-body text-center py-4"><i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
-            <h5 class="mt-3" id="cloud-delete-title">Delete Item?</h5>
-            <p class="text-muted" id="cloud-delete-message">This will move the item to trash.</p>
+        <div class="modal-body">
+            <div class="rename-hero-card">
+                <div class="rename-hero-icon" id="cloud-delete-hero-icon"></div>
+                <div class="rename-hero-info">
+                    <div class="rename-hero-name text-truncate" id="cloud-delete-hero-name"></div>
+                    <div class="rename-hero-meta" id="cloud-delete-hero-meta"></div>
+                </div>
+            </div>
+            <div class="delete-warning-block">
+                <i class="bi bi-exclamation-triangle"></i>
+                <div>
+                    <div class="delete-warning-title" id="cloud-delete-title">Delete this item?</div>
+                    <p class="delete-warning-text" id="cloud-delete-message">This will move the item to trash.</p>
+                </div>
+            </div>
             <div class="alert alert-warning d-none" id="cloud-folder-delete-warning"><i class="bi bi-info-circle"></i>
                 All contents will be deleted.</div>
             <div class="alert alert-info" id="cloud-delete-restore-info"><i class="bi bi-recycle"></i> You can restore
@@ -1635,11 +1725,36 @@
             <h2><i class="bi bi-pencil-square text-primary"></i> Rename</h2><button class="modal-close"
                 onclick="closeCloudRenameModal()" aria-label="Close"><i class="bi bi-x"></i></button>
         </div>
-        <div class="modal-body"><label class="form-label">New name</label><input type="text" class="form-control"
-                id="cloud-rename-input" placeholder="Enter new name..." maxlength="255" autocomplete="off">
+        <div class="modal-body">
+            <div class="rename-hero-card">
+                <div class="rename-hero-icon" id="cloud-rename-hero-icon"></div>
+                <div class="rename-hero-info">
+                    <div class="rename-hero-name text-truncate" id="cloud-rename-hero-name"></div>
+                    <div class="rename-hero-meta" id="cloud-rename-hero-meta"></div>
+                </div>
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label">New name</label>
+                <input type="text" class="form-control" id="cloud-rename-input" placeholder="Enter new name..." maxlength="255" autocomplete="off">
                 <div class="invalid-feedback d-none" id="cloud-rename-error"></div>
-                <small class="text-muted mt-2 d-block">Current:
-                <span id="cloud-current-name"></span></small></div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="rename-status-pill rename-status-pill--idle" id="cloud-rename-status"><i class="bi bi-dash-circle"></i> No changes</span>
+                <span class="rename-counter" id="cloud-rename-counter">0 / 255</span>
+            </div>
+
+            <div class="rename-checklist" id="cloud-rename-checklist">
+                <span class="rename-check" data-check="chars"><i class="bi bi-circle"></i> Valid characters</span>
+                <span class="rename-check" data-check="length"><i class="bi bi-circle"></i> Length OK</span>
+                <span class="rename-check" data-check="ext"><i class="bi bi-circle"></i> Extension preserved</span>
+            </div>
+
+            <div class="rename-preview d-none" id="cloud-rename-preview">
+                <i class="bi bi-arrow-right-short"></i> Will be renamed to <span class="rename-preview-new" id="cloud-rename-preview-text"></span>
+            </div>
+        </div>
         <div class="modal-footer"><button type="button" class="btn-secondary"
                 onclick="closeCloudRenameModal()"><i class="bi bi-x-square"></i> Cancel</button><button type="button" class="btn-primary"
                 id="confirm-cloud-rename"><i class="bi bi-check-lg"></i> Rename</button></div>
@@ -1672,35 +1787,53 @@
             <button class="modal-close" onclick="closeCloudShareModal()" aria-label="Close"><i class="bi bi-x"></i></button>
         </div>
         <div class="modal-body">
-            <p class="text-muted small mb-3"><i class="bi bi-file-earmark"></i> <span id="share-item-name">File
-                    name</span></p>
+            <!-- Documento a compartir — banner destacado -->
+            <div class="share-doc-banner">
+                <div class="share-doc-icon">
+                    <i class="bi bi-file-earmark-text"></i>
+                </div>
+                <div class="share-doc-info">
+                    <span class="share-doc-name" id="share-item-name">File name</span>
+                    <span class="share-doc-sub">Add people by email and choose their permission</span>
+                </div>
+            </div>
+
+            <!-- Emails — pills editables multi-destinatario -->
             <div class="mb-3">
-                <label class="form-label">Share with</label>
-                <input type="email" class="form-control" id="share-email-input" placeholder="Enter email address..." autocomplete="off">
+                <label class="form-label" for="share-email-input">Share with</label>
+                <div class="share-pillbox" id="share-pillbox">
+                    <input type="email" class="share-email-entry" id="share-email-input"
+                        placeholder="Type an email and press Enter…" autocomplete="off">
+                </div>
                 <div class="invalid-feedback d-none" id="cloud-share-error"></div>
                 <div class="small text-info mt-1 d-none" id="cloud-share-already-has-access">
                     <i class="bi bi-info-circle"></i> This person already has access — sharing again will update their permission.
                 </div>
             </div>
-            <div class="row mb-3">
-                <div class="col-6">
-                    <label class="form-label">Permission</label>
-                    <select class="form-select" id="share-role-select">
-                        <option value="reader">👁 View only</option>
-                        <option value="commenter">💬 Can comment</option>
-                        <option value="writer">✏️ Can edit</option>
-                    </select>
+
+            <!-- Permiso + notificación en una sola fila alineada -->
+            <div class="row mb-3 align-items-end">
+                <div class="col-7">
+                    <label class="form-label" for="share-role-select">Permission</label>
+                    <div class="share-role-wrap">
+                        <i class="bi bi-eye share-role-icon" id="share-role-icon" aria-hidden="true"></i>
+                        <select class="form-select share-role-select" id="share-role-select">
+                            <option value="reader" data-icon="bi-eye">View only</option>
+                            <option value="commenter" data-icon="bi-chat-left-text">Can comment</option>
+                            <option value="writer" data-icon="bi-pencil-square">Can edit</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-6">
-                    <label class="form-label">Options</label>
-                    <div class="form-check">
+                <div class="col-5">
+                    <div class="form-check form-switch mb-1">
                         <input class="form-check-input" type="checkbox" id="share-notify-check" checked>
-                        <label class="form-check-label" for="share-notify-check">Send notification</label>
+                        <label class="form-check-label small" for="share-notify-check">Send notification</label>
                     </div>
                 </div>
             </div>
+
             <div class="mb-3">
-                <label class="form-label">Message (optional)</label>
+                <label class="form-label" for="share-message-input">Message (optional)</label>
                 <textarea class="form-control" id="share-message-input" rows="2"
                     placeholder="Add a message..."></textarea>
             </div>
@@ -1830,45 +1963,265 @@
         background: #fee2e2
     }
 
+    /* ============================================================
+       "Mini file explorer" — cloud folder picker (Move to Folder)
+       ============================================================ */
+    #cloud-folder-picker-modal .modal-content-picker {
+        max-width: 460px;
+    }
+
+    /* Item being moved — same hero-card language as the rename modal */
+    .move-item-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        background: #f8fafc;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 12px;
+        margin-bottom: 14px;
+    }
+
+    .move-item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 1.05rem;
+        background: #e5e7eb;
+    }
+
+    .move-item-details {
+        min-width: 0;
+    }
+
+    .move-item-name {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .move-item-meta {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        margin-top: 1px;
+    }
+
+    /* Toolbar: search + up + new folder */
+    .picker-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .picker-search {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        background: #f8fafc;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 8px;
+        color: #94a3b8;
+        transition: border-color 0.15s ease;
+    }
+
+    .picker-search:focus-within {
+        border-color: var(--primary);
+        color: #64748b;
+    }
+
+    .picker-search input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        outline: none;
+        font-size: 0.82rem;
+        color: #1e293b;
+    }
+
+    .picker-toolbar-btn {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        background: #f8fafc;
+        color: #64748b;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .picker-toolbar-btn:hover:not(:disabled) {
+        background: var(--sidebar-primary-hover);
+        color: var(--primary);
+        border-color: var(--primary);
+    }
+
+    .picker-toolbar-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    /* Inline "new folder" row */
+    .picker-new-folder-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        margin-bottom: 10px;
+        background: #eff6ff;
+        border: 1px solid #c7d2fe;
+        border-radius: 8px;
+    }
+
+    .picker-new-folder-row input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        outline: none;
+        font-size: 0.82rem;
+        color: #1e293b;
+    }
+
+    .picker-inline-btn {
+        width: 26px;
+        height: 26px;
+        flex-shrink: 0;
+        border: none;
+        background: transparent;
+        color: #94a3b8;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .picker-inline-btn:hover {
+        background: rgba(0, 0, 0, 0.06);
+        color: #475569;
+    }
+
+    .picker-inline-btn--confirm {
+        color: var(--primary);
+    }
+
+    .picker-inline-btn--confirm:hover {
+        background: var(--sidebar-primary-hover);
+    }
+
+    /* Breadcrumbs */
     .folder-picker-breadcrumbs {
         display: flex;
         flex-wrap: wrap;
-        gap: 4px;
-        font-size: .85rem
+        align-items: center;
+        gap: 2px;
+        font-size: .8rem;
+        margin-bottom: 8px;
     }
 
     .picker-crumb {
-        padding: 4px 8px;
-        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 9px;
+        border-radius: 6px;
         cursor: pointer;
-        background: #f3f4f6
+        color: #64748b;
+        transition: all 0.15s ease;
     }
 
     .picker-crumb:hover {
-        background: #e5e7eb
+        background: #f3f4f6;
+        color: #1e293b;
     }
 
     .picker-crumb.active {
-        background: var(--primary);
-        color: #fff
+        background: var(--sidebar-primary-hover);
+        color: var(--primary);
+        font-weight: 600;
+        cursor: default;
+    }
+
+    .picker-crumb-sep {
+        font-size: 0.65rem;
+        color: #cbd5e1;
+        margin: 0 1px;
+    }
+
+    /* Folder list — card style */
+    .folder-picker-list {
+        max-height: 260px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
     }
 
     .folder-picker-item {
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 10px 12px;
-        border-radius: 6px;
-        cursor: pointer
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.15s ease;
     }
 
     .folder-picker-item:hover {
-        background: #f3f4f6
+        background: #f8fafc;
+        transform: translateX(2px);
+    }
+
+    .folder-picker-item:hover .folder-picker-item-arrow {
+        opacity: 1;
+        transform: translateX(2px);
+    }
+
+    .folder-picker-item-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fef3c7;
+        color: #b45309;
+        font-size: 0.9rem;
+    }
+
+    .folder-picker-item-name {
+        font-size: 0.85rem;
+        color: #1e293b;
+        font-weight: 500;
+    }
+
+    .folder-picker-item-arrow {
+        color: #cbd5e1;
+        opacity: 0;
+        transition: all 0.15s ease;
     }
 
     .folder-picker-item--current {
         border: 1px dashed #c7d2fe;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
+    }
+
+    .folder-picker-item--current .folder-picker-item-icon--current {
+        background: var(--sidebar-primary-hover);
+        color: var(--primary);
     }
 
     .folder-picker-item--disabled {
@@ -1878,11 +2231,81 @@
 
     .folder-picker-item--disabled:hover {
         background: transparent;
+        transform: none;
+    }
+
+    .folder-picker-item-icon--disabled {
+        background: #f1f5f9;
+        color: #94a3b8;
     }
 
     .folder-picker-item.selected {
-        background: #e0f2fe;
-        border: 1px solid var(--primary)
+        background: var(--sidebar-primary-hover);
+        border: 1px solid var(--primary);
+    }
+
+    .folder-picker-item.selected .folder-picker-item-name {
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    /* Empty state */
+    .picker-empty-state {
+        text-align: center;
+        padding: 28px 16px;
+        color: #94a3b8;
+    }
+
+    .picker-empty-state i {
+        font-size: 1.8rem;
+        opacity: 0.5;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .picker-empty-state p {
+        margin: 0;
+        font-size: 0.8rem;
+    }
+
+    /* Skeleton loading (instead of a spinner) */
+    .picker-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 2px 0;
+    }
+
+    .picker-skeleton-row {
+        height: 42px;
+        border-radius: 10px;
+        background: linear-gradient(90deg, #f1f5f9 25%, #e5e7eb 50%, #f1f5f9 75%);
+        background-size: 200% 100%;
+        animation: picker-skeleton-shimmer 1.3s ease-in-out infinite;
+    }
+
+    @keyframes picker-skeleton-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    /* Selected-destination summary */
+    .picker-destination-summary {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        padding: 9px 12px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        color: #166534;
+    }
+
+    .picker-destination-summary i {
+        color: #16a34a;
+        font-size: 1rem;
     }
 
     @keyframes cloud-spin {
