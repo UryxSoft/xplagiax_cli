@@ -47,11 +47,12 @@ class EmailService:
         return configs.get(provider, configs['noreply'])
     
     @staticmethod
-    def send_email(subject, recipients, html_content, provider='noreply', fallback_provider='gmail', plain_content=None):
+    def send_email(subject, recipients, html_content, provider='noreply', fallback_provider='gmail',
+                    plain_content=None, attachments=None):
         """
         Envía email usando el proveedor especificado
         Si falla, intenta con el proveedor de respaldo
-        
+
         Args:
             subject (str): Asunto del email
             recipients (list): Lista de destinatarios
@@ -59,70 +60,73 @@ class EmailService:
             provider (str): Proveedor principal ('noreply', 'billing', 'gmail')
             fallback_provider (str): Proveedor de respaldo
             plain_content (str): Contenido en texto plano (opcional)
-        
+            attachments (list): Lista opcional de tuplas (filename, mimetype, data_bytes)
+
         Returns:
             dict: {'success': bool, 'message': str, 'provider_used': str}
         """
-        
+
         # Intentar con proveedor principal
-        result = EmailService._try_send_email(subject, recipients, html_content, provider, plain_content)
+        result = EmailService._try_send_email(subject, recipients, html_content, provider, plain_content, attachments)
         if result['success']:
             return result
-        
+
         # Si falla, intentar con proveedor de respaldo
         logger.warning(f"Primary email provider '{provider}' failed: {result['message']}")
         logger.info(f"Trying fallback provider: {fallback_provider}")
-        
-        fallback_result = EmailService._try_send_email(subject, recipients, html_content, fallback_provider, plain_content)
+
+        fallback_result = EmailService._try_send_email(subject, recipients, html_content, fallback_provider, plain_content, attachments)
         if fallback_result['success']:
             fallback_result['message'] += f" (fallback from {provider})"
             return fallback_result
-        
+
         # Si ambos fallan
         return {
             'success': False,
             'message': f"Both providers failed. Primary: {result['message']}, Fallback: {fallback_result['message']}",
             'provider_used': None
         }
-    
+
     @staticmethod
-    def _try_send_email(subject, recipients, html_content, provider, plain_content=None):
+    def _try_send_email(subject, recipients, html_content, provider, plain_content=None, attachments=None):
         """
         Intenta enviar email con un proveedor específico
         """
         original_config = {}
         temp_mail = None
-        
+
         try:
             config = EmailService.get_email_config(provider)
-            
+
             # Crear instancia temporal de Mail
             temp_mail = Mail()
-            
+
             # Backup de configuración original
             for key, value in config.items():
                 original_config[key] = current_app.config.get(key)
                 current_app.config[key] = value
-            
+
             # Inicializar Mail con nueva configuración
             temp_mail.init_app(current_app)
-            
+
             # Preparar lista de recipients
             if isinstance(recipients, str):
                 recipients = [recipients]
-            
+
             # Crear mensaje
             msg = Message(
                 subject=subject,
                 recipients=recipients,
                 sender=config['MAIL_DEFAULT_SENDER']
             )
-            
+
             # Agregar contenido
             msg.html = html_content
             if plain_content:
                 msg.body = plain_content
-            
+            for filename, mimetype, data in (attachments or []):
+                msg.attach(filename, mimetype, data)
+
             # Enviar email
             temp_mail.send(msg)
             

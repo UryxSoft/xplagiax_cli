@@ -2011,6 +2011,9 @@ body.xp-file-preview .mode-switch-container {
                     if (typeof this._exitSplitMode === 'function') this._exitSplitMode();
                     this._analyzedText = e.text || '';
                     this._skipHistorySave = true;
+                    // Reabierta desde el historial: ya tiene id — el botón "Share
+                    // analysis" del topbar lo necesita sin esperar a un guardado.
+                    this._lastHistoryId = _oh;
                     this._enterMarktrackView(e.text || '', e.ai || null, e.source || null, e.citation || null, e.result_view || null);
                 }, 350);
             }
@@ -3212,7 +3215,18 @@ body.xp-file-preview .mode-switch-container {
             let aiScore, humanScore;
             const segWords = blocks.map(b => b.text.split(/\s+/).filter(Boolean).length);
             const totalSegWords = segWords.reduce((a, n) => a + n, 0);
-            if (totalSegWords > 0) {
+            const allSameLabel = blocks.length > 0 && blocks.every(b => b.type === blocks[0].type);
+            if (allSameLabel) {
+                // Every segment agrees on the label — there is no opposing class
+                // anywhere in the text, so the per-segment confidence gap (e.g. a
+                // segment that is AI at 91% confidence) is the model's residual
+                // uncertainty, not an identified human portion. Blending it into
+                // the headline score produced results like "91% AI / 9% Human"
+                // while every row in the segment table read "AI", which read as
+                // self-contradictory. With a unanimous label the score is 100/0.
+                aiScore = blocks[0].type === 'ai' ? 100 : 0;
+                humanScore = 100 - aiScore;
+            } else if (totalSegWords > 0) {
                 const weighted = blocks.reduce((acc, b, i) => {
                     const aiProb = b.type === 'ai' ? b.confidence : Math.max(0, 100 - b.confidence);
                     return acc + segWords[i] * aiProb;
@@ -4418,7 +4432,7 @@ body.xp-file-preview .mode-switch-container {
             const style = this._mtStyleScore(ai ? ai.stylometric : null);
             const refs = this._mtRefsScore(ai ? ai.citation : null);
             const alerts = [
-                ai       ? { goto: 'ai',   high: aiPct >= 50, icon: 'fa-microchip', title: 'AI-Generated Content', tip: 'Estimate of how much of the text was written by an AI model, based on writing-pattern analysis.', txt: `${aiPct}% of the text shows AI patterns`, btn: 'View Details' } : null,
+                ai       ? { goto: 'ai',   high: aiPct >= 50, icon: 'fa-robot', title: 'AI-Generated Content', tip: 'Estimate of how much of the text was written by an AI model, based on writing-pattern analysis.', txt: `${aiPct}% of the text shows AI patterns`, btn: 'View Details' } : null,
                 source   ? { goto: 'plag', high: plagFlagged, icon: plagFlagged ? 'fa-copy' : 'fa-shield-alt', title: 'Plagiarism Report', tip: 'Summary of text passages that match known external sources.',
                              txt: plagFlagged ? `${flaggedN} passage${flaggedN === 1 ? '' : 's'} match known sources · ${exact}% literal copy`
                                               : `No copied passages · ${overall}% thematic similarity`, btn: 'View Report' } : null,
@@ -5371,7 +5385,7 @@ body.xp-file-preview .mode-switch-container {
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                         Re-analyze
                     </button>
-                    ${(typeof currentUserData !== 'undefined' && currentUserData.plan !== 'Starter') ? `
+                    ${({{ (user_data.user_type or 'Starter') | tojson }} !== 'Starter') ? `
                     <button class="ai-split-new-btn" id="aiSplitShareBtn" type="button" title="Share this analysis with other users by email">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                         Share analysis
@@ -5394,7 +5408,7 @@ body.xp-file-preview .mode-switch-container {
                         <div class="analysis-panels">
                             <div class="tabs" role="tablist">
                                 <button class="tab active" data-tab="ov" type="button" title="Overview"><i class="fas fa-chart-pie"></i></button>
-                                ${hasAi    ? '<button class="tab" data-tab="ai"   type="button" title="AI Detection"><i class="fas fa-microchip"></i></button>'          : ''}
+                                ${hasAi    ? '<button class="tab" data-tab="ai"   type="button" title="AI Detection"><i class="fas fa-robot"></i></button>'          : ''}
                                 ${hasPlag  ? '<button class="tab" data-tab="plag" type="button" title="Plagiarism"><i class="fas fa-copy"></i></button>'           : ''}
                                 ${hasCit   ? '<button class="tab" data-tab="cit"  type="button" title="Citations, References &amp; Bibliography"><i class="fas fa-quote-right"></i></button>' : ''}
                                 ${hasStyle ? '<button class="tab" data-tab="style" type="button" title="Style Analysis"><i class="fas fa-pen-nib"></i></button>'         : ''}

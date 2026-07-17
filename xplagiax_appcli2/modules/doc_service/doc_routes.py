@@ -4622,16 +4622,23 @@ def history_share(hid):
             results.append({'email': email, 'status': 'shared'})
         else:
             # Externo: email HTML profesional + PDF adjunto (best-effort por destinatario).
+            # Usa EmailService (provider + fallback) en vez del objeto `mail` global de
+            # settings.connections: ese nunca recibe mail.init_app(app) en app.py, así
+            # que mail.send() siempre lanzaba (RuntimeError: extensión no registrada) y
+            # todo external share terminaba en status 'error' pase lo que pase.
             try:
-                from flask_mail import Message
-                from settings.connections import mail
+                from settings.email_service import EmailService
                 if pdf_bytes is None:
                     pdf_bytes = _share_pdf_bytes(entry, current_user.email)
-                msg = Message(f'{current_user.email} shared an XplagiaX analysis with you',
-                              recipients=[email])
-                msg.html = _share_email_html(entry, current_user.email)
-                msg.attach('xplagiax-analysis-report.pdf', 'application/pdf', pdf_bytes)
-                mail.send(msg)
+                result = EmailService.send_email(
+                    subject=f'{current_user.email} shared an XplagiaX analysis with you',
+                    recipients=[email],
+                    html_content=_share_email_html(entry, current_user.email),
+                    provider='noreply', fallback_provider='gmail',
+                    attachments=[('xplagiax-analysis-report.pdf', 'application/pdf', pdf_bytes)],
+                )
+                if not result['success']:
+                    raise RuntimeError(result['message'])
                 results.append({'email': email, 'status': 'emailed'})
             except Exception:
                 logger.exception('share email failed for %s', email)
