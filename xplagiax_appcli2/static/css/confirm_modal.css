@@ -14,7 +14,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1100; /* por encima de los offcanvas */
+  /* Por encima de TODO lo demás en la app: los offcanvas de Trash/Archived
+     usan z-index 9500-9600 (app_style_1.css) y el modal de Settings llega a
+     100000 (settings_modal.css) — con 1100 este confirm quedaba pintado
+     detrás de esos overlays en vez de encima, aunque el click sí llegaba
+     (por eso "no aparecía" pero la acción igual esperaba confirmación). */
+  z-index: 100050;
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s ease;

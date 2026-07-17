@@ -207,11 +207,19 @@ function closeTrashOc() {
   document.body.style.overflow = '';
 }
 
+function _trashItemLabel(btn, type) {
+  var itemEl = btn && btn.closest('.xp-arc-item');
+  var nameEl = itemEl && itemEl.querySelector('.xp-arc-name');
+  var name = nameEl ? nameEl.textContent.trim() : '';
+  var kind = type === 'folder' ? 'Folder' : 'Document';
+  return name ? kind + ' "' + name + '"' : 'This item';
+}
+
 function restoreTrashItem(id, type, btn) {
   xpConfirm({
     variant: 'restore',
     title: 'Restore item',
-    message: 'This item will be moved back to your documents.',
+    message: _trashItemLabel(btn, type) + ' will be moved back to your documents.',
     confirmLabel: 'Restore', confirmIcon: 'bi-arrow-counterclockwise'
   }).then(function(ok) {
     if (!ok) return;
@@ -235,7 +243,7 @@ function deleteTrashItem(id, type, btn) {
   xpConfirm({
     variant: 'danger',
     title: 'Delete permanently',
-    message: 'This item will be permanently deleted. This action cannot be undone.',
+    message: _trashItemLabel(btn, type) + ' will be permanently deleted. This action cannot be undone.',
     confirmLabel: 'Delete', confirmIcon: 'bi-trash'
   }).then(function(ok) {
     if (!ok) return;

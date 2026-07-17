@@ -322,11 +322,15 @@ def account():
 
         update_user_activity()
 
-        # Build set of connected storage provider keys from user.tokens JSON
-        import json as _json
+        # Build set of connected storage provider keys. Users.tokens está
+        # cifrado en reposo (ver modules.integration_service.token_crypto) —
+        # hacer json.loads directo sobre la columna (como antes) rompía contra
+        # el blob cifrado y siempre caía al except, mostrando todo como "Not
+        # connected" sin importar el estado real. TokenRepository descifra y
+        # es retrocompatible con filas antiguas en claro.
         try:
-            raw = current_user.tokens or '{}'
-            connected_providers = set(_json.loads(raw).keys())
+            from modules.integration_service.token_repository import TokenRepository
+            connected_providers = set(TokenRepository(current_user.id).all().keys())
         except Exception:
             connected_providers = set()
 
