@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}XplagiaX{% endblock %}</title>
+</head>
+<body style="margin:0;padding:24px;background:#eef2f7;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
+    <div style="background:#064CDB;padding:20px 26px;">
+      <div style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:.02em;">
+        <span style="opacity:.85;">&times;</span>plagia<span style="opacity:.85;">&times;</span>
+      </div>
+      <div style="color:rgba(255,255,255,.75);font-size:12px;margin-top:2px;">{% block eyebrow %}{% endblock %}</div>
+    </div>
+    <div style="padding:26px;">
+      {% block content %}{% endblock %}
+    </div>
+    <div style="padding:14px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;">
+      <p style="margin:0;font-size:11px;color:#64748b;">{% block footer %}This is an automated message from XplagiaX. If you weren't expecting this email you can ignore it.{% endblock %}</p>
+    </div>
+  </div>
+</body>
+</html>

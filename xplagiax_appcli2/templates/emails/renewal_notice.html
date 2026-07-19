@@ -1,0 +1,26 @@
+{% extends 'emails/base.html' %}
+{% block title %}Your subscription renews soon{% endblock %}
+{% block eyebrow %}Billing{% endblock %}
+{% block content %}
+<p style="margin:0 0 6px;font-size:13px;color:#64748b;">Hi <b style="color:#0f172a;">{{ user.name or user.email }}</b>,</p>
+<h2 style="margin:0 0 14px;font-size:17px;line-height:1.35;color:#0f172a;">Your subscription renews soon</h2>
+<p style="margin:0 0 20px;font-size:13px;line-height:1.6;color:#334155;">
+  This is a reminder that your <b style="color:#0f172a;">{{ user.user_type or 'XplagiaX' }}</b>
+  plan is set to renew{% if renewal_date %} on <b style="color:#0f172a;">{{ renewal_date }}</b>{% endif %}.
+  No action is needed if you'd like your subscription to continue.
+</p>
+{% if renewal_amount %}
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;margin-bottom:8px;">
+  <tr>
+    <td style="padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center;">
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Renewal Amount</div>
+      <div style="font-size:22px;font-weight:800;color:#064CDB;margin-top:4px;">{{ renewal_amount }}</div>
+    </td>
+  </tr>
+</table>
+{% endif %}
+<p style="margin:18px 0 0;font-size:12.5px;line-height:1.6;color:#64748b;">
+  Want to make changes to your plan? You can manage your subscription anytime from your
+  account settings.
+</p>
+{% endblock %}

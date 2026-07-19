@@ -1,9 +1,17 @@
 {% extends 'emails/base.html' %}
+{% block title %}Your verification code{% endblock %}
+{% block eyebrow %}Security Verification{% endblock %}
 {% block content %}
-<h2>Tu código de verificación</h2>
-<p>Hola {{ user.username }},</p>
-<p>Tu código de autenticación de dos factores es:</p>
-<h3 style="color: #007bff;">{{ token }}</h3>
-<p>Ingresa este código en la aplicación para continuar.</p>
-<p>Este código expirará en pocos minutos.</p>
+<p style="margin:0 0 6px;font-size:13px;color:#64748b;">Hi <b style="color:#0f172a;">{{ user.username }}</b>,</p>
+<h2 style="margin:0 0 14px;font-size:17px;line-height:1.35;color:#0f172a;">Your verification code</h2>
+<p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#334155;">
+  Use the code below to complete sign-in. This code expires in a few minutes.
+</p>
+<div style="text-align:center;margin:24px 0;">
+  <span style="display:inline-block;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
+               padding:14px 28px;font-size:28px;font-weight:800;letter-spacing:.3em;color:#064CDB;">{{ token }}</span>
+</div>
+<p style="margin:18px 0 0;font-size:12.5px;line-height:1.6;color:#64748b;">
+  If you didn't request this code, you can safely ignore this email.
+</p>
 {% endblock %}

@@ -285,6 +285,18 @@ document.getElementById('sidebarItemArchive')?.addEventListener('click', () => {
   openArchivedOc();
 });
 
+// ── Sidebar items: Shared with me / Shared by me → open analysis history modal ──
+// The badge counts (item_shares rows) are populated by sidebar_counts.js;
+// _histCtrl is defined inline in history_modal_widget.html (included on every
+// page via user_base.html), but since these handlers only run at click time
+// — long after page load — load order between the two scripts doesn't matter.
+document.getElementById('sidebarItemSharedToMe')?.addEventListener('click', () => {
+  window._histCtrl?.open();
+});
+document.getElementById('sidebarItemSharedWith')?.addEventListener('click', () => {
+  window._histCtrl?.open();
+});
+
 // ── Archived offcanvas helpers ─────────────────────────────────────────────
 function _fmtBytes(b) {
   if (!b) return '—';

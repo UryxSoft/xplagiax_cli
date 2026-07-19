@@ -338,24 +338,43 @@ def handle_upcoming_invoice(invoice):
     subscription_id = invoice.get('subscription')
     if not subscription_id:
         return
-    
+
     user = Users.query.filter_by(subscription_id=subscription_id).first()
     if user and not user.subscription_renewal_notified:
         try:
             from flask_mail import Message
             from settings.connections import mail
-            
+
+            # Best-effort formatting — the template renders fine without these
+            # (renewal_amount/renewal_date are optional), so a malformed or
+            # partial Stripe payload never blocks the notification itself.
+            renewal_amount = None
+            amount_due = invoice.get('amount_due')
+            if amount_due is not None:
+                currency = (invoice.get('currency') or 'usd').upper()
+                renewal_amount = f"{amount_due / 100:.2f} {currency}"
+
+            renewal_date = None
+            period_end = invoice.get('period_end') or invoice.get('next_payment_attempt')
+            if period_end:
+                renewal_date = datetime.utcfromtimestamp(period_end).strftime('%B %d, %Y')
+
             msg = Message(
-                'Renovación próxima de tu suscripción',
+                'Your XplagiaX subscription renews soon',
                 recipients=[user.email]
             )
-            msg.html = render_template('emails/renewal_notice.html', user=user)
+            msg.html = render_template(
+                'emails/renewal_notice.html',
+                user=user,
+                renewal_amount=renewal_amount,
+                renewal_date=renewal_date,
+            )
             mail.send(msg)
-            
+
             user.subscription_renewal_notified = True
             db.session.add(user)
             db.session.commit()
-            
+
         except Exception as e:
             current_app.logger.exception("Failed to send renewal notice")
 

@@ -4614,7 +4614,9 @@ def _share_email_html(entry, sender_email):
 <div style="margin:0;padding:24px;background:#eef2f7;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
   <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
     <div style="background:{B['primary']};padding:20px 26px;">
-      <div style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:.02em;">XplagiaX</div>
+      <div style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:.02em;">
+        <span style="opacity:.85;">&times;</span>plagia<span style="opacity:.85;">&times;</span>
+      </div>
       <div style="color:rgba(255,255,255,.75);font-size:12px;margin-top:2px;">AI TestPro · FinderX — Analysis Report</div>
     </div>
     <div style="padding:26px;">
