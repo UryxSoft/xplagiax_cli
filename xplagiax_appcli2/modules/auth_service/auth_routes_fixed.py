@@ -12,6 +12,7 @@ from settings.connections import mail, limiter
 from flask_login import login_user, logout_user, login_required, current_user
 from settings.utilities import generate_token, verify_token
 from settings.email_service import EmailService, EmailTemplates
+from . import totp_crypto, totp_service
 import bcrypt
 import requests
 from flask_mail import Message
@@ -690,6 +691,16 @@ def login():
         print("DEBUG LOGIN: Password mismatch")
         return jsonify({'error': 'Incorrect credentials'}), 401
 
+    # 2FA gate: password verified but the session is NOT created yet. A
+    # short-lived signed token (same itsdangerous mechanism as confirm/reset
+    # email links — stateless, no extra session/table) identifies WHO is
+    # mid-login without granting access. The real session is only created in
+    # verify_2fa_login() below, after the TOTP/recovery code checks out.
+    _ensure_totp_columns()
+    if user.totp_enabled:
+        pending_token = user.get_token('2fa_pending', expires_sec=300)
+        return jsonify({'requires_2fa': True, 'pending_token': pending_token}), 200
+
     # Create new session (invalidates any existing session)
     session_token = user.create_session()
     db.session.add(user)
@@ -698,7 +709,7 @@ def login():
 
     session['session_token'] = session_token
     login_user(user, remember = remember_me)
-    
+
     next_url = sanitize_redirect_url(request.args.get('next'))
     return jsonify({
         'message': 'Session started successfully',
@@ -1499,6 +1510,168 @@ def record_login(user, session_token):
         db.session.add(entry)
     except Exception:
         current_app.logger.exception("Failed to record login history")
+
+
+# ── Two-Factor Authentication (TOTP) ──────────────────────────────────────────
+# db.create_all() only creates NEW tables, it never ALTERs existing ones (same
+# constraint the rest of the project works around — see doc_routes.py's
+# _ensure_result_view_column / _ensure_analysis_shares_table). totp_secret
+# already existed as VARCHAR(16), too small even for the unencrypted 32-char
+# base32 secret; widening it to fit the Fernet ciphertext (~140 chars) and
+# adding totp_enabled/totp_recovery_codes needs this same self-healing pattern.
+_TOTP_COLUMNS_READY = False
+
+
+def _ensure_totp_columns():
+    global _TOTP_COLUMNS_READY
+    if _TOTP_COLUMNS_READY:
+        return
+    try:
+        from sqlalchemy import inspect as _sa_inspect, text as _sa_text
+        cols = {c['name']: c for c in _sa_inspect(db.engine).get_columns('users')}
+        if 'totp_enabled' not in cols:
+            db.session.execute(_sa_text(
+                "ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN NOT NULL DEFAULT FALSE"))
+        if 'totp_recovery_codes' not in cols:
+            db.session.execute(_sa_text(
+                "ALTER TABLE users ADD COLUMN totp_recovery_codes TEXT NULL"))
+        secret_col = cols.get('totp_secret')
+        if secret_col is not None:
+            size = getattr(secret_col.get('type'), 'length', None)
+            if size is not None and size < 255:
+                db.session.execute(_sa_text(
+                    "ALTER TABLE users MODIFY COLUMN totp_secret VARCHAR(255) NULL"))
+        db.session.commit()
+        _TOTP_COLUMNS_READY = True
+    except Exception:
+        db.session.rollback()
+        current_app.logger.warning("Could not ensure users.totp_* columns", exc_info=True)
+
+
+@auth_bp.route('/2fa/status', methods=['GET'])
+@login_required
+def totp_status():
+    _ensure_totp_columns()
+    return jsonify({'enabled': bool(current_user.totp_enabled)})
+
+
+@auth_bp.route('/2fa/setup', methods=['POST'])
+@login_required
+def totp_setup():
+    """Start enabling 2FA: generate a fresh secret, store it ENCRYPTED but
+    with totp_enabled still False (so an abandoned setup never gates login —
+    it just gets overwritten by the next /2fa/setup call), and return a QR
+    code + the raw secret for manual entry."""
+    _ensure_totp_columns()
+    if current_user.totp_enabled:
+        return jsonify({'error': 'Two-factor authentication is already enabled.'}), 400
+
+    secret = totp_service.generate_secret()
+    current_user.totp_secret = totp_crypto.encrypt_secret(secret)
+    db.session.add(current_user)
+    db.session.commit()
+
+    return jsonify({
+        'secret': secret,
+        'qr_code': totp_service.provisioning_qr_data_uri(secret, current_user.email),
+    })
+
+
+@auth_bp.route('/2fa/verify-setup', methods=['POST'])
+@login_required
+@limiter.limit("10 per 15 minutes")
+def totp_verify_setup():
+    """Confirms the authenticator app is correctly paired before turning 2FA
+    on for real — without this step, a typo'd QR scan would silently lock the
+    user out on their very next login."""
+    _ensure_totp_columns()
+    if current_user.totp_enabled:
+        return jsonify({'error': 'Two-factor authentication is already enabled.'}), 400
+
+    secret = totp_crypto.decrypt_secret(current_user.totp_secret)
+    if not secret:
+        return jsonify({'error': 'No pending setup found. Start again.'}), 400
+
+    code = (request.get_json(silent=True) or {}).get('code', '')
+    if not totp_service.verify_totp_code(secret, code):
+        return jsonify({'error': 'Invalid code. Check your authenticator app and try again.'}), 400
+
+    plain_codes, stored_codes = totp_service.generate_recovery_codes()
+    current_user.totp_enabled = True
+    current_user.totp_recovery_codes = stored_codes
+    db.session.add(current_user)
+    db.session.commit()
+
+    return jsonify({'success': True, 'recovery_codes': plain_codes})
+
+
+@auth_bp.route('/2fa/disable', methods=['POST'])
+@login_required
+def totp_disable():
+    """Requires the current password — same bar as change_password() above.
+    Disabling 2FA lowers account security, so it deserves the same proof of
+    identity as the rest of this file's sensitive actions."""
+    _ensure_totp_columns()
+    if not current_user.totp_enabled:
+        return jsonify({'error': 'Two-factor authentication is not enabled.'}), 400
+
+    password = (request.get_json(silent=True) or {}).get('password', '')
+    if not current_user._password_hash or not bcrypt.checkpw(
+        password.encode('utf-8'), current_user._password_hash.encode('utf-8')
+    ):
+        return jsonify({'error': 'Incorrect password.'}), 400
+
+    current_user.totp_enabled = False
+    current_user.totp_secret = None
+    current_user.totp_recovery_codes = None
+    db.session.add(current_user)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@auth_bp.route('/2fa/verify-login', methods=['POST'])
+@limiter.limit("5 per 15 minutes")
+def totp_verify_login():
+    """Second half of the 2FA-gated login (see login() above). The user is
+    NOT authenticated yet — identity comes only from pending_token, so this
+    mirrors login()'s own trust level, not @login_required's."""
+    _ensure_totp_columns()
+    data = request.get_json(silent=True) or {}
+    pending_token = data.get('pending_token', '')
+    code = data.get('code', '')
+    remember_me = bool(data.get('remember_me', False))
+
+    user = Users.verify_token(pending_token, '2fa_pending')
+    if not user:
+        return jsonify({'error': 'Your session expired. Please sign in again.'}), 401
+    if not user.totp_enabled:
+        return jsonify({'error': 'Two-factor authentication is not enabled for this account.'}), 400
+
+    secret = totp_crypto.decrypt_secret(user.totp_secret)
+    ok = bool(secret) and totp_service.verify_totp_code(secret, code)
+
+    if not ok:
+        # Fall back to a recovery code — consumes it on match so it can't be reused.
+        new_codes = totp_service.consume_recovery_code(user.totp_recovery_codes, code)
+        if new_codes is not None:
+            user.totp_recovery_codes = new_codes
+            ok = True
+
+    if not ok:
+        return jsonify({'error': 'Invalid code.'}), 401
+
+    session_token = user.create_session()
+    db.session.add(user)
+    record_login(user, session_token)
+    db.session.commit()
+
+    session['session_token'] = session_token
+    login_user(user, remember=remember_me)
+
+    return jsonify({
+        'message': 'Session started successfully',
+        'redirect': sanitize_redirect_url(None),
+    }), 200
 
 
 # ── New Security endpoints ────────────────────────────────────────────────────

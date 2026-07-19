@@ -111,7 +111,7 @@
                     <svg class="success-checkmark" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                     </svg>
-                    ¡Registro Exitoso!
+                    Registration Successful!
                 `;
 
                     submitBtn.style.background = '#10b981';
@@ -286,16 +286,16 @@
         // Update based on strength
         if (strengthResult.strength === 'weak') {
             spans[0].classList.add('active');
-            textElement.textContent = 'Débil';
+            textElement.textContent = 'Weak';
             textElement.classList.add('weak');
         } else if (strengthResult.strength === 'medium') {
             spans[0].classList.add('active');
             spans[1].classList.add('active');
-            textElement.textContent = 'Mediana';
+            textElement.textContent = 'Medium';
             textElement.classList.add('medium');
         } else if (strengthResult.strength === 'strong') {
             spans.forEach(span => span.classList.add('active'));
-            textElement.textContent = 'Fuerte';
+            textElement.textContent = 'Strong';
             textElement.classList.add('strong');
         }
 

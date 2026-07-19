@@ -4,8 +4,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Descripción de la página web">
-    <meta name="keywords" content="palabras clave, SEO, optimización">
+    <meta name="description" content="Sign in or create your XplagiaX account.">
+    <meta name="keywords" content="XplagiaX, sign in, sign up, login, register">
     <meta name="Xplagiax ltd" content="Uryx technologies">
     <meta name="robots" content="index, follow">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -377,6 +377,41 @@
 
                     <div class="signup-link">
                         Don't have an account? <a href="javascript:void(0)" onclick="switchToRegister()">Sign up</a>
+                    </div>
+                </form>
+
+                <!-- Paso 2FA — reemplaza el form de arriba cuando /auth_bp/login
+                     responde requires_2fa:true. Mismo lenguaje visual (form-header,
+                     input-container, submit-btn) que el resto de esta pantalla. -->
+                <form class="form" id="tfaLoginForm" style="display:none">
+                    <div class="form-header">
+                        <h2>Two-Factor Authentication</h2>
+                        <p>Enter the 6-digit code from your authenticator app.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tfa_code">Verification code</label>
+                        <div class="input-container">
+                            <div class="input-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                </svg>
+                            </div>
+                            <input type="text" class="input" id="tfa_code" inputmode="numeric" autocomplete="one-time-code"
+                                maxlength="6" placeholder="000000" style="letter-spacing:.3em;text-align:center" required>
+                        </div>
+                    </div>
+
+                    <button class="submit-btn" type="submit" id="tfaSubmitBtn">
+                        <span id="tfaBtnText">Verify</span>
+                        <div class="progress-bar" id="tfaProgressBar"></div>
+                    </button>
+
+                    <div class="signup-link">
+                        Lost access to your app? Use one of your recovery codes instead — same field.
+                    </div>
+                    <div class="signup-link" style="margin-top:6px">
+                        <a href="javascript:void(0)" id="tfaBackToLoginLink">&larr; Back to sign in</a>
                     </div>
                 </form>
             </div>

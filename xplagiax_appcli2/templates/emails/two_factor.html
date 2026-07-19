@@ -2,7 +2,7 @@
 {% block title %}Your verification code{% endblock %}
 {% block eyebrow %}Security Verification{% endblock %}
 {% block content %}
-<p style="margin:0 0 6px;font-size:13px;color:#64748b;">Hi <b style="color:#0f172a;">{{ user.username }}</b>,</p>
+<p style="margin:0 0 6px;font-size:13px;color:#64748b;">Hi <b style="color:#0f172a;">{{ user.name or user.email }}</b>,</p>
 <h2 style="margin:0 0 14px;font-size:17px;line-height:1.35;color:#0f172a;">Your verification code</h2>
 <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#334155;">
   Use the code below to complete sign-in. This code expires in a few minutes.

@@ -33,7 +33,15 @@ class Users(db.Model, UserMixin):
     country                       = db.Column(db.String(100), nullable = True)
     isactive                      = db.Column(db.Boolean, default = False)  # ✅ Campo principal
     token                         = db.Column(db.Text, unique = True)
-    totp_secret                   = db.Column(db.String(16), nullable=True)
+    # TOTP (Google Authenticator / Authy). totp_secret guarda el secreto CIFRADO
+    # (Fernet, ver totp_crypto.py) — nunca texto plano. String(16) se quedó corto
+    # desde el día uno (pyotp.random_base32() ya genera 32 chars sin cifrar);
+    # _ensure_totp_columns() en auth_routes_fixed.py la ensancha a VARCHAR(255)
+    # en el primer request que usa 2FA, igual que el resto de auto-migraciones
+    # del proyecto (db.create_all() no altera tablas existentes).
+    totp_secret                   = db.Column(db.String(255), nullable=True)
+    totp_enabled                  = db.Column(db.Boolean, default=False)
+    totp_recovery_codes           = db.Column(db.Text, nullable=True)  # JSON: lista de hashes bcrypt, un solo uso c/u
     
     # Session management
     active_session                = db.Column(db.Boolean, default=False)
@@ -103,8 +111,10 @@ class Users(db.Model, UserMixin):
                     country  = None,
                     isactive  = None, 
                     token  = None,
-                    totp_secret = None, 
-                    active_session = None, 
+                    totp_secret = None,
+                    totp_enabled = None,
+                    totp_recovery_codes = None,
+                    active_session = None,
                     confirmed = None,
                     confirmed_at = None,
                     storage_plan_id = None, 
@@ -126,6 +136,8 @@ class Users(db.Model, UserMixin):
         self.isactive           = isactive if isactive is not None else False
         self.token              = token
         self.totp_secret        = totp_secret
+        self.totp_enabled       = totp_enabled if totp_enabled is not None else False
+        self.totp_recovery_codes = totp_recovery_codes
         self.active_session     = active_session
         self.confirmed          = confirmed if confirmed is not None else False
         self.confirmed_at       = confirmed_at

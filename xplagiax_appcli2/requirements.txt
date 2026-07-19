@@ -66,3 +66,7 @@ fast_langdetect==0.3.2
 joblib==1.4.2
 
 cryptography>=42.0
+
+# ── Two-Factor Authentication (TOTP) ─────────────────────────────────────────
+pyotp==2.10.0
+qrcode==8.2

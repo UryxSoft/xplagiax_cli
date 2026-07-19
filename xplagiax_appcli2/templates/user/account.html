@@ -639,6 +639,32 @@
           </div>
         </div>
 
+        <!-- Two-Factor Authentication -->
+        <div class="sm-card">
+          <div class="sm-card-head">
+            <div class="sm-card-title">
+              <span class="sm-card-title-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+              </span>
+              Two-Factor Authentication
+            </div>
+          </div>
+          <div class="sm-card-body">
+            <div class="sm-row" style="align-items:flex-start;flex-direction:column;gap:12px">
+              <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+                <div class="sm-row-left">
+                  <div class="sm-row-label">Authenticator App</div>
+                  <div class="sm-row-desc" id="tfaStatusDesc">Require a 6-digit code from an app like Google Authenticator or Authy when signing in.</div>
+                </div>
+                <label class="sm-switch" aria-label="Enable Two-Factor Authentication">
+                  <input type="checkbox" id="tfaSwitch" onchange="tfaOnSwitchToggle(this)">
+                  <span class="sm-switch-track"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Recent sessions -->
         <div class="sm-card">
           <div class="sm-card-head">
@@ -1167,6 +1193,79 @@
   </div>
 </div>
 
+<!-- ── Enable 2FA — setup modal (accent blue, 2 steps) ──────────── -->
+<div class="sm-danger-modal-overlay" id="tfaSetupOverlay" role="dialog" aria-modal="true" aria-labelledby="tfaSetupTitle">
+  <div class="sm-danger-modal sm-modal-accent">
+    <div class="sm-danger-modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <h3 id="tfaSetupTitle">Set Up Two-Factor Authentication</h3>
+
+    <!-- Step 1: scan QR + enter the code the app shows -->
+    <div class="sm-tfa-step active" id="tfaStepScan">
+      <p class="sm-danger-modal-desc">
+        Scan this QR code with Google Authenticator, Authy, or any TOTP app.
+        Can't scan it? Enter the code below manually.
+      </p>
+      <div class="sm-tfa-qr-wrap">
+        <img id="tfaQrImg" src="" alt="Two-factor setup QR code">
+        <span class="sm-tfa-secret" id="tfaSecretText"></span>
+      </div>
+      <div class="sm-dc-field">
+        <label for="tfaSetupCode">Enter the 6-digit code from your app</label>
+        <input type="text" id="tfaSetupCode" class="sm-tfa-code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+      </div>
+    </div>
+
+    <!-- Step 2: recovery codes, shown once right after verification -->
+    <div class="sm-tfa-step" id="tfaStepRecovery">
+      <p class="sm-danger-modal-desc">
+        Two-factor authentication is now active. Save these recovery codes
+        somewhere safe — each one can be used once to sign in if you lose
+        access to your authenticator app.
+      </p>
+      <div class="sm-tfa-recovery-grid" id="tfaRecoveryGrid"></div>
+      <div class="sm-tfa-recovery-warn">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>These codes won't be shown again. Copy or download them now.</span>
+      </div>
+    </div>
+
+    <div class="sm-danger-modal-actions" id="tfaSetupActions">
+      <button class="sm-btn sm-btn-ghost" id="tfaSetupCancelBtn" onclick="tfaCloseSetupModal()">Cancel</button>
+      <button class="sm-btn sm-btn-accent-solid" id="tfaSetupConfirmBtn" onclick="tfaSubmitVerifySetup()">
+        <span class="sm-danger-modal-spin" style="border-color:rgba(255,255,255,.35);border-top-color:#fff;display:none"></span>
+        <span>Verify &amp; Enable</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Disable 2FA — password confirmation modal ────────────────── -->
+<div class="sm-danger-modal-overlay" id="tfaDisableOverlay" role="dialog" aria-modal="true" aria-labelledby="tfaDisableTitle">
+  <div class="sm-danger-modal">
+    <div class="sm-danger-modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <h3 id="tfaDisableTitle">Disable Two-Factor Authentication</h3>
+    <p class="sm-danger-modal-desc">
+      This removes the extra verification step from your login. Enter your
+      password to confirm.
+    </p>
+    <div class="sm-dc-field">
+      <label for="tfaDisablePassword">Current password</label>
+      <input type="password" id="tfaDisablePassword" autocomplete="current-password" placeholder="Enter your password">
+    </div>
+    <div class="sm-danger-modal-actions">
+      <button class="sm-btn sm-btn-ghost" onclick="tfaCloseDisableModal()">Cancel</button>
+      <button class="sm-btn sm-btn-danger-solid" id="tfaDisableConfirmBtn" onclick="tfaSubmitDisable()">
+        <span class="sm-danger-modal-spin"></span>
+        <span>Disable 2FA</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 
 <!-- ── Cancel Subscription Modal ────────────────────────── -->
 <div id="cancelModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);z-index:99998;display:none;align-items:center;justify-content:center;">
@@ -1542,6 +1641,7 @@ document.addEventListener('DOMContentLoaded', () => {
   smLoadDocumentRetention();
   smLoadAutoArchive();
   smLoadAiPlugins();
+  tfaLoadStatus();
 });
 
 /* ───── Privacy: Document Retention ──────────────────────── */
@@ -2054,6 +2154,147 @@ async function secSubmitPwChange() {
       smToast(data.error || 'Failed to update password.', 'error');
     }
   } catch { smToast('Connection error. Please try again.', 'error'); }
+}
+
+/* ───── Security: Two-Factor Authentication ─────────────────
+   Turning the switch ON never flips it visually until /2fa/verify-setup
+   confirms the code — otherwise a user could believe 2FA is active while
+   the secret was never actually paired with their app. Turning it OFF
+   works the same way: the switch stays checked until /2fa/disable confirms
+   the password, so a stray click never silently drops account protection. */
+async function tfaLoadStatus() {
+  const el = document.getElementById('tfaSwitch');
+  if (!el) return;
+  try {
+    const res = await fetch('/auth_bp/2fa/status', { credentials: 'include' });
+    const data = await res.json();
+    if (res.ok) el.checked = !!data.enabled;
+  } catch (_) { /* deja el switch en su estado por defecto (off) si falla */ }
+}
+
+function tfaOnSwitchToggle(el) {
+  if (el.checked) {
+    el.checked = false;
+    tfaOpenSetupModal();
+  } else {
+    el.checked = true;
+    tfaOpenDisableModal();
+  }
+}
+
+async function tfaOpenSetupModal() {
+  const overlay = document.getElementById('tfaSetupOverlay');
+  document.getElementById('tfaStepScan').classList.add('active');
+  document.getElementById('tfaStepRecovery').classList.remove('active');
+  document.getElementById('tfaSetupCode').value = '';
+  document.getElementById('tfaSetupCancelBtn').textContent = 'Cancel';
+  document.getElementById('tfaSetupConfirmBtn').style.display = 'inline-flex';
+  overlay.classList.add('open');
+
+  try {
+    const res = await fetch('/auth_bp/2fa/setup', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      smToast(data.error || 'Could not start setup.', 'error');
+      overlay.classList.remove('open');
+      return;
+    }
+    document.getElementById('tfaQrImg').src = data.qr_code;
+    document.getElementById('tfaSecretText').textContent = data.secret;
+    setTimeout(() => document.getElementById('tfaSetupCode').focus(), 80);
+  } catch (_) {
+    smToast('Connection error. Please try again.', 'error');
+    overlay.classList.remove('open');
+  }
+}
+
+function tfaCloseSetupModal() {
+  document.getElementById('tfaSetupOverlay').classList.remove('open');
+  // El estado real ya lo sabe el server (tfaLoadStatus lo confirmará la
+  // próxima vez que se abra el panel); nada que revertir aquí.
+}
+
+async function tfaSubmitVerifySetup() {
+  const codeEl = document.getElementById('tfaSetupCode');
+  const code = codeEl.value.trim();
+  if (!/^\d{6}$/.test(code)) {
+    smToast('Enter the 6-digit code from your app.', 'error');
+    codeEl.focus();
+    return;
+  }
+  const confirmBtn = document.getElementById('tfaSetupConfirmBtn');
+  confirmBtn.disabled = true;
+  confirmBtn.classList.add('loading');
+  confirmBtn.querySelector('.sm-danger-modal-spin').style.display = 'inline-block';
+  try {
+    const res = await fetch('/auth_bp/2fa/verify-setup', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      smToast(data.error || 'Invalid code.', 'error');
+      return;
+    }
+    document.getElementById('tfaRecoveryGrid').innerHTML =
+      data.recovery_codes.map(c => `<div class="sm-tfa-recovery-code">${c}</div>`).join('');
+    document.getElementById('tfaStepScan').classList.remove('active');
+    document.getElementById('tfaStepRecovery').classList.add('active');
+    document.getElementById('tfaSetupConfirmBtn').style.display = 'none';
+    document.getElementById('tfaSetupCancelBtn').textContent = 'Done';
+    document.getElementById('tfaSwitch').checked = true;
+    smToast('Two-factor authentication enabled.', 'success');
+  } catch (_) {
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    confirmBtn.disabled = false;
+    confirmBtn.classList.remove('loading');
+    confirmBtn.querySelector('.sm-danger-modal-spin').style.display = 'none';
+  }
+}
+
+function tfaOpenDisableModal() {
+  document.getElementById('tfaDisablePassword').value = '';
+  document.getElementById('tfaDisableOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('tfaDisablePassword').focus(), 80);
+}
+
+function tfaCloseDisableModal() {
+  document.getElementById('tfaDisableOverlay').classList.remove('open');
+}
+
+async function tfaSubmitDisable() {
+  const pwEl = document.getElementById('tfaDisablePassword');
+  if (!pwEl.value) { pwEl.classList.add('invalid'); pwEl.focus(); return; }
+  pwEl.classList.remove('invalid');
+
+  const confirmBtn = document.getElementById('tfaDisableConfirmBtn');
+  confirmBtn.disabled = true;
+  confirmBtn.classList.add('loading');
+  try {
+    const res = await fetch('/auth_bp/2fa/disable', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwEl.value })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('tfaSwitch').checked = false;
+      tfaCloseDisableModal();
+      smToast('Two-factor authentication disabled.', 'success');
+    } else {
+      smToast(data.error || 'Incorrect password.', 'error');
+    }
+  } catch (_) {
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    confirmBtn.disabled = false;
+    confirmBtn.classList.remove('loading');
+  }
 }
 
 /* ───── Security: recent sessions ────────────────────────── */

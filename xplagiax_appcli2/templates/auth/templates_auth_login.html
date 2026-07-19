@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Iniciar Sesión</title>
+    <title>Sign In</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -87,41 +87,41 @@
 </head>
 <body>
     <div class="container">
-        <h1>Iniciar Sesión</h1>
-        
+        <h1>Sign In</h1>
+
         <div id="alerts"></div>
-        
+
         <form id="loginForm">
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" required>
             </div>
-            
+
             <div class="form-group">
-                <label for="password">Contraseña</label>
+                <label for="password">Password</label>
                 <input type="password" id="password" name="password" required>
             </div>
-            
-            <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+
+            <button type="submit" class="btn btn-primary">Sign In</button>
         </form>
-        
+
         <div class="divider">
-            <span>o continúa con</span>
+            <span>or continue with</span>
         </div>
-        
+
         <div class="oauth-buttons">
             <a href="/auth/google" class="btn btn-outline">
-                🔍 Continuar con Google
+                🔍 Continue with Google
             </a>
             <a href="/auth/microsoft" class="btn btn-outline">
-                🪟 Continuar con Microsoft
+                🪟 Continue with Microsoft
             </a>
         </div>
-        
+
         <div class="links">
-            <a href="/auth/forgot-password">¿Olvidaste tu contraseña?</a> |
-            <a href="/auth/signup">Crear cuenta</a> |
-            <a href="/">Volver al inicio</a>
+            <a href="/auth/forgot-password">Forgot your password?</a> |
+            <a href="/auth/signup">Create account</a> |
+            <a href="/">Back to home</a>
         </div>
     </div>
 
@@ -137,7 +137,7 @@
             alertsDiv.innerHTML = '';
             
             if (!email || !password) {
-                showAlert('Por favor completa todos los campos', 'error');
+                showAlert('Please fill in all fields', 'error');
                 return;
             }
             
@@ -158,10 +158,10 @@
                         window.location.href = data.redirect || '/dashboard';
                     }, 1000);
                 } else {
-                    showAlert(data.error || 'Error en el inicio de sesión', 'error');
+                    showAlert(data.error || 'Sign-in error', 'error');
                 }
             } catch (error) {
-                showAlert('Error de conexión. Intenta nuevamente.', 'error');
+                showAlert('Connection error. Please try again.', 'error');
             }
         });
         

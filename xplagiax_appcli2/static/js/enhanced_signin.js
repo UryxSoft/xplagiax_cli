@@ -17,6 +17,102 @@
         return; // página sin formulario de login (p.ej. otras vistas que cargan este JS)
     }
 
+    // ── 2FA step state ──────────────────────────────────────────────────────
+    // pending_token identifica la sesión a medio autenticar (firmado server-side,
+    // expira en 5 min — ver auth_routes_fixed.py). remember_me viaja aparte porque
+    // el checkbox pertenece al form de login, que queda oculto durante este paso.
+    let tfaPendingToken = null;
+    let tfaRememberMe = false;
+
+    const tfaLoginForm = document.getElementById('tfaLoginForm');
+    const tfaBackLink = document.getElementById('tfaBackToLoginLink');
+
+    function showTfaStep(pendingToken, rememberMe) {
+        tfaPendingToken = pendingToken;
+        tfaRememberMe = rememberMe;
+        loginForm.style.display = 'none';
+        if (tfaLoginForm) {
+            tfaLoginForm.style.display = 'block';
+            const codeInput = document.getElementById('tfa_code');
+            if (codeInput) { codeInput.value = ''; setTimeout(() => codeInput.focus(), 60); }
+        }
+    }
+
+    function backToLoginStep() {
+        tfaPendingToken = null;
+        if (tfaLoginForm) tfaLoginForm.style.display = 'none';
+        loginForm.style.display = 'block';
+        clearErrorStates();
+    }
+
+    if (tfaBackLink) {
+        tfaBackLink.addEventListener('click', backToLoginStep);
+    }
+
+    if (tfaLoginForm) {
+        tfaLoginForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const codeInput = document.getElementById('tfa_code');
+            const code = (codeInput.value || '').trim();
+            const submitBtn = document.getElementById('tfaSubmitBtn');
+            const btnText = document.getElementById('tfaBtnText');
+            const progressBar = document.getElementById('tfaProgressBar');
+
+            if (!code) {
+                codeInput.closest('.input-container').classList.add('error-state');
+                return;
+            }
+            codeInput.closest('.input-container').classList.remove('error-state');
+
+            submitBtn.disabled = true;
+            progressBar.style.display = 'block';
+            btnText.innerHTML = '<span class="loading-spinner"></span> Verifying...';
+
+            try {
+                const response = await fetch('/auth_bp/2fa/verify-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify({
+                        pending_token: tfaPendingToken,
+                        code: code,
+                        remember_me: tfaRememberMe
+                    })
+                });
+                const data = await response.json();
+                progressBar.style.display = 'none';
+
+                if (response.ok) {
+                    btnText.innerHTML = `
+                        <svg class="success-checkmark" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                        Success!`;
+                    setTimeout(() => { window.location.href = data.redirect || '/home'; }, 600);
+                } else {
+                    submitBtn.disabled = false;
+                    btnText.textContent = 'Verify';
+                    codeInput.closest('.input-container').classList.add('error-state');
+                    tfaLoginForm.classList.add('error-shake');
+                    setTimeout(() => tfaLoginForm.classList.remove('error-shake'), 500);
+                    const existing = tfaLoginForm.querySelector('.error-message');
+                    if (existing) existing.remove();
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error-message';
+                    errorDiv.textContent = data.error || 'Invalid code.';
+                    tfaLoginForm.querySelector('.form-header').appendChild(errorDiv);
+                    if (response.status === 401 && (data.error || '').includes('expired')) {
+                        // pending_token venció (>5 min) — no hay nada que reintentar, forzar re-login.
+                        setTimeout(backToLoginStep, 2000);
+                    }
+                }
+            } catch (error) {
+                progressBar.style.display = 'none';
+                submitBtn.disabled = false;
+                btnText.textContent = 'Verify';
+            }
+        });
+    }
+
     loginForm.addEventListener('submit', async function (e) {
         e.preventDefault();
 
@@ -75,6 +171,17 @@
             // Remove loading state
             form.classList.remove('loading');
             progressBar.style.display = 'none';
+
+            if (response.ok && data.requires_2fa) {
+                // Password correct, but the account has 2FA on — hand off to
+                // the code-entry step instead of redirecting. No session was
+                // created server-side yet (see login() in auth_routes_fixed.py).
+                submitBtn.disabled = false;
+                btnText.textContent = 'Sign In';
+                inputs.forEach(input => { input.disabled = false; });
+                showTfaStep(data.pending_token, rememberMe);
+                return;
+            }
 
             if (response.ok) {
                 // SUCCESS STATE
