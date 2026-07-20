@@ -2232,14 +2232,23 @@ body.xp-file-preview .mode-switch-container {
                     _afterChange();
                 });
                 cit.addEventListener('dblclick', () => {
+                    // Silent otherwise: the only visible change is the checkmark
+                    // disappearing on the FinderX card, easy to miss (this is what
+                    // was causing FinderX to vanish from results with no explanation).
+                    const droppedSource = _is('search_source');
                     _set('search_source', false);                // drop FinderX
                     _set('validate_citations', true);            // citations-only
                     _afterChange();
+                    if (droppedSource) this._showFloatingWarning('Citations-only mode: FinderX source search was turned off.');
                 });
                 cit.addEventListener('keydown', e => {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        _set('search_source', false);
+                        // Mirror the click handler: while FinderX is on, Citations is
+                        // already included — a single activation must be a no-op, not
+                        // silently drop FinderX. (Previously this unconditionally set
+                        // search_source=false on every keyboard activation.)
+                        if (_is('search_source')) return;
                         _set('validate_citations', !_is('validate_citations'));
                         _afterChange();
                     }
@@ -3210,10 +3219,13 @@ body.xp-file-preview .mode-switch-container {
                         checkAndPerformAnalysis();
                     }
                     // Avisar de los servicios pedidos que fallaron (sin bloquear el resto).
+                    // _showFloatingWarning (no showError): _enterMarktrackView() se
+                    // llama pocas líneas más abajo y oculta #statusMessage de inmediato
+                    // — un showError() aquí quedaría invisible en el mismo tick.
                     if (wantAi && !aiResult)
-                        this.showError('AI detection failed: ' + ((aiS.reason && aiS.reason.message) || 'unknown error'));
+                        this._showFloatingWarning('AI detection failed: ' + ((aiS.reason && aiS.reason.message) || 'unknown error'));
                     if (wantSource && !sourceResult)
-                        this.showError('FinderX failed: ' + ((srcS.reason && srcS.reason.message) || 'unknown error'));
+                        this._showFloatingWarning('FinderX failed: ' + ((srcS.reason && srcS.reason.message) || 'unknown error'));
                     // FinderX y Citations son dos jobs independientes que corren en
                     // paralelo (líneas 3188-3191) — uno puede fallar sin el otro.
                     // Antes este aviso se silenciaba por completo si FinderX tenía
@@ -3222,7 +3234,7 @@ body.xp-file-preview .mode-switch-container {
                     // explicación. wantCitations ya cubre ambos casos de selección
                     // (checkbox explícito o acoplado a FinderX).
                     if (wantCitations && !citationResult)
-                        this.showError('Citation validation failed: ' + ((citS.reason && citS.reason.message) || 'unknown error'));
+                        this._showFloatingWarning('Citation validation failed: ' + ((citS.reason && citS.reason.message) || 'unknown error'));
                     this._enterMarktrackView(text, aiResult, sourceResult, citationResult, htmlViewUrl);
                 } else {
                     const reason = (aiS.reason && aiS.reason.message)
@@ -7949,6 +7961,37 @@ body.xp-file-preview .mode-switch-container {
             setTimeout(() => {
                 this.elements.wrapper.classList.remove('error');
             }, 1000);
+        }
+
+        // Partial-failure warning for runAnalysesOnText(): #statusMessage lives
+        // inside the input-mode layout and gets hidden the instant
+        // _enterMarktrackView() opens the split results view, which happens
+        // right after this fires whenever at least one of the requested
+        // analyses succeeded. showError() would be set and hidden in the same
+        // tick — invisible. This renders in a fixed, document.body-level host
+        // that _enterMarktrackView() never touches, so it survives the switch.
+        _showFloatingWarning(message) {
+            let host = document.getElementById('xpaFloatingWarnings');
+            if (!host) {
+                host = document.createElement('div');
+                host.id = 'xpaFloatingWarnings';
+                host.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);'
+                    + 'z-index:100000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;';
+                document.body.appendChild(host);
+            }
+            const banner = document.createElement('div');
+            banner.textContent = message;
+            banner.style.cssText = 'background:#fffbeb;color:#b45309;border:1px solid #fed7aa;'
+                + 'padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;'
+                + 'box-shadow:0 4px 12px rgba(0,0,0,0.15);opacity:0;transform:translateY(-8px);'
+                + 'transition:opacity .25s ease,transform .25s ease;max-width:90vw;';
+            host.appendChild(banner);
+            requestAnimationFrame(() => { banner.style.opacity = '1'; banner.style.transform = 'translateY(0)'; });
+            setTimeout(() => {
+                banner.style.opacity = '0';
+                banner.style.transform = 'translateY(-8px)';
+                setTimeout(() => banner.remove(), 300);
+            }, 7000);
         }
 
         showStatus(message, type) {
