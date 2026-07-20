@@ -5369,7 +5369,7 @@ body.xp-file-preview .mode-switch-container {
                 segBody += cleanSegs.map(x => this._buildSegmentBlockHtml(x)).join('');
             }
             if (!segs.length) {
-                segBody = `<div class="empty-state"><p>${academic.length ? 'No copied passages' : 'No academic matches found'}</p><small>${academic.length ? 'See the matched sources below.' : 'Content appears original against the corpus.'}</small></div>`;
+                segBody = `<div class="empty-state"><p>${academic.length ? 'No copied passages' : 'No matching sources found'}</p><small>${academic.length ? 'See the matched sources below.' : 'Content appears original against the academic corpus and the web.'}</small></div>`;
             }
 
             const acadSection = academic.length ? this._buildAcademicMatchesHtml(academic) : '';

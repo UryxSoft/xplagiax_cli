@@ -330,7 +330,6 @@ def google_callbackx():
         #print(f" Intentando login para usuario ID: {user.id}")
         
         # Verificar que el user_loader funciona ANTES del login
-        from flask import current_app
         loaded_user = current_app.login_manager._user_callback(str(user.id))
         if not loaded_user:
             #print(" CRÍTICO: user_loader falla antes del login")
@@ -556,7 +555,6 @@ def microsoft_callback():
         #print(f" Intentando login para usuario Microsoft ID: {user.id}")
         
         # Verificar que el user_loader funciona ANTES del login
-        from flask import current_app
         loaded_user = current_app.login_manager._user_callback(str(user.id))
         if not loaded_user:
             print("❌ CRÍTICO: user_loader falla antes del login")
@@ -636,6 +634,18 @@ def microsoft_callback():
 # Endpoints donde avisar "sesión expirada" es puro ruido: el usuario ya está
 # en (o yendo hacia) la pantalla de login/registro, o iniciando un flujo OAuth.
 _SESSION_FLASH_EXEMPT = ('x_apps.login', 'x_apps.index', 'x_apps.register')
+
+
+@auth_bp.before_app_request
+def _ensure_totp_columns_hook():
+    """Self-heal users.totp_* columns before anything on any request touches
+    the users table — including the Flask-Login user_loader that resolves
+    current_user below, and the Google/Microsoft OAuth callbacks, which query
+    Users directly without going through _ensure_totp_columns() themselves.
+    Registered before security_checks() so it always runs first; the
+    memoized _TOTP_COLUMNS_READY flag makes every call after the first one
+    a no-op."""
+    _ensure_totp_columns()
 
 
 @auth_bp.before_app_request
