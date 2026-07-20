@@ -1,0 +1,90 @@
+mejoras_xplagiax — fix: AI TestPro no aparece en documentos grandes
+=====================================================================
+
+QUE ARREGLA
+-----------
+Cuando el texto pegado es grande (~20K+ palabras), AI TestPro fallaba en
+silencio mientras FinderX/Citations sí mostraban resultado. Causa: AI TestPro
+es el único de los tres análisis que corre inline (una sola petición HTTP de
+principio a fin) — con AI_SERVICE_MODE=sync, un documento grande tarda más
+que el proxy_read_timeout de nginx (60s en app.xplagiax.ca) y más que el
+propio tope interno de xota (_SYNC_TIMEOUT_CAP=100s), así que nunca llega a
+responder a tiempo.
+
+Cambio: documentos por encima de AI_ASYNC_THRESHOLD_WORDS (default 1500
+palabras) se mandan por /analyze_document_async + polling — el mismo patrón
+que ya usa FinderX — sin importar AI_SERVICE_MODE. El poll ceiling del
+frontend también se recalculó para reflejar el presupuesto real de Celery de
+xota (antes era un 420s fijo copiado de FinderX, sin relación con el tamaño
+del documento).
+
+ARCHIVOS TOCADOS
+-----------------
+- xplagiax_appcli2/modules/doc_service/doc_routes.py
+- xplagiax_appcli2/templates/user/analysis_smartinput.html
+
+Ambos vienen dos veces en este paquete:
+- mejoras_xplagiax.patch  → diff unificado, para aplicar sobre tu checkout.
+- files/                  → copia completa de los 2 archivos ya con el
+                            cambio aplicado, por si preferís copiarlos
+                            directo en vez de usar el patch.
+
+REQUISITO OPERATIVO — LEER ANTES DE APLICAR
+---------------------------------------------
+Este cambio asume que el worker Celery de xota está vivo (broker/backend en
+Redis + GUNICORN_SPAWN_CELERY=1, como en tu docker run). Si NO lo está, los
+documentos grandes quedarán en 'pending' para siempre — peor que el bug
+actual. Si tenés dudas, probá primero a mano:
+  POST /analyze_document_async  (con un texto de prueba)
+  GET  /analyze_status/<task_id>  un par de veces
+y confirmá que resuelve a status "SUCCESS"/similar, no que se queda pegado.
+
+Si el worker no está confirmado, podés desactivar la promoción a async sin
+tocar código: variable de entorno AI_ASYNC_THRESHOLD_WORDS=0.
+
+COMANDOS PARA APLICAR (con git, recomendado)
+----------------------------------------------
+    tar -xzf mejoras_xplagiax.tar.gz
+    cd /ruta/a/tu/checkout/de/xplagiax_cli
+    git apply --check /ruta/a/mejoras_xplagiax/mejoras_xplagiax.patch   # valida antes de tocar nada
+    git apply /ruta/a/mejoras_xplagiax/mejoras_xplagiax.patch
+    git diff --stat                                                     # confirmar qué cambió
+
+Si tu checkout no es un repo git, o "git apply" se queja por diferencias de
+contexto (líneas que ya cambiaron desde este export), usá "patch" en su
+lugar:
+    cd /ruta/a/tu/checkout/de/xplagiax_cli
+    patch -p1 < /ruta/a/mejoras_xplagiax/mejoras_xplagiax.patch
+
+COMANDOS PARA APLICAR (copia directa, sin patch)
+---------------------------------------------------
+    tar -xzf mejoras_xplagiax.tar.gz
+    cp mejoras_xplagiax/files/xplagiax_appcli2/modules/doc_service/doc_routes.py \
+       /ruta/a/tu/checkout/xplagiax_appcli2/modules/doc_service/doc_routes.py
+    cp mejoras_xplagiax/files/xplagiax_appcli2/templates/user/analysis_smartinput.html \
+       /ruta/a/tu/checkout/xplagiax_appcli2/templates/user/analysis_smartinput.html
+
+Nota: esto sobreescribe los archivos completos — solo usalo si tu copia local
+de esos 2 archivos coincide con la del repo (sin cambios locales propios sin
+commitear en ellos).
+
+DESPUES DE APLICAR
+-------------------
+Reiniciá el servicio de appcli2 (gunicorn/docker, el que uses en prod) para
+que tome el cambio. No requiere migraciones ni reinicio de xota/nginx.
+
+VARIABLES DE ENTORNO NUEVAS (opcionales)
+-------------------------------------------
+AI_ASYNC_THRESHOLD_WORDS   default 1500   — palabras a partir de las cuales
+                                             se fuerza la vía async. 0 = nunca
+                                             forzar (vuelve al comportamiento
+                                             previo).
+
+CALIBRACION
+-----------
+El patch agrega un log 'AI submit finished in Xs (word_count=N, ...)' en
+cada llamada síncrona a xota. Con tráfico real de unos días podés ajustar
+AI_ASYNC_THRESHOLD_WORDS con datos en vez de con la estimación incluida
+(derivada de la fórmula adaptive_timeout de xota: 30s + 15s por cada 1000
+palabras, tope 100s en sync — ver comentario en el código junto a la
+constante).
