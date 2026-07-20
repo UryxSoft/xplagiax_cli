@@ -404,7 +404,10 @@ def google_callbackx():
 
     except Exception as e:
         current_app.logger.exception("[google-oauth] EXCEPCIÓN CRÍTICA en OAuth callback")
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass  # Si la DB está caída, el rollback también fallará, evitar 500
         
         #  LIMPIAR SESIÓN EN CASO DE ERROR
         flask_session.clear()
@@ -620,7 +623,10 @@ def microsoft_callback():
 
     except Exception as e:
         current_app.logger.exception("[microsoft-oauth] EXCEPCIÓN CRÍTICA en OAuth callback")
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
         
         flask_session.clear()
         
