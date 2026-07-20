@@ -1,0 +1,243 @@
+{# Vista pública del reporte (QR / link del PDF) — solo accesible con el token
+   firmado; sin sesión, sin navegación de la app. Los datos llegan ya
+   normalizados por report_pdf.extract_report_data (misma fuente de verdad que
+   el PDF, mismos umbrales y gating hasFlag que la pantalla de análisis). #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Academic Integrity Report — XplagiaX</title>
+<style>
+:root{--primary:#064CDB;--ink:#0f172a;--muted:#64748b;--body:#334155;--bg:#f8fafc;
+--line:#e2e8f0;--ai:#ef4444;--plag:#f59e0b;--cit:#064CDB;--ok:#10b981;--orig:#a78bfa;
+--danger:#dc2626;--warn:#d97706;--success:#059669}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Open Sans',-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:#eef2f7;color:var(--body);line-height:1.55;font-size:14px}
+.wrap{max-width:880px;margin:0 auto;padding:28px 16px 60px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.brandbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+background:var(--primary);border-radius:16px;padding:18px 24px;margin-bottom:16px}
+.brand{color:#fff;font-size:19px;font-weight:800;letter-spacing:.02em}
+.brand span{opacity:.85}
+.brand small{display:block;font-size:11px;font-weight:600;opacity:.75;letter-spacing:.08em;margin-top:2px}
+.vbadge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);color:#fff;
+font-size:11px;font-weight:700;padding:6px 14px;border-radius:20px;letter-spacing:.05em}
+h1{font-size:20px;color:var(--ink);letter-spacing:-.01em;margin-bottom:4px}
+h2{font-size:15px;color:var(--ink);margin-bottom:12px}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 18px;margin-top:14px}
+.meta div b{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.meta div span{font-size:13px;color:var(--ink);font-weight:600;word-break:break-all}
+.execu{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.ring{width:120px;height:120px;flex-shrink:0}
+.risk-chip{display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:800;margin-bottom:6px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.kpi{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 10px;text-align:center}
+.kpi b{display:block;font-size:22px;font-weight:800;letter-spacing:-.03em}
+.kpi i{display:block;font-style:normal;font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+.kpi small{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+.distbar{height:12px;border-radius:6px;overflow:hidden;display:flex;gap:1px;margin:10px 0 8px}
+.distbar div{min-width:2px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--body)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.factor{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
+.factor:last-child{border-bottom:0}
+.factor .g{flex-shrink:0;font-size:12px;line-height:1.6}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;
+padding:8px 8px;background:var(--bg);border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+td a{color:var(--primary);text-decoration:none}
+td a:hover{text-decoration:underline}
+.seg{border:1px solid var(--line);border-left:3px solid var(--danger);border-radius:10px;
+background:#fdfdfe;padding:12px 14px;margin-bottom:10px}
+.seg.ok{border-left-color:var(--success)}
+.seg.ai{border-left-color:var(--ai)}
+.seg-head{display:flex;justify-content:space-between;gap:10px;font-size:12px;font-weight:700;margin-bottom:5px}
+.seg-head em{font-style:normal;color:var(--muted);font-weight:600}
+.seg p{font-size:12.5px}
+.seg small{display:block;color:var(--muted);font-size:11px;margin-top:5px}
+.interp{background:var(--bg);border-left:3px solid var(--primary);border-radius:0 10px 10px 0;padding:14px 16px;font-size:13px}
+.rec{padding:5px 0;font-size:13px}
+.rec b{color:var(--primary);font-weight:800}
+.foot{color:var(--muted);font-size:11px;text-align:center;line-height:1.7;margin-top:22px}
+.note{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;font-size:12px;color:#92400e;margin-top:12px}
+@media print{body{background:#fff}.card{box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brandbar">
+    <div class="brand"><span>&times;</span>plagia<span>&times;</span>
+      <small>AI TESTPRO · FINDERX — ACADEMIC INTEGRITY REPORT</small></div>
+    <div class="vbadge">✓ VERIFIED REPORT</div>
+  </div>
+
+  <div class="card">
+    <h1>{{ d.title }}</h1>
+    <div class="meta">
+      <div><b>Date (UTC)</b><span>{{ d.created.strftime('%B %d, %Y · %H:%M') }}</span></div>
+      <div><b>Words analyzed</b><span>{{ '{:,}'.format(d.word_count) }}</span></div>
+      {% if d.language %}<div><b>Language</b><span>{{ d.language }}</span></div>{% endif %}
+      <div><b>Analysis ID</b><span>{{ d.history_id }}</span></div>
+      <div><b>Verification</b><span>{{ d.checksum[:16] }}</span></div>
+    </div>
+  </div>
+
+  {% set rk = {'LOW':  ('●','Low Risk','var(--ok)'),
+               'MEDIUM':('▲','Medium Risk','var(--plag)'),
+               'HIGH': ('■','High Risk','var(--ai)')}[d.risk] %}
+  <div class="card">
+    <h2>Executive Summary</h2>
+    <div class="execu">
+      <svg class="ring" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#eef2f7" stroke-width="14"/>
+        <circle cx="60" cy="60" r="50" fill="none" stroke="{{ rk[2] }}" stroke-width="14"
+                stroke-linecap="round" stroke-dasharray="314.16"
+                stroke-dashoffset="{{ '%.1f' % (314.16 * (1 - d.integrity_score / 100)) }}"
+                transform="rotate(-90 60 60)"/>
+        <text x="60" y="64" text-anchor="middle" style="font-size:26px;font-weight:800;fill:var(--ink)">{{ d.integrity_score }}</text>
+        <text x="60" y="80" text-anchor="middle" style="font-size:9px;fill:var(--muted)">/ 100</text>
+      </svg>
+      <div style="flex:1;min-width:240px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em">ACADEMIC INTEGRITY INDEX</div>
+        <div class="risk-chip" style="color:{{ rk[2] }}">{{ rk[0] }} {{ rk[1] }}</div>
+        <p style="font-size:13px">{{ explanation }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Key Indicators</h2>
+    <div class="kpis">
+      {% if d.ai_pct is not none %}<div class="kpi"><b style="color:var(--ai)">{{ d.ai_pct }}%</b><i>AI Generated</i><small>Probability of AI-generated text</small></div>{% endif %}
+      {% if d.plag_pct is not none %}<div class="kpi"><b style="color:var(--plag)">{{ d.plag_pct }}%</b><i>Plagiarism</i><small>Confirmed source matches</small></div>{% endif %}
+      {% if d.cit_score is not none %}<div class="kpi"><b style="color:var(--cit)">{{ d.cit_score }}<span style="font-size:13px">/100</span></b><i>Citations</i><small>Referencing quality</small></div>{% endif %}
+      {% if d.references_found is not none %}<div class="kpi"><b style="color:var(--cit)">{{ d.references_found }}</b><i>References</i><small>Bibliographic entries</small></div>{% endif %}
+      {% if d.original_pct is not none %}<div class="kpi"><b style="color:var(--orig)">{{ d.original_pct }}%</b><i>Original</i><small>No confirmed match</small></div>{% endif %}
+      {% if d.human_pct is not none %}<div class="kpi"><b style="color:var(--ok)">{{ d.human_pct }}%</b><i>Human</i><small>Naturally written</small></div>{% endif %}
+    </div>
+    {% set dist = [] %}
+    {% if d.ai_pct is not none %}{% set _ = dist.append(('AI', d.ai_pct, 'var(--ai)')) %}{% endif %}
+    {% if d.plag_pct is not none %}{% set _ = dist.append(('Plagiarism', d.plag_pct, 'var(--plag)')) %}{% endif %}
+    {% if d.cit_score is not none %}{% set _ = dist.append(('Citations', d.cit_score, 'var(--cit)')) %}{% endif %}
+    {% if d.human_pct is not none %}{% set _ = dist.append(('Human', d.human_pct, 'var(--ok)')) %}{% endif %}
+    {% if d.original_pct is not none %}{% set _ = dist.append(('Original', d.original_pct, 'var(--orig)')) %}{% endif %}
+    {% if dist %}
+    <div class="distbar">
+      {% for name, v, c in dist %}<div title="{{ name }}: {{ v }}%" style="flex:{{ [v, 1] | max }} 1 0%;background:{{ c }}"></div>{% endfor %}
+    </div>
+    <div class="legend">
+      {% for name, v, c in dist %}<span><i style="background:{{ c }}"></i>{{ name }} {{ v }}%</span>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if factors %}
+  <div class="card">
+    <h2>Academic Risk Assessment</h2>
+    {% for title, text, kind in factors %}
+    <div class="factor">
+      <span class="g" style="color:{{ {'bad':'var(--danger)','warn':'var(--warn)','good':'var(--success)'}[kind] }}">{{ {'bad':'■','warn':'▲','good':'●'}[kind] }}</span>
+      <span><b style="color:var(--ink)">{{ title }}</b> — {{ text }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if d.academic or d.web %}
+  <div class="card">
+    <h2>Detected Sources</h2>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Candidate sources sharing topic or vocabulary
+      with the document. Only passages under <b>Findings</b> indicate a confirmed literal match.</p>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr><th>#</th><th>Source</th><th>Provider</th><th>Year</th><th>Type</th></tr></thead>
+      <tbody>
+      {% for m in (d.academic[:8] + d.web[:4]) %}
+        {% set url = m.url or ('https://doi.org/' ~ m.doi if m.doi else None) %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{% if url %}<a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ (m.title or url) | truncate(110) }}</a>{% else %}{{ (m.title or 'Untitled source') | truncate(110) }}{% endif %}</td>
+          <td>{{ m.provider or m.source or '—' }}</td>
+          <td>{{ m.year or '—' }}</td>
+          <td>{{ 'Web' if (m.source_type or '') | lower == 'internet' else 'Academic' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% set ai_blocks = (d.ai.blocks if d.ai and d.ai.blocks else []) | selectattr('type', 'equalto', 'ai') | list %}
+  {% if d.segs or ai_blocks %}
+  <div class="card">
+    <h2>Findings</h2>
+    {% set cleared = d.segs | rejectattr('decision', 'in', ['plagiarism', 'paraphrase']) | list %}
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+      {{ ai_blocks | length }} AI-flagged section(s) · {{ d.flagged_n }} plagiarism/paraphrase segment(s) ·
+      {{ cleared | length }} cleared segment(s)</p>
+    {% for s in d.flagged_segs[:10] %}
+    <div class="seg">
+      <div class="seg-head"><span style="color:var(--danger)">#{{ loop.index }} · {{ (s.decision or 'match') | upper }}</span>
+        <em>match {{ s.match_score | default(0) | int }}%</em></div>
+      <p>"{{ (s.text or '') | truncate(340) }}"</p>
+      <small>{% if s.matched_source and s.matched_source.title %}Matched: {{ s.matched_source.title | truncate(90) }} · {% endif %}{{ (s.reason or '') | truncate(140) }}</small>
+    </div>
+    {% endfor %}
+    {% for b in ai_blocks[:8] %}
+    <div class="seg ai">
+      <div class="seg-head"><span style="color:var(--ai)">AI PATTERN</span>
+        <em>confidence {{ b.confidence | default(0) | int }}%</em></div>
+      <p>"{{ (b.text or '') | truncate(340) }}"</p>
+      {% if b.patterns %}<small>{{ b.patterns[:3] | join(' · ') }}</small>{% endif %}
+    </div>
+    {% endfor %}
+    {% for s in cleared[:5] %}
+    <div class="seg ok">
+      <div class="seg-head"><span style="color:var(--success)">ORIGINAL</span>
+        <em>match {{ s.match_score | default(0) | int }}%</em></div>
+      <p>"{{ (s.text or '') | truncate(240) }}"</p>
+      <small>{{ (s.reason or 'No confirmed match.') | truncate(140) }}</small>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if d.cit %}
+  <div class="card">
+    <h2>Citations, References &amp; Bibliography</h2>
+    <div class="kpis">
+      <div class="kpi"><b style="color:var(--cit)">{{ d.cit_score if d.cit_score is not none else '—' }}<span style="font-size:13px">/100</span></b><i>Quality</i></div>
+      <div class="kpi"><b style="color:var(--ink)">{{ d.citations_found if d.citations_found is not none else '—' }}</b><i>Citations</i></div>
+      <div class="kpi"><b style="color:var(--ink)">{{ d.references_found if d.references_found is not none else '—' }}</b><i>References</i></div>
+      <div class="kpi"><b style="color:{{ 'var(--warn)' if d.orphan_cit else 'var(--success)' }}">{{ d.orphan_cit if d.orphan_cit is not none else '—' }}</b><i>Orphan cites</i></div>
+      <div class="kpi"><b style="color:{{ 'var(--warn)' if d.orphan_ref else 'var(--success)' }}">{{ d.orphan_ref if d.orphan_ref is not none else '—' }}</b><i>Orphan refs</i></div>
+      <div class="kpi"><b style="color:{{ 'var(--danger)' if d.cit_risk in ('high','critical') else 'var(--success)' }};text-transform:capitalize;font-size:16px">{{ d.cit_risk or '—' }}</b><i>Risk</i></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>Expert Interpretation</h2>
+    <div class="interp">{{ interpretation }}</div>
+    <h2 style="margin-top:18px">Recommendations</h2>
+    {% for r in recs %}<div class="rec"><b>→</b>&nbsp; {{ r }}</div>{% endfor %}
+    <div class="note"><b>Methodology notice.</b> These scores are automated decision-support indicators
+      intended to guide human review — not a definitive determination of academic misconduct.</div>
+  </div>
+
+  <div class="foot">
+    Generated by <b>XplagiaX</b> · AI TestPro &amp; FinderX · Report {{ d.history_id[:8] }} ·
+    Verification {{ d.checksum[:16] }}<br>
+    {{ d.created.strftime('%Y-%m-%d %H:%M UTC') }} · Confidential — this page is only reachable
+    through the link or QR code in the shared report.
+  </div>
+
+</div>
+</body>
+</html>

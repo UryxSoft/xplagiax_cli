@@ -4539,100 +4539,34 @@ _XPA_BRAND = {'primary': '#064CDB', 'ink': '#0f172a', 'muted': '#64748b',
               'ai': '#ef4444', 'plag': '#f59e0b', 'ok': '#10b981', 'bg': '#f8fafc'}
 
 
+# Base pública para el link/QR del reporte. Constante por entorno (mismo
+# criterio que el fix de OAuth redirect URIs: url_for(_external=True) detrás
+# de nginx generaba hosts equivocados, así que no se usa aquí).
+PUBLIC_REPORT_BASE = (os.environ.get('PUBLIC_REPORT_BASE')
+                      or 'https://app.xplagiax.ca').rstrip('/')
+
+
+def _public_report_token(entry):
+    """Token firmado y sin estado para la vista pública del reporte.
+
+    Solo el id — la pantalla es de solo lectura y únicamente alcanzable con
+    este token (QR/link del PDF). Revocación: borrar el análisis del
+    historial invalida la vista (la ruta hace 404 si la fila no existe)."""
+    ser = URLSafeSerializer(current_app.secret_key, salt='xpx-public-report')
+    return ser.dumps([entry.history_id])
+
+
+def _public_report_url(entry):
+    return f'{PUBLIC_REPORT_BASE}/x_doc/report/{_public_report_token(entry)}'
+
+
 def _share_pdf_bytes(entry, sender_email):
-    """PDF resumen del análisis (reportlab): cabecera de marca, métricas,
-    overview y extracto del texto analizado. Devuelve bytes."""
-    import io
-    from reportlab.lib.pagesizes import LETTER
-    from reportlab.lib.units import mm
-    from reportlab.lib.colors import HexColor
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
-                                    TableStyle, HRFlowable)
-
-    B = _XPA_BRAND
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=LETTER,
-                            leftMargin=18 * mm, rightMargin=18 * mm,
-                            topMargin=16 * mm, bottomMargin=16 * mm,
-                            title='XplagiaX Analysis Report')
-    ss = getSampleStyleSheet()
-    h1 = ParagraphStyle('xh1', parent=ss['Title'], fontSize=17, leading=21,
-                        textColor=HexColor(B['ink']), alignment=0, spaceAfter=2)
-    sub = ParagraphStyle('xsub', parent=ss['Normal'], fontSize=9, leading=12,
-                         textColor=HexColor(B['muted']))
-    lbl = ParagraphStyle('xlbl', parent=ss['Normal'], fontSize=8, leading=10,
-                         textColor=HexColor(B['muted']))
-    body = ParagraphStyle('xbody', parent=ss['Normal'], fontSize=9.5, leading=14,
-                          textColor=HexColor('#334155'))
-
-    def _pct(v):
-        return '—' if v is None else f'{int(v)}%'
-
-    story = [
-        Paragraph('XplagiaX — Analysis Report', h1),
-        Paragraph(f'Shared by {sender_email} · '
-                  f'{datetime.utcnow().strftime("%b %d, %Y")}', sub),
-        Spacer(1, 6), HRFlowable(width='100%', color=HexColor(B['primary']), thickness=2),
-        Spacer(1, 10),
-        Paragraph(entry.title or 'Untitled analysis',
-                  ParagraphStyle('xt', parent=body, fontSize=12, leading=16,
-                                 textColor=HexColor(B['ink']), spaceAfter=8)),
-    ]
-
-    cells = [
-        [Paragraph('AI CONTENT', lbl), Paragraph('SIMILARITY', lbl), Paragraph('CITATION QUALITY', lbl)],
-        [Paragraph(f'<font color="{B["ai"]}" size="16"><b>{_pct(entry.ai_pct)}</b></font>', body),
-         Paragraph(f'<font color="{B["plag"]}" size="16"><b>{_pct(entry.overall)}</b></font>', body),
-         Paragraph(f'<font color="{B["primary"]}" size="16"><b>'
-                   f'{"—" if entry.cit_score is None else str(int(entry.cit_score)) + "/100"}</b></font>', body)],
-    ]
-    metrics = Table(cells, colWidths=[58 * mm] * 3)
-    metrics.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), HexColor(B['bg'])),
-        ('BOX', (0, 0), (-1, -1), 0.75, HexColor('#e2e8f0')),
-        ('INNERGRID', (0, 0), (-1, -1), 0.75, HexColor('#e2e8f0')),
-        ('TOPPADDING', (0, 0), (-1, 0), 7), ('BOTTOMPADDING', (0, 1), (-1, 1), 9),
-        ('LEFTPADDING', (0, 0), (-1, -1), 10),
-    ]))
-    story += [metrics, Spacer(1, 14),
-              Paragraph('<b>Overview</b>', ParagraphStyle('xo', parent=body, textColor=HexColor(B['ink']))),
-              Spacer(1, 3)]
-
-    ai_pct = entry.ai_pct
-    if ai_pct is None:
-        overview = 'This document was analyzed with XplagiaX AI TestPro.'
-    elif ai_pct >= 50:
-        overview = (f'High AI concentration: {ai_pct}% of the analyzed content shows '
-                    'AI-characteristic patterns (word-weighted across sections).')
-    elif ai_pct >= 25:
-        overview = f'Mixed content: approximately {ai_pct}% of the text shows AI-characteristic patterns.'
-    else:
-        overview = f'Predominantly human-written: only {ai_pct}% shows AI-characteristic patterns.'
-    if entry.overall is not None:
-        overview += f' Similarity to existing sources: {int(entry.overall)}%.'
-    story.append(Paragraph(overview, body))
-
-    text = (entry.text or '').strip()
-    if text:
-        excerpt = text[:6000]
-        story += [Spacer(1, 12),
-                  Paragraph('<b>Analyzed text' + (' (excerpt)' if len(text) > 6000 else '') + '</b>',
-                            ParagraphStyle('xa', parent=body, textColor=HexColor(B['ink']))),
-                  Spacer(1, 3)]
-        for para in excerpt.split('\n'):
-            para = para.strip()
-            if para:
-                safe = para.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-                story.append(Paragraph(safe, body))
-                story.append(Spacer(1, 4))
-
-    story += [Spacer(1, 14), HRFlowable(width='100%', color=HexColor('#e2e8f0'), thickness=0.75),
-              Spacer(1, 4),
-              Paragraph('Generated by XplagiaX · AI TestPro & FinderX — this report was shared '
-                        f'with you by {sender_email}.', lbl)]
-    doc.build(story)
-    return buf.getvalue()
+    """PDF enterprise del análisis (ver modules/doc_service/report_pdf.py):
+    portada + QR de verificación, resumen ejecutivo, KPIs, distribución,
+    risk assessment, fuentes, hallazgos por segmento, citas, métricas,
+    interpretación y recomendaciones. Devuelve bytes."""
+    from modules.doc_service.report_pdf import build_report_pdf
+    return build_report_pdf(entry, sender_email, public_url=_public_report_url(entry))
 
 
 def _share_email_html(entry, sender_email):
@@ -4676,8 +4610,16 @@ def _share_email_html(entry, sender_email):
         <b style="color:{B['ink']};">Overview.</b> {preview}…
       </div>
       <p style="margin:18px 0 0;font-size:12.5px;line-height:1.6;color:{B['muted']};">
-        The full report is attached as a PDF. It includes the section-by-section metrics
-        and the analyzed text.</p>
+        The full report is attached as a PDF. It includes the executive summary, source
+        matches, per-segment findings and recommendations.</p>
+      <div style="margin-top:16px;text-align:center;">
+        <a href="{_public_report_url(entry)}"
+           style="display:inline-block;background:{B['primary']};color:#ffffff;text-decoration:none;
+                  font-size:13px;font-weight:700;padding:11px 22px;border-radius:10px;">
+          View interactive report</a>
+        <p style="margin:8px 0 0;font-size:11px;color:{B['muted']};">
+          Same link as the QR code inside the PDF — read-only, no account required.</p>
+      </div>
     </div>
     <div style="padding:14px 26px;background:{B['bg']};border-top:1px solid #e2e8f0;">
       <p style="margin:0;font-size:11px;color:{B['muted']};">
@@ -4787,6 +4729,59 @@ def history_unshare(hid, share_id):
     db.session.delete(share)
     db.session.commit()
     return jsonify({'ok': True}), 200
+
+
+@x_doc.route('/report/<token>', methods=['GET'])
+def public_report(token):
+    """Vista pública de solo lectura del reporte — la pantalla del QR/link del
+    PDF. SIN @login_required a propósito: el token firmado ES la credencial
+    (solo lo tiene quien recibió el PDF/email). No aparece en ninguna
+    navegación de la app; noindex para que tampoco la indexen buscadores.
+    Se invalida sola cuando el dueño borra el análisis del historial."""
+    from modules.models.model import AnalysisHistory
+    ser = URLSafeSerializer(current_app.secret_key, salt='xpx-public-report')
+    try:
+        payload = ser.loads(token)
+        hid = payload[0] if isinstance(payload, list) else payload
+    except (BadSignature, ValueError, TypeError, IndexError):
+        abort(404)
+    entry = AnalysisHistory.query.filter_by(history_id=str(hid)).first()
+    if not entry:
+        abort(404)
+
+    from modules.doc_service.report_pdf import (extract_report_data, risk_explanation,
+                                                risk_factors, recommendations, interpretation)
+    d = extract_report_data(entry)
+    resp = current_app.make_response(render_template(
+        'user/shared_report.html', d=d,
+        explanation=risk_explanation(d), factors=risk_factors(d),
+        recs=recommendations(d), interpretation=interpretation(d)))
+    resp.headers['X-Robots-Tag'] = 'noindex, nofollow'
+    return resp
+
+
+@x_doc.route('/history/<hid>/report.pdf', methods=['GET'])
+@login_required
+def history_report_pdf(hid):
+    """Descarga directa del PDF enterprise (antes solo existía adjunto en el
+    email de share externo). Dueño del análisis o usuario con quien se
+    compartió (AnalysisShare.shared_with_id)."""
+    from modules.models.model import AnalysisHistory, AnalysisShare
+    entry = AnalysisHistory.query.filter_by(user_id=current_user.id, history_id=hid).first()
+    if not entry:
+        _ensure_analysis_shares_table()
+        entry = (AnalysisHistory.query
+                 .join(AnalysisShare, AnalysisShare.analysis_id == AnalysisHistory.id)
+                 .filter(AnalysisHistory.history_id == hid,
+                         AnalysisShare.shared_with_id == current_user.id)
+                 .first())
+    if not entry:
+        return jsonify({'error': 'Analysis not found.'}), 404
+    pdf = _share_pdf_bytes(entry, current_user.email)
+    import io as _io
+    return send_file(_io.BytesIO(pdf), mimetype='application/pdf',
+                     as_attachment=True,
+                     download_name='xplagiax-academic-integrity-report.pdf')
 
 
 # ════════════════════════════════════════════════════════════════════════════
