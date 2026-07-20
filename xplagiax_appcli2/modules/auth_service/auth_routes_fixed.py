@@ -1637,6 +1637,14 @@ def totp_setup():
     code + the raw secret for manual entry."""
     _ensure_totp_columns()
     if current_user.totp_enabled:
+        # Diagnostic for the frontend-state-vs-DB-state mismatch this guard
+        # produces when the switch shows off but the account is already on
+        # (tfaLoadStatus() only fetches /2fa/status once, on page load — a
+        # failed/late fetch there leaves it stuck unchecked for the session).
+        current_app.logger.info(
+            '2fa/setup rejected: user_id=%s already has totp_enabled=True',
+            current_user.id,
+        )
         return jsonify({'error': 'Two-factor authentication is already enabled.'}), 400
 
     secret = totp_service.generate_secret()
@@ -1659,14 +1667,28 @@ def totp_verify_setup():
     user out on their very next login."""
     _ensure_totp_columns()
     if current_user.totp_enabled:
+        current_app.logger.info(
+            '2fa/verify-setup rejected: user_id=%s already has totp_enabled=True',
+            current_user.id,
+        )
         return jsonify({'error': 'Two-factor authentication is already enabled.'}), 400
 
     secret = totp_crypto.decrypt_secret(current_user.totp_secret)
     if not secret:
+        # Either /2fa/setup was never called for this account, or decrypt_secret()
+        # rejected it — a stale ciphertext from before TOKEN_ENCRYPTION_KEY/SECRET_KEY
+        # rotated would land here too (InvalidToken), so log which case this is.
+        current_app.logger.warning(
+            '2fa/verify-setup: user_id=%s no decryptable pending secret (has_stored=%s)',
+            current_user.id, bool(current_user.totp_secret),
+        )
         return jsonify({'error': 'No pending setup found. Start again.'}), 400
 
     code = (request.get_json(silent=True) or {}).get('code', '')
     if not totp_service.verify_totp_code(secret, code):
+        current_app.logger.info(
+            '2fa/verify-setup: user_id=%s submitted an invalid code', current_user.id,
+        )
         return jsonify({'error': 'Invalid code. Check your authenticator app and try again.'}), 400
 
     plain_codes, stored_codes = totp_service.generate_recovery_codes()
@@ -1686,12 +1708,16 @@ def totp_disable():
     identity as the rest of this file's sensitive actions."""
     _ensure_totp_columns()
     if not current_user.totp_enabled:
+        current_app.logger.info(
+            '2fa/disable rejected: user_id=%s totp_enabled=False already', current_user.id,
+        )
         return jsonify({'error': 'Two-factor authentication is not enabled.'}), 400
 
     password = (request.get_json(silent=True) or {}).get('password', '')
     if not current_user._password_hash or not bcrypt.checkpw(
         password.encode('utf-8'), current_user._password_hash.encode('utf-8')
     ):
+        current_app.logger.info('2fa/disable: user_id=%s wrong password', current_user.id)
         return jsonify({'error': 'Incorrect password.'}), 400
 
     current_user.totp_enabled = False
@@ -1721,6 +1747,15 @@ def totp_verify_login():
         return jsonify({'error': 'Two-factor authentication is not enabled for this account.'}), 400
 
     secret = totp_crypto.decrypt_secret(user.totp_secret)
+    if not secret:
+        # decrypt_secret() returns None for both "no secret stored" and "stored
+        # ciphertext doesn't decrypt under the current key" — worth telling apart
+        # in the logs, since the latter means every code will fail no matter what
+        # the user enters (TOKEN_ENCRYPTION_KEY/SECRET_KEY changed since setup).
+        current_app.logger.warning(
+            '2fa/verify-login: user_id=%s totp_secret undecryptable (has_stored=%s)',
+            user.id, bool(user.totp_secret),
+        )
     ok = bool(secret) and totp_service.verify_totp_code(secret, code)
 
     if not ok:
@@ -1731,6 +1766,7 @@ def totp_verify_login():
             ok = True
 
     if not ok:
+        current_app.logger.info('2fa/verify-login: user_id=%s invalid code/recovery attempt', user.id)
         return jsonify({'error': 'Invalid code.'}), 401
 
     session_token = user.create_session()

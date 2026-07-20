@@ -2162,14 +2162,25 @@ async function secSubmitPwChange() {
    the secret was never actually paired with their app. Turning it OFF
    works the same way: the switch stays checked until /2fa/disable confirms
    the password, so a stray click never silently drops account protection. */
-async function tfaLoadStatus() {
+async function tfaLoadStatus(retrying) {
   const el = document.getElementById('tfaSwitch');
   if (!el) return;
   try {
     const res = await fetch('/auth_bp/2fa/status', { credentials: 'include' });
+    if (!res.ok) throw new Error('status ' + res.status);
     const data = await res.json();
-    if (res.ok) el.checked = !!data.enabled;
-  } catch (_) { /* deja el switch en su estado por defecto (off) si falla */ }
+    el.checked = !!data.enabled;
+    el.disabled = false;
+    el.title = '';
+  } catch (_) {
+    // One retry before giving up — a single blip here used to leave the
+    // switch stuck unchecked for the whole page lifetime (never re-fetched
+    // before a click), so every "enable" attempt 400'd against an account
+    // that was already on, with no way for the user to tell why.
+    if (!retrying) { setTimeout(() => tfaLoadStatus(true), 1200); return; }
+    el.disabled = true;
+    el.title = 'Could not load 2FA status. Reload the page to try again.';
+  }
 }
 
 function tfaOnSwitchToggle(el) {
@@ -2198,8 +2209,16 @@ async function tfaOpenSetupModal() {
     });
     const data = await res.json();
     if (!res.ok) {
-      smToast(data.error || 'Could not start setup.', 'error');
       overlay.classList.remove('open');
+      if (res.status === 400 && /already enabled/i.test(data.error || '')) {
+        // Switch showed off (stale/failed status load) but the account already
+        // has 2FA on — re-sync instead of leaving a generic error the user can
+        // only retry into the same 400 again.
+        smToast('Two-factor authentication is already enabled on this account.', 'error');
+        tfaLoadStatus();
+        return;
+      }
+      smToast(data.error || 'Could not start setup.', 'error');
       return;
     }
     document.getElementById('tfaQrImg').src = data.qr_code;

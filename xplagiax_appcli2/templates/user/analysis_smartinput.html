@@ -4640,7 +4640,7 @@ body.xp-file-preview .mode-switch-container {
             };
             const distSegs = [
                 ai       ? { name: 'AI',         value: aiPct,       color: '#ef4444' } : null,
-                source   ? { name: 'Plagiarism', value: overall,     color: '#f59e0b' } : null,
+                source   ? { name: 'Plagiarism', value: plagFlagged ? overall : 0, color: '#f59e0b' } : null,
                 citation ? { name: 'Citations',  value: citScore,    color: '#064CDB' } : null,
                 ai       ? { name: 'Human',      value: humanPct,    color: '#10b981' } : null,
                 source   ? { name: 'Original',   value: originalPct, color: '#a78bfa' } : null,
@@ -5309,7 +5309,10 @@ body.xp-file-preview .mode-switch-container {
             const ratio    = summary.flagged_ratio != null ? num(summary.flagged_ratio) : (analyzed ? flaggedN / analyzed : 0);
             const hasFlag  = flaggedN > 0;
 
-            const colFor = v => v >= 50 ? '#dc2626' : v >= 25 ? '#d97706' : '#059669';
+            // Gated by hasFlag, same signal as the verdict below — a high raw
+            // score from one short/localized match (see noteHtml) shouldn't
+            // paint the ring/tiles red when zero segments were confirmed.
+            const colFor = v => (hasFlag && v >= 50) ? '#dc2626' : (hasFlag && v >= 25) ? '#d97706' : '#059669';
             const ringColor = colFor(overall);
 
             // Verdict is driven by ACTUAL segment flags so it never contradicts the score tiles / note.
@@ -6000,8 +6003,15 @@ body.xp-file-preview .mode-switch-container {
                 : safeText;
             const aiPct = ai ? Math.round(ai.ai_score) : 0;
             const overall = source ? Math.round((source.scores || {}).overall || 0) : 0;
+            // Same hasFlag signal _buildMtPlagPanel uses for its verdict — a bare
+            // topbar chip has no room for the "short/localized match" nuance the
+            // plag-note explains, so gate it to 0/clear instead of a raw score
+            // that can contradict "No copied passages found" at a glance.
+            const plagSegs = source && Array.isArray(source.segment_matches) ? source.segment_matches : [];
+            const plagFlagged = plagSegs.some(x => ['plagiarism', 'paraphrase'].includes(String(x.decision || '').toLowerCase()));
+            const displayOverall = plagFlagged ? overall : 0;
             const aiColor = aiPct >= 50 ? '#ef4444' : aiPct >= 25 ? '#f59e0b' : '#10b981';
-            const srcLbl = this._sourceLabel(overall);
+            const srcLbl = this._sourceLabel(displayOverall);
             const hasAi    = !!ai;
             const hasPlag  = !!source;
             const hasCit   = !!citation;
@@ -6025,7 +6035,7 @@ body.xp-file-preview .mode-switch-container {
                     <div class="ai-split-topbar-sep"></div>
                     <div class="ai-split-topbar-meta">
                         ${ai ? `<span class="ai-split-meta-chip" style="color:${aiColor};border-color:${aiColor}33;background:${aiColor}0d">${aiPct}% AI</span>` : ''}
-                        ${source ? `<span class="ai-split-meta-chip" style="color:${srcLbl.color};border-color:${srcLbl.color}33;background:${srcLbl.color}0d">${overall}% match</span>` : ''}
+                        ${source ? `<span class="ai-split-meta-chip" style="color:${srcLbl.color};border-color:${srcLbl.color}33;background:${srcLbl.color}0d">${displayOverall}% match</span>` : ''}
                     </div>
                     <button class="ai-split-new-btn" id="aiSplitReanalyzeBtn" type="button" title="Run the same analysis again on this text (uses 1 analysis credit)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
