@@ -1569,7 +1569,10 @@ def record_login(user, session_token):
         db.session.flush()  # detectar errores de columna aquí, no en el commit externo
     except Exception:
         current_app.logger.exception("Failed to record login history")
-        db.session.rollback()  # descartar solo la entrada de historial, no el usuario
+        try:
+            db.session.rollback()  # descartar solo la entrada de historial, no el usuario
+        except Exception:
+            pass
 
 
 # ── Two-Factor Authentication (TOTP) ──────────────────────────────────────────
