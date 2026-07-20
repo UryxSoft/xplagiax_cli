@@ -171,10 +171,59 @@ def oauth_status():
     })
 
 
+# ── Auto-migración OAuth: columnas nuevas que db.create_all() no añade ───────
+# db.create_all() solo crea tablas nuevas, nunca altera las existentes.
+# Estas funciones replican el patrón de _ensure_totp_columns() para columnas
+# añadidas a LoginHistory (browser, os_name, city, country) y a Users (avatar).
+# Sin esto, db.session.commit() falla con "Unknown column" al hacer el INSERT
+# del LoginHistory o del User con avatar, cayendo en el except genérico.
+_OAUTH_DB_COLUMNS_READY = False
+
+
+def _ensure_oauth_db_columns():
+    """Añade columnas de LoginHistory y Users que pueden faltar en DBs existentes."""
+    global _OAUTH_DB_COLUMNS_READY
+    if _OAUTH_DB_COLUMNS_READY:
+        return
+    try:
+        from sqlalchemy import inspect as _sa_inspect, text as _sa_text
+
+        # ── logins_xplagiax_clients ───────────────────────────────────────
+        login_cols = {c['name'] for c in _sa_inspect(db.engine).get_columns('logins_xplagiax_clients')}
+        login_additions = [
+            ('browser',  "ALTER TABLE logins_xplagiax_clients ADD COLUMN browser  VARCHAR(128) NULL"),
+            ('os_name',  "ALTER TABLE logins_xplagiax_clients ADD COLUMN os_name  VARCHAR(128) NULL"),
+            ('city',     "ALTER TABLE logins_xplagiax_clients ADD COLUMN city     VARCHAR(128) NULL"),
+            ('country',  "ALTER TABLE logins_xplagiax_clients ADD COLUMN country  VARCHAR(128) NULL"),
+        ]
+        for col, ddl in login_additions:
+            if col not in login_cols:
+                db.session.execute(_sa_text(ddl))
+                current_app.logger.info("[oauth-db] Added logins_xplagiax_clients.%s", col)
+
+        # ── users ─────────────────────────────────────────────────────────
+        user_cols = {c['name'] for c in _sa_inspect(db.engine).get_columns('users')}
+        if 'avatar' not in user_cols:
+            db.session.execute(_sa_text(
+                "ALTER TABLE users ADD COLUMN avatar VARCHAR(200) NULL"))
+            current_app.logger.info("[oauth-db] Added users.avatar")
+
+        db.session.commit()
+        _OAUTH_DB_COLUMNS_READY = True
+        current_app.logger.info("[oauth-db] DB columns verified/created OK")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.warning(
+            "[oauth-db] Could not ensure OAuth DB columns — login may fail if columns are missing",
+            exc_info=True)
+
+
 @auth_bp.route("/google/login")
 def google_login():
+    # Garantizar que las columnas de la DB existan antes de intentar el OAuth.
     # Fail-fast con mensaje visible: sin GOOGLE_CLIENT_ID/SECRET el redirect a
     # Google muere en un "invalid_request" críptico fuera de nuestra app.
+    _ensure_oauth_db_columns()
     if not google_oauth.client_id or not google_oauth.client_secret:
         current_app.logger.error(
             "Google OAuth no configurado: define GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET")
@@ -354,8 +403,7 @@ def google_callbackx():
         return response
 
     except Exception as e:
-        #print(f" EXCEPCIÓN CRÍTICA en OAuth callback:")
-        #print(traceback.format_exc())
+        current_app.logger.exception("[google-oauth] EXCEPCIÓN CRÍTICA en OAuth callback")
         db.session.rollback()
         
         #  LIMPIAR SESIÓN EN CASO DE ERROR
@@ -367,6 +415,7 @@ def google_callbackx():
 @auth_bp.route("/microsoft/login")
 def microsoft_login():
     """Iniciar login con Microsoft"""
+    _ensure_oauth_db_columns()
     if not microsoft_oauth.client_id or not microsoft_oauth.client_secret:
         current_app.logger.error(
             "Microsoft OAuth no configurado: define MICROSOFT_CLIENT_ID y MICROSOFT_CLIENT_SECRET")
@@ -570,8 +619,7 @@ def microsoft_callback():
         return response
 
     except Exception as e:
-        print(f"💥 EXCEPCIÓN CRÍTICA en Microsoft OAuth callback:")
-        print(traceback.format_exc())
+        current_app.logger.exception("[microsoft-oauth] EXCEPCIÓN CRÍTICA en OAuth callback")
         db.session.rollback()
         
         flask_session.clear()
@@ -1493,7 +1541,11 @@ def _get_client_ip():
 
 
 def record_login(user, session_token):
-    """Insert a login row into logins_xplagiax_clients after a successful login."""
+    """Insert a login row into logins_xplagiax_clients after a successful login.
+
+    El flush() inmediato detecta columnas faltantes DENTRO del try/except,
+    evitando que el error burbujee al commit() externo del callback de OAuth
+    y cause el genérico "An internal error occurred"."""
     try:
         ua_string = request.headers.get('User-Agent', '')
         browser, os_name = _parse_ua(ua_string)
@@ -1508,8 +1560,10 @@ def record_login(user, session_token):
             session_token=session_token,
         )
         db.session.add(entry)
+        db.session.flush()  # detectar errores de columna aquí, no en el commit externo
     except Exception:
         current_app.logger.exception("Failed to record login history")
+        db.session.rollback()  # descartar solo la entrada de historial, no el usuario
 
 
 # ── Two-Factor Authentication (TOTP) ──────────────────────────────────────────
