@@ -21,7 +21,7 @@ from .microsoft_oauth import MicrosoftOAuth
 from datetime import datetime, timedelta
 import secrets
 from functools import wraps
-from settings.connections import db 
+from settings.connections import db  #
 
 auth_bp = Blueprint('auth_bp', __name__)
 
