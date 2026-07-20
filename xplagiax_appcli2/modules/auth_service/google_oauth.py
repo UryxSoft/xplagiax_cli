@@ -29,17 +29,25 @@ class GoogleOAuth:
         # Scopes mínimos necesarios
         self.scopes = ["email", "profile"]
 
+    # URI de producción registrada en Google Cloud Console.
+    # La env var GOOGLE_REDIRECT_URI siempre tiene prioridad (útil en
+    # desarrollo o si el dominio cambia); si no está definida se usa este
+    # valor fijo que coincide con la redirect URI autorizada en el proyecto
+    # de Google (repo privado).
+    PRODUCTION_REDIRECT_URI = 'https://app.xplagiax.ca/auth_bp/google/callbackx'
+
     def get_redirect_uri(self):
         """Redirect URI resuelta EN TIEMPO DE REQUEST.
 
-        La env var GOOGLE_REDIRECT_URI siempre tiene prioridad; si no está,
-        se deriva del host real de la request con url_for(_external=True)
-        (ProxyFix ya garantiza esquema/host correctos detrás de nginx).
-        Antes era un valor fijo al puerto 5000 mientras la app corre en el
-        5003 → Google devolvía redirect_uri_mismatch en todos los entornos
-        sin la env var. Debe usarse el MISMO valor en authorize y en el
-        intercambio de código (requisito de la spec OAuth2)."""
-        return os.getenv('GOOGLE_REDIRECT_URI') or url_for('auth_bp.google_callbackx', _external=True)
+        Prioridad:
+          1. Variable de entorno GOOGLE_REDIRECT_URI (máxima flexibilidad).
+          2. Valor fijo de producción (PRODUCTION_REDIRECT_URI) — garantiza
+             que siempre coincida con la URI registrada en Google Console.
+        El valor derivado de url_for() fue eliminado porque detrás de nginx
+        sin ProxyFix configurado correctamente generaba http:// o puertos
+        incorrectos causando redirect_uri_mismatch (error 400 en el
+        intercambio de token)."""
+        return os.getenv('GOOGLE_REDIRECT_URI') or self.PRODUCTION_REDIRECT_URI
 
     def get_authorization_url(self):
         """Generar URL de autorización para redirigir al usuario"""

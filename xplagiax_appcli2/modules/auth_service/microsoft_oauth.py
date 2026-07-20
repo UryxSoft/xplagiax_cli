@@ -23,14 +23,21 @@ class MicrosoftOAuth:
         # Scopes mínimos necesarios
         self.scopes = ["openid", "profile", "email", "User.Read"]
 
-    def get_redirect_uri(self):
-        """Redirect URI resuelta EN TIEMPO DE REQUEST (ver google_oauth.py).
+    # URI de producción registrada en Azure App Registration.
+    # La env var MICROSOFT_REDIRECT_URI siempre tiene prioridad; si no está
+    # definida se usa este valor fijo que coincide con la redirect URI Web
+    # autorizada en el portal de Azure (repo privado).
+    PRODUCTION_REDIRECT_URI = 'https://app.xplagiax.ca/auth_bp/microsoft/callback'
 
-        MICROSOFT_REDIRECT_URI tiene prioridad; sin ella se deriva del host
-        real de la request. El valor fijo anterior (localhost:5000) no
-        coincidía con el puerto real de la app (5003) ni con el dominio de
-        producción → AADSTS50011 (redirect URI mismatch)."""
-        return os.environ.get('MICROSOFT_REDIRECT_URI') or url_for('auth_bp.microsoft_callback', _external=True)
+    def get_redirect_uri(self):
+        """Redirect URI resuelta EN TIEMPO DE REQUEST.
+
+        Prioridad:
+          1. Variable de entorno MICROSOFT_REDIRECT_URI (máxima flexibilidad).
+          2. Valor fijo de producción (PRODUCTION_REDIRECT_URI) — evita
+             AADSTS50011 (redirect URI mismatch) cuando url_for() genera
+             http:// o un puerto incorrecto detrás de nginx sin ProxyFix."""
+        return os.environ.get('MICROSOFT_REDIRECT_URI') or self.PRODUCTION_REDIRECT_URI
 
     def get_authorization_url(self):
         """Generar URL de autorización para redirigir al usuario"""
