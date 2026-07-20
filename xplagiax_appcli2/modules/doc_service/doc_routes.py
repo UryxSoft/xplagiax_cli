@@ -4729,6 +4729,25 @@ def history_shares(hid):
     return jsonify({'shares': [s.to_dict() for s in shares]}), 200
 
 
+@x_doc.route('/history/<hid>/share/<int:share_id>', methods=['DELETE'])
+@login_required
+def history_unshare(hid, share_id):
+    """Revoca UN destinatario (el modal de compartir ahora permite editar la
+    lista, no solo agregar). share_id se valida contra entry.id, que ya está
+    acotado a current_user.id — no alcanza con adivinar un share_id ajeno."""
+    from modules.models.model import AnalysisHistory, AnalysisShare
+    _ensure_analysis_shares_table()
+    entry = AnalysisHistory.query.filter_by(user_id=current_user.id, history_id=hid).first()
+    if not entry:
+        return jsonify({'error': 'Analysis not found.'}), 404
+    share = AnalysisShare.query.filter_by(id=share_id, analysis_id=entry.id).first()
+    if not share:
+        return jsonify({'error': 'Share not found.'}), 404
+    db.session.delete(share)
+    db.session.commit()
+    return jsonify({'ok': True}), 200
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # Delete All Documents — borrado total, irreversible, de TODOS los documentos,
 # análisis, historial y almacenamiento del usuario. Alcanza también marktrack

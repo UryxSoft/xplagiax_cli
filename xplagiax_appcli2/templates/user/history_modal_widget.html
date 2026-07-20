@@ -815,6 +815,11 @@
             const adv = window._advComp;
             if (adv && typeof adv._enterMarktrackView === 'function') {
                 adv._skipHistorySave = true;
+                // Sin esto, "Share analysis" del topbar seguía apuntando al ID del
+                // último análisis GUARDADO (o a ninguno) en vez de al que se acaba
+                // de reabrir — compartía el análisis equivocado o fallaba con
+                // "not saved yet" aunque la entrada obviamente ya existe.
+                adv._lastHistoryId = id;
                 adv._analyzedText = entry.text || '';
                 const doOpen = () => adv._enterMarktrackView(entry.text || '', entry.ai || null, entry.source || null, entry.citation || null, entry.result_view || null);
                 if (typeof adv._exitSplitMode === 'function') {
@@ -978,10 +983,13 @@
 .xpa-share-pillbox:focus-within{border-color:#064CDB;box-shadow:0 0 0 3px rgba(6,76,219,.08)}
 .xpa-share-pillbox.is-invalid{border-color:#dc2626}
 .xpa-share-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 8px 3px 3px;border-radius:20px;background:#f1f5f9;font-size:12px;color:#0f172a;animation:xpaShareIn .15s ease-out}
+.xpa-share-pill--existing{background:#ecfdf5;border:1px solid #a7f3d0}
 .xpa-share-pill-av{width:20px;height:20px;border-radius:50%;color:#fff;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
-.xpa-share-pill-x{border:none;background:none;color:#94a3b8;cursor:pointer;font-size:13px;line-height:1;padding:0 2px}
-.xpa-share-pill-x:hover{color:#dc2626}
+.xpa-share-pill-check{display:inline-flex;color:#059669;flex-shrink:0}
+.xpa-share-pill-x{border:none;background:none;color:#94a3b8;cursor:pointer;line-height:1;padding:2px;display:inline-flex;border-radius:50%;flex-shrink:0}
+.xpa-share-pill-x:hover{color:#dc2626;background:#fee2e2}
 .xpa-share-pillbox input{flex:1;min-width:140px;border:none;outline:none;font-size:13px;padding:4px;background:transparent;color:#0f172a}
+.xpa-share-pillbox.is-loading input{cursor:wait}
 .xpa-share-err{display:none;font-size:11.5px;color:#dc2626;margin-top:6px}
 .xpa-share-hint{font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.5}
 .xpa-share-results{margin-top:12px;display:none;flex-direction:column;gap:5px;font-size:12px}
@@ -991,6 +999,7 @@
 .xpa-share-btn-sec{background:#f1f5f9;color:#334155}.xpa-share-btn-sec:hover{background:#e2e8f0}
 .xpa-share-btn-pri{background:#064CDB;color:#fff}.xpa-share-btn-pri:hover{background:#0540b8}
 .xpa-share-btn-pri:disabled{opacity:.5;cursor:not-allowed}
+.xpa-share-spin{width:12px;height:12px;border-radius:50%;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;display:inline-block;animation:xpaShareSpin .7s linear infinite}
 </style>
 <div class="xpa-share-overlay" id="xpaShareOverlay" role="dialog" aria-modal="true" aria-labelledby="xpaShareTitle">
   <div class="xpa-share-card">
@@ -1014,7 +1023,10 @@
       <div class="xpa-share-results" id="xpaShareResults"></div>
     </div>
     <div class="xpa-share-foot">
-      <button class="xpa-share-btn xpa-share-btn-sec" type="button" id="xpaShareCancel">Cancel</button>
+      <button class="xpa-share-btn xpa-share-btn-sec" type="button" id="xpaShareCancel">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Cancel
+      </button>
       <button class="xpa-share-btn xpa-share-btn-pri" type="button" id="xpaShareSend" disabled>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         Share
@@ -1033,36 +1045,92 @@
     var resEl = document.getElementById('xpaShareResults');
     var sendBtn = document.getElementById('xpaShareSend');
     var titleEl = document.getElementById('xpaShareEntryTitle');
+    // emails: destinatarios NUEVOS tecleados en esta sesión del modal — son los
+    // ÚNICOS que se mandan al backend al enviar. existingShares: con quién ya
+    // se compartió (precargado vía GET .../shares) — cada pill trae su propio
+    // id y su × llama a unshare de inmediato, no se re-envían nunca.
     var emails = [];
+    var existingShares = [];
     var currentId = null;
+
+    var SEND_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+    var CHECK_ICON = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    var X_ICON = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 
     function avColor(e) { return (window._xpaAvColor ? window._xpaAvColor(e) : '#064CDB'); }
     function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
     function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; pillbox.classList.add('is-invalid'); }
     function clearErr() { errEl.style.display = 'none'; pillbox.classList.remove('is-invalid'); }
+    function sendIdle(text) { sendBtn.disabled = false; sendBtn.innerHTML = SEND_ICON + ' <span>' + text + '</span>'; }
+    function sendBusy(text) { sendBtn.disabled = true; sendBtn.innerHTML = '<span class="xpa-share-spin"></span> ' + text; }
+
+    // Sin nada nuevo tecleado: si hay compartidos existentes el botón pasa a
+    // "Done" (las bajas ya se aplicaron en vivo al hacer clic en cada ×) — si
+    // no hay nada en absoluto, queda deshabilitado como el modal original.
+    function updateSendState() {
+        if (emails.length > 0) sendIdle(existingShares.length ? 'Update' : 'Share');
+        else if (existingShares.length > 0) sendIdle('Done');
+        else { sendBtn.disabled = true; sendBtn.innerHTML = SEND_ICON + ' <span>Share</span>'; }
+    }
+
+    function removeExisting(shareId, pillEl) {
+        pillEl.style.opacity = '.5';
+        pillEl.style.pointerEvents = 'none';
+        fetch('/x_doc/history/' + encodeURIComponent(currentId) + '/share/' + shareId, { method: 'DELETE' })
+            .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+            .then(function (res) {
+                if (!res.ok) {
+                    pillEl.style.opacity = ''; pillEl.style.pointerEvents = '';
+                    showErr((res.d && res.d.error) || 'Could not remove recipient.');
+                    return;
+                }
+                existingShares = existingShares.filter(function (s) { return s.id !== shareId; });
+                renderPills();
+            })
+            .catch(function () {
+                pillEl.style.opacity = ''; pillEl.style.pointerEvents = '';
+                showErr('Network error — please try again.');
+            });
+    }
 
     function renderPills() {
         pillbox.querySelectorAll('.xpa-share-pill').forEach(function (p) { p.remove(); });
-        emails.slice().reverse().forEach(function (e) {
+        existingShares.forEach(function (s) {
             var pill = document.createElement('span');
-            pill.className = 'xpa-share-pill';
+            pill.className = 'xpa-share-pill xpa-share-pill--existing';
+            pill.innerHTML = '<span class="xpa-share-pill-av" style="background:' + avColor(s.email) + '">' +
+                (s.initial || s.email[0].toUpperCase()) + '</span>' +
+                '<span class="xpa-share-pill-check" title="Already shared">' + CHECK_ICON + '</span>' +
+                '<span></span><button type="button" class="xpa-share-pill-x" aria-label="Remove access for ' + s.email + '">' + X_ICON + '</button>';
+            pill.children[2].textContent = s.email;
+            pill.querySelector('.xpa-share-pill-x').addEventListener('click', function () { removeExisting(s.id, pill); });
+            pillbox.insertBefore(pill, input);
+        });
+        emails.forEach(function (e) {
+            var pill = document.createElement('span');
+            pill.className = 'xpa-share-pill xpa-share-pill--new';
             pill.innerHTML = '<span class="xpa-share-pill-av" style="background:' + avColor(e) + '">' +
-                e[0].toUpperCase() + '</span><span></span><button type="button" class="xpa-share-pill-x" aria-label="Remove">&#215;</button>';
+                e[0].toUpperCase() + '</span><span></span><button type="button" class="xpa-share-pill-x" aria-label="Remove ' + e + '">' + X_ICON + '</button>';
             pill.children[1].textContent = e;
             pill.querySelector('.xpa-share-pill-x').addEventListener('click', function () {
                 emails = emails.filter(function (x) { return x !== e; });
                 renderPills();
             });
-            pillbox.insertBefore(pill, pillbox.firstChild);
+            pillbox.insertBefore(pill, input);
         });
-        sendBtn.disabled = emails.length === 0;
+        updateSendState();
     }
     function addEmail(raw) {
         var e = String(raw || '').trim().toLowerCase().replace(/[,;]+$/, '');
         if (!e) return;
         if (!validEmail(e)) { showErr('"' + e + '" is not a valid email address.'); return; }
+        if (existingShares.some(function (s) { return s.email === e; })) {
+            showErr('"' + e + '" already has access.');
+            input.value = '';
+            return;
+        }
         if (emails.indexOf(e) !== -1) { input.value = ''; return; }
-        if (emails.length >= 20) { showErr('Maximum 20 recipients.'); return; }
+        if (emails.length + existingShares.length >= 20) { showErr('Maximum 20 recipients.'); return; }
         clearErr();
         emails.push(e);
         input.value = '';
@@ -1094,17 +1162,22 @@
 
     sendBtn.addEventListener('click', function () {
         if (input.value.trim()) addEmail(input.value);
-        if (!emails.length || !currentId) return;
-        sendBtn.disabled = true;
-        sendBtn.innerHTML = '<span style="width:12px;height:12px;border:2px solid #ffffff55;border-top-color:#fff;border-radius:50%;display:inline-block;animation:xpaShareSpin .7s linear infinite"></span> Sharing…';
+        if (!emails.length) {
+            // Nada nuevo que enviar — las bajas (si hubo) ya se aplicaron en
+            // vivo al hacer clic en cada ×. "Done" simplemente cierra.
+            if (existingShares.length) close();
+            return;
+        }
+        if (!currentId) return;
+        sendBusy('Sharing…');
+        // Solo van los NUEVOS — los ya compartidos ni siquiera viajan en este
+        // request, así que jamás se les reenvía el correo del reporte.
         fetch('/x_doc/history/' + encodeURIComponent(currentId) + '/share', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ emails: emails })
         }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
           .then(function (res) {
-            sendBtn.innerHTML = 'Share';
-            sendBtn.disabled = false;
-            if (!res.ok) { showErr(res.d.error || 'Could not share the analysis.'); return; }
+            if (!res.ok) { sendIdle(existingShares.length ? 'Update' : 'Share'); showErr(res.d.error || 'Could not share the analysis.'); return; }
             var LBL = { shared: ['ok', 'shared — will appear in their history'],
                         emailed: ['ok', 'emailed with the PDF report'],
                         already_shared: ['warn', 'was already shared'],
@@ -1119,13 +1192,19 @@
                 var b = resEl.children[i] && resEl.children[i].querySelector('b');
                 if (b) b.textContent = x.email;
             });
-            emails = []; renderPills();
-            // Refrescar el historial para que aparezca el stack de avatares.
-            if (window._histCtrl && typeof window._histCtrl._load === 'function') {
-                try { window._histCtrl._load(); } catch (e) {}
-            }
+            // El server devuelve el set de shares actualizado — es la fuente de
+            // verdad más fresca posible, así que la usamos tal cual en vez de
+            // reconstruirla a mano (cubre 'shared'/'emailed'/'already_shared'
+            // por igual, incluidos casos raros de doble submit).
+            emails = [];
+            existingShares = Array.isArray(res.d.shares) ? res.d.shares : existingShares;
+            renderPills();
+            // Refresca el stack de avatares en la lista del historial, si está
+            // montada. HistoryModalCtrl no expone un refresh puntual — open()
+            // sí re-consulta la lista, pero también robaría foco/reabriría el
+            // modal de historial detrás de este, así que se omite a propósito.
         }).catch(function () {
-            sendBtn.innerHTML = 'Share'; sendBtn.disabled = false;
+            sendIdle(existingShares.length ? 'Update' : 'Share');
             showErr('Network error — please try again.');
         });
     });
@@ -1137,6 +1216,7 @@
     window.xpaShareAnalysis = function (historyId, title) {
         currentId = historyId;
         emails = [];
+        existingShares = [];
         renderPills();
         clearErr();
         resEl.style.display = 'none'; resEl.innerHTML = '';
@@ -1144,6 +1224,24 @@
         titleEl.textContent = title || 'Analysis';
         overlay.classList.add('open');
         setTimeout(function () { input.focus(); }, 60);
+
+        // Precargar con quién ya se compartió, para poder editarlo (no solo
+        // agregar) — antes el modal siempre arrancaba vacío aunque el análisis
+        // ya tuviera destinatarios.
+        pillbox.classList.add('is-loading');
+        input.disabled = true;
+        fetch('/x_doc/history/' + encodeURIComponent(historyId) + '/shares')
+            .then(function (r) { return r.ok ? r.json() : { shares: [] }; })
+            .then(function (d) {
+                if (currentId !== historyId) return; // el modal se reabrió con otro id mientras esto viajaba
+                existingShares = Array.isArray(d.shares) ? d.shares : [];
+                renderPills();
+            })
+            .catch(function () { /* best-effort: el modal sigue usable para compartir de cero */ })
+            .then(function () {
+                pillbox.classList.remove('is-loading');
+                input.disabled = false;
+            });
     };
 })();
 </script>
