@@ -3785,6 +3785,30 @@ AI_DEFAULT_PLUGINS = ['ai_detection', 'citation_check', 'stylometric_analysis']
 # documento por párrafos sin ese tope. Ajustable por entorno.
 AI_ANALYZE_MAX_WORDS = int(os.environ.get('AI_ANALYZE_MAX_WORDS', '600'))
 
+# Por encima de este umbral (palabras), /analyze_document se manda por la vía
+# async (/analyze_document_async + poll) SIN IMPORTAR AI_SERVICE_MODE — un
+# documento grande procesado inline puede superar el proxy_read_timeout de
+# nginx (60s en app.xplagiax.ca, ver documentations/nginx.txt) antes de que
+# xota termine, y el cliente nunca ve el resultado de AI TestPro aunque
+# FinderX/Citations (que sí son async) sí lleguen. Asume que xota tiene un
+# worker Celery vivo (CELERY_BROKER_URL/CELERY_RESULT_BACKEND +
+# GUNICORN_SPAWN_CELERY=1 en su despliegue) — si no lo tiene, estos jobs
+# quedarían en 'pending' para siempre. Poner en 0 (o un número muy alto)
+# desactiva la promoción a async y vuelve al comportamiento previo.
+#
+# Derivado del propio código de xota (app/routes.py), no a ojo:
+#   - adaptive_timeout(word_count) ≈ base(30s) + per_kwords(15s) * (words/1000),
+#     tope _SYNC_TIMEOUT_CAP=100s en los endpoints síncronos.
+#   - En 2000 palabras ese presupuesto YA iguala los 60s de nginx (30+15*2=60)
+#     con margen cero — y esto es por UN plugin; analyze_text() pide 3
+#     (ai_detection + citation_check + stylometric_analysis) por defecto, y no
+#     tenemos visibilidad de si registry.run() los corre secuencial o en
+#     paralelo. Por eso el default queda bien por debajo de ese cruce (1500,
+#     ~52.5s de presupuesto para 1 plugin) en vez de pegado al límite.
+#   - Ajustar con los logs de 'AI submit finished in Xs' que se agregan más
+#     abajo en analyze_text() una vez haya tráfico real.
+AI_ASYNC_THRESHOLD_WORDS = int(os.environ.get('AI_ASYNC_THRESHOLD_WORDS', '1500'))
+
 
 def _user_ai_plugins():
     """Plugins elegidos en Settings › AI & Automation (lista validada, [] = default)."""
@@ -3823,24 +3847,34 @@ def _effective_ai_plugins(requested):
 
 
 def _ai_async_urls(word_count=None):
-    """Devuelve (submit_url, base_url) del servicio de IA según AI_SERVICE_MODE.
+    """Devuelve (submit_url, base_url) del servicio de IA.
 
     Si la URL configurada apunta al endpoint corto /analyze (limitado en tamaño
     de texto) y el documento supera AI_ANALYZE_MAX_WORDS, se cambia
     automáticamente a /analyze_document (procesa por párrafos, sin ese límite) —
     sin esto, un texto de ~1000 palabras devolvía HTTP 400 del servicio.
+
+    sync vs async: normalmente lo decide AI_SERVICE_MODE, pero un documento por
+    encima de AI_ASYNC_THRESHOLD_WORDS se manda async pase lo que pase — inline
+    (sync) puede superar el proxy_read_timeout de nginx antes de que xota
+    responda (ver AI_ASYNC_THRESHOLD_WORDS arriba).
     """
     submit_url = AI_TEXT_SERVICE_URL
     if submit_url.rstrip('/').endswith('/analyze') and word_count and word_count > AI_ANALYZE_MAX_WORDS:
         submit_url = submit_url.rstrip('/') + '_document'
-    if AI_SERVICE_MODE == 'sync':
+
+    oversized = bool(
+        AI_ASYNC_THRESHOLD_WORDS > 0 and word_count and word_count > AI_ASYNC_THRESHOLD_WORDS
+    )
+    use_async = oversized or AI_SERVICE_MODE == 'async'
+
+    if use_async:
+        if submit_url.endswith('/analyze_document'):
+            submit_url = submit_url + '_async'
+    else:
         # Forzar endpoint síncrono (no requiere worker).
         if submit_url.endswith('/analyze_document_async'):
             submit_url = submit_url[:-len('_async')]
-    else:
-        # Forzar endpoint async.
-        if submit_url.endswith('/analyze_document'):
-            submit_url = submit_url + '_async'
     return submit_url, submit_url.rsplit('/', 1)[0]
 
 
@@ -3908,6 +3942,10 @@ def analyze_text():
             timeout=(5, 90),
         )
 
+    # Sin tiempos reales de xota por tamaño de documento — este log es la
+    # fuente para calibrar AI_ASYNC_THRESHOLD_WORDS con datos en vez de
+    # a ojo (ver el comentario en la definición de esa constante).
+    t0 = time.monotonic()
     try:
         submit = _post(submit_url)
         # Fallback tamaño: el endpoint corto /analyze rechaza con 400 los textos
@@ -3918,8 +3956,11 @@ def analyze_text():
             logger.info('AI submit got 400 on /analyze — retrying via %s', doc_url)
             submit = _post(doc_url)
     except requests.exceptions.RequestException as exc:
-        logger.error('AI submit failed: %s', exc)
+        logger.error('AI submit failed after %.1fs (word_count=%d, url=%s): %s',
+                      time.monotonic() - t0, word_count, submit_url, exc)
         return jsonify({'error': 'Could not reach the analysis service.'}), 502
+    logger.info('AI submit finished in %.1fs (word_count=%d, url=%s, status=%s)',
+                time.monotonic() - t0, word_count, submit_url, submit.status_code)
     if not submit.ok:
         logger.error('AI submit returned %s: %s', submit.status_code, submit.text[:300])
         if submit.status_code == 400:
