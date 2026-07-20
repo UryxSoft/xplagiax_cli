@@ -1,0 +1,68 @@
+{% extends 'adminx/base.html' %}
+{% block title %}Dashboard — XplagiaX Admin{% endblock %}
+{% block nav_dash %}active{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Executive Dashboard</h1>
+  <span class="chip chip-muted" id="genAt"></span>
+</div>
+
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px" id="planCards"></div>
+
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:14px" id="kpiCards"></div>
+
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+  <div class="card">
+    <h3 style="font-size:14px;color:var(--ink);margin-bottom:10px">Recent registrations</h3>
+    <div class="table-wrap"><table id="tblRecent">
+      <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Created</th></tr></thead>
+      <tbody></tbody></table></div>
+  </div>
+  <div class="card">
+    <h3 style="font-size:14px;color:var(--ink);margin-bottom:10px">Latest access</h3>
+    <div class="table-wrap"><table id="tblLogins">
+      <thead><tr><th>Email</th><th>Plan</th><th>Last login (UTC)</th></tr></thead>
+      <tbody></tbody></table></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const PLAN_COLORS={'Starter':'#64748b','Scholar Suite':'#a78bfa','Individual':'#064CDB',
+'Research Essentials':'#f59e0b','Institutes':'#10b981'};
+(async function(){
+  try{
+    const d = await api('/adminx/api/metrics');
+    document.getElementById('genAt').textContent = d.generated_at;
+    document.getElementById('planCards').innerHTML = Object.entries(d.plans).map(([p,v])=>`
+      <div class="card" style="border-top:3px solid ${PLAN_COLORS[p]||'#064CDB'}">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">${esc(p)}</div>
+        <div style="font-size:26px;font-weight:800;color:var(--ink);margin:4px 0 8px">${v.total}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="chip chip-ok">${v.active} active</span>
+          <span class="chip chip-off">${v.inactive} inactive</span>
+          <span class="chip chip-info">${v.trial} trial</span>
+          ${v.expired_trial?`<span class="chip chip-warn">${v.expired_trial} expired</span>`:''}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px">Daily limit/user: <b>${d.plan_limits[p] ?? '—'}</b></div>
+      </div>`).join('');
+    const a = d.analyses;
+    const kpi=(label,val,color)=>`<div class="card" style="text-align:center">
+      <div style="font-size:24px;font-weight:800;color:${color}">${val}</div>
+      <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:3px">${label}</div></div>`;
+    document.getElementById('kpiCards').innerHTML =
+      kpi('Analyses today', a.used_today.toLocaleString(), '#064CDB') +
+      kpi('Analyses (30 days)', a.used_30d.toLocaleString(), '#064CDB') +
+      kpi('Daily capacity', a.daily_capacity.toLocaleString(), '#10b981') +
+      kpi('Remaining today', a.remaining_today.toLocaleString(), '#f59e0b') +
+      kpi('New users (7d)', d.new_users_7d, '#a78bfa');
+    document.querySelector('#tblRecent tbody').innerHTML = d.recent_users.map(u=>
+      `<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.plan)}</td><td>${esc(u.created||'—')}</td></tr>`).join('')
+      || '<tr><td colspan="4" style="color:var(--muted)">No data</td></tr>';
+    document.querySelector('#tblLogins tbody').innerHTML = d.last_logins.map(u=>
+      `<tr><td>${esc(u.email)}</td><td>${esc(u.plan)}</td><td>${esc(u.last_login||'—')}</td></tr>`).join('')
+      || '<tr><td colspan="3" style="color:var(--muted)">No data</td></tr>';
+  }catch(e){toast('Metrics failed: '+e.message, true);}
+})();
+</script>
+{% endblock %}

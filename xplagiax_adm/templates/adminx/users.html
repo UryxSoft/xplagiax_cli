@@ -1,0 +1,171 @@
+{% extends 'adminx/base.html' %}
+{% block title %}Users — XplagiaX Admin{% endblock %}
+{% block nav_users %}active{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>User Management</h1>
+  <button class="btn btn-primary" onclick="openCreate()">＋ Create user</button>
+</div>
+
+<div class="tabs" id="planTabs">
+  <button class="tab active" data-plan="">All</button>
+  {% for p in plans %}<button class="tab" data-plan="{{ p }}">{{ p }}</button>{% endfor %}
+</div>
+
+<div class="card">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+    <input id="q" placeholder="Search name, email, institution…" style="flex:1;min-width:200px">
+    <select id="status">
+      <option value="">All statuses</option>
+      <option value="active">Active</option><option value="inactive">Inactive</option>
+      <option value="trial">On trial</option><option value="unconfirmed">Unconfirmed</option>
+    </select>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Trial</th>
+      <th>Credits today</th><th>Created</th><th>Last login</th><th style="text-align:right">Actions</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+    <span style="font-size:12px;color:var(--muted)" id="count"></span>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm" onclick="go(-1)">← Prev</button>
+      <button class="btn btn-sm" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalBody"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const PLANS = {{ plans | list | tojson }};
+let state = {plan:'', search:'', status:'', page:1, per_page:20, total:0};
+document.querySelectorAll('#planTabs .tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('#planTabs .tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active'); state.plan=t.dataset.plan; state.page=1; load();});
+let _qh; document.getElementById('q').oninput=e=>{clearTimeout(_qh);
+  _qh=setTimeout(()=>{state.search=e.target.value.trim();state.page=1;load();},350);};
+document.getElementById('status').onchange=e=>{state.status=e.target.value;state.page=1;load();};
+function go(d){const max=Math.ceil(state.total/state.per_page)||1;
+  state.page=Math.min(max,Math.max(1,state.page+d));load();}
+
+async function load(){
+  try{
+    const p=new URLSearchParams({plan:state.plan,search:state.search,status:state.status,
+      page:state.page,per_page:state.per_page});
+    const d=await api('/adminx/users/api/users?'+p);
+    state.total=d.total;
+    document.getElementById('count').textContent=
+      `${d.total} user(s) · page ${d.page}/${Math.max(1,Math.ceil(d.total/d.per_page))}`;
+    document.getElementById('rows').innerHTML=d.users.map(u=>`
+      <tr>
+        <td><b style="color:var(--ink)">${esc(u.name)}</b><br>
+            <span style="font-size:11px;color:var(--muted)">${esc(u.email)}</span></td>
+        <td><span class="chip chip-info">${esc(u.plan)}</span></td>
+        <td>${u.active?'<span class="chip chip-ok">Active</span>':'<span class="chip chip-off">Inactive</span>'}
+            ${u.confirmed?'':'<span class="chip chip-warn" title="Has not activated the account">Unconfirmed</span>'}</td>
+        <td>${u.on_trial?`<span class="chip ${u.trial_expired?'chip-off':'chip-info'}">${u.trial_expired?'Expired':'Until '+esc(u.trial_ends_at||'?')}</span>`:'—'}</td>
+        <td>${u.credits_used_today}/${u.credits_limit}
+            <span style="font-size:10.5px;color:var(--muted)">(${u.credits_remaining_today} left)</span></td>
+        <td>${esc(u.created||'—')}</td>
+        <td>${esc(u.last_login||'—')}</td>
+        <td style="text-align:right;white-space:nowrap">
+          <button class="btn btn-sm" onclick='openEdit(${JSON.stringify(u)})'>Edit</button>
+          <button class="btn btn-sm" onclick='openOps(${JSON.stringify(u)})'>⋯</button>
+        </td>
+      </tr>`).join('') || '<tr><td colspan="8" style="color:var(--muted)">No users found</td></tr>';
+  }catch(e){toast('Load failed: '+e.message,true);}
+}
+load();
+
+function closeModal(){document.getElementById('modalBg').classList.remove('open');}
+function showModal(html){document.getElementById('modalBody').innerHTML=html;
+  document.getElementById('modalBg').classList.add('open');}
+const planOpts=sel=>PLANS.map(p=>`<option ${p===sel?'selected':''}>${p}</option>`).join('');
+
+function openCreate(){showModal(`
+  <h3>Create user</h3>
+  <div class="field"><label>First name</label><input id="f_fn"></div>
+  <div class="field"><label>Last name</label><input id="f_ln"></div>
+  <div class="field"><label>Email *</label><input id="f_em" type="email"></div>
+  <div class="field"><label>Plan</label><select id="f_pl">${planOpts('Starter')}</select></div>
+  <div class="field"><label>Trial</label><select id="f_tr"><option value="">No</option><option value="1">Yes</option></select></div>
+  <div class="field"><label>Trial days</label><input id="f_td" type="number" value="14" min="1" max="365"></div>
+  <p style="font-size:11.5px;color:var(--muted);margin-bottom:12px">An activation email will be sent —
+  the user confirms the address and sets their own password in the client app. Passwords are never emailed.</p>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="doCreate()">Create &amp; send email</button>
+  </div>`);}
+async function doCreate(){
+  try{
+    const d=await api('/adminx/users/api/users',{method:'POST',body:JSON.stringify({
+      first_name:val('f_fn'),last_name:val('f_ln'),email:val('f_em'),plan:val('f_pl'),
+      trial:!!val('f_tr'),trial_days:parseInt(val('f_td')||'14')})});
+    toast(d.activation_email_sent?'User created — activation email sent.':'User created, but the email FAILED — use "Resend activation".',!d.activation_email_sent);
+    closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+function val(id){return document.getElementById(id).value;}
+
+function openEdit(u){showModal(`
+  <h3>Edit — ${esc(u.email)}</h3>
+  <div class="field"><label>First name</label><input id="e_fn" value="${esc(u.first_name||'')}"></div>
+  <div class="field"><label>Last name</label><input id="e_ln" value="${esc(u.last_name||'')}"></div>
+  <div class="field"><label>Plan</label><select id="e_pl">${planOpts(u.plan)}</select></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="doEdit(${u.id})">Save</button>
+  </div>`);}
+async function doEdit(id){
+  try{await api('/adminx/users/api/users/'+id,{method:'PATCH',body:JSON.stringify({
+    first_name:val('e_fn'),last_name:val('e_ln'),plan:val('e_pl')})});
+    toast('User updated.');closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+
+function openOps(u){showModal(`
+  <h3>${esc(u.email)}</h3>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    ${u.active?`<button class="btn" onclick="op(${u.id},'suspend')">⏸ Suspend account</button>`
+              :`<button class="btn" onclick="op(${u.id},'reactivate')">▶ Reactivate account</button>`}
+    ${!u.confirmed?`<button class="btn" onclick="op(${u.id},'reset-activation')">✉ Reset &amp; resend activation</button>`:''}
+    <hr style="border:0;border-top:1px solid var(--line)">
+    <b style="font-size:12px;color:var(--ink)">Trial</b>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="trial(${u.id},'start')">Start 14d</button>
+      <button class="btn btn-sm" onclick="trial(${u.id},'extend')">Extend +7d</button>
+      <button class="btn btn-sm" onclick="trial(${u.id},'end')">End</button>
+      <button class="btn btn-sm" onclick="trial(${u.id},'convert')">Convert to active</button>
+    </div>
+    <b style="font-size:12px;color:var(--ink)">Credits (today: ${u.credits_used_today}/${u.credits_limit})</b>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <input id="c_amt" type="number" value="5" min="1" max="1000" style="width:80px">
+      <button class="btn btn-sm" onclick="credits(${u.id},'grant')">＋ Grant back</button>
+      <button class="btn btn-sm" onclick="credits(${u.id},'consume')">－ Consume</button>
+    </div>
+    <hr style="border:0;border-top:1px solid var(--line)">
+    <button class="btn btn-danger" onclick="if(confirm('Soft-delete (suspend + mark) this account?'))op(${u.id},null,'DELETE')">🗑 Delete (soft)</button>
+  </div>`);}
+async function op(id,action,method){
+  try{const url='/adminx/users/api/users/'+id+(action?'/'+action:'');
+    await api(url,{method:method||'POST'});toast('Done.');closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+async function trial(id,opn){
+  try{await api(`/adminx/users/api/users/${id}/trial`,{method:'POST',
+    body:JSON.stringify({op:opn,days:opn==='extend'?7:14})});
+    toast('Trial '+opn+' OK.');closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+async function credits(id,opn){
+  try{await api(`/adminx/users/api/users/${id}/credits`,{method:'POST',
+    body:JSON.stringify({op:opn,amount:parseInt(val('c_amt')||'1')})});
+    toast('Credits updated.');closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+</script>
+{% endblock %}

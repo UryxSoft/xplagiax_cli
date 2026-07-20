@@ -28,14 +28,25 @@ def validate_password(password):
     return len(password) >= 6
 
 def rate_limit_decorator(max_attempts=5):
-    """Decorador simple para limitar intentos (implementar Redis en producción)"""
+    """Rate limit REAL (antes solo logueaba el intento y dejaba pasar todo):
+    ventana deslizante de 15 minutos por IP + auditoría del intento.
+    Mismo presupuesto que el 2FA de appcli2 (5/15min)."""
+    from core.security import rate_limit
+
     def decorator(f):
+        limited = rate_limit(max_attempts, 15 * 60, 'admin-login')(f)
+
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Aquí puedes implementar rate limiting con Redis
-            # Por simplicidad, solo registramos el intento
-            logger.info(f"Intento de acceso desde IP: {request.remote_addr}")
-            return f(*args, **kwargs)
+            logger.info("Login attempt from IP: %s",
+                        request.headers.get('X-Real-IP', request.remote_addr))
+            try:
+                from core.audit import log_action
+                log_action('auth.login_attempt', 'users_admin', None,
+                           {'email': (request.get_json(silent=True) or request.form.to_dict() or {}).get('email')})
+            except Exception:
+                pass
+            return limited(*args, **kwargs)
         return decorated_function
     return decorator
 

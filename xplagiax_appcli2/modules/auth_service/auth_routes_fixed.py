@@ -1621,6 +1621,75 @@ def _ensure_totp_columns():
         current_app.logger.warning("Could not ensure users.totp_* columns", exc_info=True)
 
 
+# ── Activación de cuentas creadas desde xplagiax_adm ─────────────────────────
+# Token firmado por el admin con ACTIVATION_SIGNING_KEY (mismo valor de env en
+# ambos contenedores; fallback SECRET_KEY si son la misma app-key). Payload:
+# [email, nonce] donde nonce = users.token — resetear la cuenta en el admin
+# rota el nonce e invalida todos los links anteriores (un solo uso efectivo:
+# al confirmar, el nonce se rota también aquí).
+
+def _activation_serializer():
+    from itsdangerous import URLSafeTimedSerializer
+    key = (os.environ.get('ACTIVATION_SIGNING_KEY')
+           or current_app.config.get('ACTIVATION_SIGNING_KEY')
+           or current_app.secret_key)
+    return URLSafeTimedSerializer(key, salt='xpx-account-activation')
+
+
+def _load_activation_user(token):
+    """Devuelve (user, None) o (None, motivo)."""
+    from itsdangerous import BadSignature, SignatureExpired
+    max_age = int(os.environ.get('ACTIVATION_MAX_AGE_HOURS', '72')) * 3600
+    try:
+        email, nonce = _activation_serializer().loads(token, max_age=max_age)
+    except SignatureExpired:
+        return None, 'This activation link has expired. Ask your administrator to resend it.'
+    except (BadSignature, ValueError, TypeError):
+        return None, 'This activation link is not valid.'
+    user = Users.query.filter_by(email=str(email).lower()).first()
+    if not user:
+        return None, 'This activation link is not valid.'
+    if user.confirmed:
+        return None, 'This account is already activated. You can sign in normally.'
+    if (user.token or '') != str(nonce):
+        return None, 'This activation link was replaced by a newer one. Use the most recent email.'
+    return user, None
+
+
+@auth_bp.route('/activate/<token>', methods=['GET'])
+def activate_account_page(token):
+    user, err = _load_activation_user(token)
+    return render_template('user/activate_account.html',
+                           token=token, error=err,
+                           email=(user.email if user else None),
+                           name=(user.name if user else None))
+
+
+@auth_bp.route('/activate/<token>', methods=['POST'])
+@limiter.limit("10 per 15 minutes")
+def activate_account_submit(token):
+    user, err = _load_activation_user(token)
+    if err:
+        return jsonify({'error': err}), 400
+    data = request.get_json(silent=True) or {}
+    email_confirm = str(data.get('email_confirm') or '').strip().lower()
+    password = str(data.get('password') or '')
+    if email_confirm != (user.email or '').lower():
+        return jsonify({'error': 'The confirmation email does not match this invitation.'}), 400
+    if len(password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters long.'}), 400
+
+    user._password_hash = bcrypt.hashpw(password.encode('utf-8'),
+                                        bcrypt.gensalt()).decode('utf-8')
+    user.confirmed = True
+    user.confirmed_at = datetime.utcnow()
+    user.isactive = True
+    user.token = secrets.token_hex(16)  # rota el nonce → el link queda de un solo uso
+    db.session.commit()
+    current_app.logger.info('Account activated via admin invitation: %s', user.email)
+    return jsonify({'success': True, 'redirect': '/login'}), 200
+
+
 @auth_bp.route('/2fa/status', methods=['GET'])
 @login_required
 def totp_status():

@@ -17,8 +17,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # This Python class defines a model for users with various attributes such as email, password hash,
 # name, avatar, institute, country, and activation status.
 class Users(UserMixin, db.Model):
+    """SINCRONIZADO con xplagiax_appcli2/modules/models/model.py (fuente de
+    verdad). El fork viejo de esta clase tenía un enum de 3 planes (faltaban
+    'Scholar Suite' y 'Research Essentials'), `confirmado`/`is_active` en vez
+    de `confirmed`/`isactive`, y totp_secret String(16) plano vs el cifrado de
+    255 — escribir usuarios desde el admin podía corromper cuentas del
+    cliente. Se mantienen alias de compatibilidad para el código admin viejo."""
     __tablename__       = 'users'
-    id                  = db.Column(db.Integer, primary_key = True) # primary keys are required by SQLAlchemy
+    id                  = db.Column(db.Integer, primary_key = True)
     email               = db.Column(db.String(100), unique = True)
     _password_hash      = db.Column(db.String(255), nullable = True)
     hashCode            = db.Column(db.String(255), nullable = True)
@@ -28,26 +34,59 @@ class Users(UserMixin, db.Model):
     tokens              = db.Column(db.Text, nullable = True)
     institute           = db.Column(db.String(255), nullable = True)
     country             = db.Column(db.String(100), nullable = True)
-    is_active           = db.Column(db.Boolean, default = False)
+    isactive            = db.Column(db.Boolean, default = False)
     token               = db.Column(db.String(32), unique = True)
-    totp_secret         = db.Column(db.String(16), nullable=True)
+    totp_secret         = db.Column(db.String(255), nullable=True)  # cifrado (Fernet) en appcli2
+    totp_enabled        = db.Column(db.Boolean, default=False)
     active_session      = db.Column(db.Boolean, default=False)
-    confirmado          = db.Column(db.Boolean, default=False)
+    confirmed           = db.Column(db.Boolean, default=False)
+    confirmed_at        = db.Column(db.DateTime, nullable=True)
+    last_login          = db.Column(db.DateTime, nullable=True)
     folders             = db.relationship('Folder',backref='owner',lazy=True)
     files               = db.relationship('File',backref='owner',lazy=True)
     created_date        = db.Column(db.DateTime, default=datetime.utcnow)
-    # Información de almacenamiento
-    storage_plan_id = db.Column(db.Integer, db.ForeignKey('storage_plans.id'))
-    used_storage_bytes = db.Column(db.BigInteger, default=0)  # Almacenamiento utilizado en bytes
-    user_type  = db.Column(Enum('Starter', 'Individual', 'Institutes'),nullable=True)
+    storage_plan_id     = db.Column(db.Integer, db.ForeignKey('storage_plans.id'))
+    used_storage_bytes  = db.Column(db.BigInteger, default=0)
+    user_type           = db.Column(Enum('Starter', 'Scholar Suite', 'Individual',
+                                         'Research Essentials', 'Institutes'), nullable=True)
+    # Trial & subscription (mismos campos que appcli2)
+    is_on_trial                   = db.Column(db.Boolean, default=False)
+    trial_starts_at               = db.Column(db.DateTime, nullable=True)
+    trial_ends_at                 = db.Column(db.DateTime, nullable=True)
+    trial_notified                = db.Column(db.Boolean, default=False)
+    subscription_provider         = db.Column(db.String(32), nullable=True)
+    subscription_id               = db.Column(db.String(128), nullable=True)
+    subscription_status           = db.Column(db.String(64), nullable=True)
+    subscription_type             = db.Column(db.String(32), nullable=True)
+    subscription_starts_at        = db.Column(db.DateTime, nullable=True)
+    subscription_ends_at          = db.Column(db.DateTime, nullable=True)
+    subscription_renewal_notified = db.Column(db.Boolean, default=False)
     addon_subscriptions = db.relationship('UserAddonSubscription', backref='user', lazy=True)
-
-    # Relaciones
     created_sessions = db.relationship('SubmissionSession', back_populates='professor', lazy='dynamic')
     student_submissions = db.relationship('StudentSubmission', back_populates='student', lazy='dynamic')
 
-    
-    def __init__(self, email, _password_hash, hashCode, name, lastname, avatar, tokens, institute, country, is_active, token,totp_secret, active_session, confirmado, storage_plan_id=None, used_storage_bytes=0,user_type = None):
+    # ── Alias de compatibilidad con el código admin viejo ──
+    @hybrid_property
+    def is_active(self):            # UserMixin + código legacy
+        return bool(self.isactive)
+
+    @is_active.setter
+    def is_active(self, v):
+        self.isactive = bool(v)
+
+    @hybrid_property
+    def confirmado(self):
+        return bool(self.confirmed)
+
+    @confirmado.setter
+    def confirmado(self, v):
+        self.confirmed = bool(v)
+
+    def __init__(self, email=None, _password_hash=None, hashCode=None, name=None,
+                 lastname=None, avatar=None, tokens=None, institute=None, country=None,
+                 is_active=None, token=None, totp_secret=None, active_session=None,
+                 confirmado=None, storage_plan_id=None, used_storage_bytes=0,
+                 user_type=None, **kw):
         self.email = email
         self._password_hash = _password_hash
         self.hashCode = hashCode
@@ -57,14 +96,17 @@ class Users(UserMixin, db.Model):
         self.tokens = tokens
         self.institute = institute
         self.country = country
-        self.is_active = is_active
+        self.isactive = bool(is_active) if is_active is not None else False
         self.token = token
         self.totp_secret = totp_secret
-        self.active_session = active_session
-        self.confirmado = confirmado
+        self.active_session = bool(active_session) if active_session is not None else False
+        self.confirmed = bool(confirmado) if confirmado is not None else False
         self.storage_plan_id = storage_plan_id
         self.used_storage_bytes = used_storage_bytes
-        self.user_type = user_type
+        self.user_type = user_type or 'Starter'
+        for k, v in kw.items():
+            if hasattr(type(self), k):
+                setattr(self, k, v)
     
     def get_total_storage_limit_bytes(self):
         """Calcular el límite total de almacenamiento en bytes (plan base + complementos)"""

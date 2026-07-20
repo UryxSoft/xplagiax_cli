@@ -72,6 +72,19 @@ socket_events(socketio)  # Registrar eventos de SocketIO
 # Después de crear socketio
 #register_websocket_handlers(socketio)
 
+# FIX CRÍTICO (F1): varios de estos blueprints exponían su CRUD SIN ninguna
+# autenticación — cualquiera con la URL leía/escribía datos administrativos.
+# Guard único a nivel blueprint, registrado ANTES de register_blueprint
+# (Flask no admite hooks después).
+from core.security import (csrf_protect_blueprint, login_required_blueprint,
+                           apply_security_headers)
+for _bp in (institutions_bp, institution_types_bp, countries_bp, cities_bp,
+            provinces_bp, documents_bp, doctype_bp, languages_bp, users_bp,
+            usersadmin_bp, reports_bp, services_bp, settings_bp,
+            document_analysis_bp, contact_sale_bp, sessions_bp,
+            sessionsssh_bp, terminal_bp, dashboardssh_bp):
+    login_required_blueprint(_bp)
+
 app.register_blueprint(users_bp, url_prefix='/users_bp')
 app.register_blueprint(usersadmin_bp, url_prefix='/usersadmin_bp')
 app.register_blueprint(documents_bp, url_prefix='/documents_bp')
@@ -95,6 +108,18 @@ app.register_blueprint(services_bp, url_prefix='/services_bp')
 app.register_blueprint(settings_bp, url_prefix='/settings_bp')
 app.register_blueprint(document_analysis_bp, url_prefix='/document_analysis_bp')
 app.register_blueprint(contact_sale_bp, url_prefix='/contact_sale_bp')
+
+# ── AdminX (rediseño F1+F2): dashboard + gestión de usuarios ─────────────────
+from modules.adminx_dashboard import adminx_dashboard_bp
+from modules.adminx_users import adminx_users_bp
+
+csrf_protect_blueprint(adminx_dashboard_bp)
+csrf_protect_blueprint(adminx_users_bp)
+app.register_blueprint(adminx_dashboard_bp, url_prefix='/adminx')
+app.register_blueprint(adminx_users_bp, url_prefix='/adminx/users')
+
+apply_security_headers(app)
+
 if __name__ == '__main__':
     #app.run(debug=True,host='127.0.0.1',port=5001)
     socketio.run(app, host='127.0.0.1', port=5001)
