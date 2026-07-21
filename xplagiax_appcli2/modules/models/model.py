@@ -42,7 +42,16 @@ class Users(db.Model, UserMixin):
     totp_secret                   = db.Column(db.String(255), nullable=True)
     totp_enabled                  = db.Column(db.Boolean, default=False)
     totp_recovery_codes           = db.Column(db.Text, nullable=True)  # JSON: lista de hashes bcrypt, un solo uso c/u
-    
+
+    # Email OTP — segundo método de 2FA, independiente de TOTP (un usuario
+    # puede tener uno, otro, o ambos activos — /2fa/verify-login acepta
+    # cualquiera de los dos contra el mismo pending_token). El código nunca se
+    # guarda en texto plano: solo su hash bcrypt + expiración, igual que los
+    # recovery codes de TOTP. Ver email_otp_service.py.
+    email_otp_enabled             = db.Column(db.Boolean, default=False)
+    email_otp_code_hash           = db.Column(db.String(255), nullable=True)
+    email_otp_expires_at          = db.Column(db.DateTime, nullable=True)
+
     # Session management
     active_session                = db.Column(db.Boolean, default=False)
     session_token                 = db.Column(db.String(128), nullable=True, unique=True)
@@ -114,6 +123,7 @@ class Users(db.Model, UserMixin):
                     totp_secret = None,
                     totp_enabled = None,
                     totp_recovery_codes = None,
+                    email_otp_enabled = None,
                     active_session = None,
                     confirmed = None,
                     confirmed_at = None,
@@ -138,6 +148,7 @@ class Users(db.Model, UserMixin):
         self.totp_secret        = totp_secret
         self.totp_enabled       = totp_enabled if totp_enabled is not None else False
         self.totp_recovery_codes = totp_recovery_codes
+        self.email_otp_enabled  = email_otp_enabled if email_otp_enabled is not None else False
         self.active_session     = active_session
         self.confirmed          = confirmed if confirmed is not None else False
         self.confirmed_at       = confirmed_at
@@ -1315,6 +1326,10 @@ class AnalysisHistory(db.Model):
             'title': self.title or 'Untitled analysis',
             'preview': (self.text or '')[:160],
             'aiPct': self.ai_pct, 'overall': self.overall, 'cit': self.cit_score,
+            # result_view is only ever set for the uploaded-document flow (the
+            # server-rendered result.html to reopen) — its presence is already
+            # a reliable document-vs-pasted-text signal, no new column needed.
+            'isDocument': bool(self.result_view),
         }
 
     def to_full(self):

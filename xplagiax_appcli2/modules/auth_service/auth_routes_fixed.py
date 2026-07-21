@@ -12,7 +12,7 @@ from settings.connections import mail, limiter
 from flask_login import login_user, logout_user, login_required, current_user
 from settings.utilities import generate_token, verify_token
 from settings.email_service import EmailService, EmailTemplates
-from . import totp_crypto, totp_service
+from . import totp_crypto, totp_service, email_otp_service
 import bcrypt
 import requests
 from flask_mail import Message
@@ -319,6 +319,29 @@ def google_callbackx():
         db.session.commit()
         #print(f" Usuario guardado en DB y token generado")
 
+        # 3b. 2FA gate — same rule as login() below: Google only proves this
+        # person controls that email inbox, which is a weaker bar than what
+        # TOTP/email-OTP 2FA is meant to add on top. A user with either
+        # method active must clear that challenge before a real session is
+        # created, same as password login.
+        _ensure_totp_columns()
+        _ensure_email_otp_columns()
+        if user.totp_enabled or user.email_otp_enabled:
+            methods = []
+            if user.totp_enabled:
+                methods.append('totp')
+            if user.email_otp_enabled:
+                methods.append('email')
+            pending_token = user.get_token('2fa_pending', expires_sec=300)
+            if user.email_otp_enabled and not user.totp_enabled:
+                if not _send_email_otp_code(user):
+                    flash("Could not send the verification code. Please try again.", "error")
+                    return redirect(url_for('x_apps.login'))
+            flask_session.clear()
+            flask_session['oauth_2fa_pending_token'] = pending_token
+            flask_session['oauth_2fa_methods'] = methods
+            return redirect(url_for('x_apps.login', oauth_2fa='1'))
+
         # 4. LIMPIAR SESIÓN COMPLETAMENTE
         flask_session.clear()
         #print(" Sesión completamente limpiada")
@@ -544,6 +567,27 @@ def microsoft_callback():
         db.session.commit()
         #print(f" Usuario Microsoft guardado en DB y token generado")
 
+        # 3b. 2FA gate — same rule as google_callbackx()/login(): Microsoft
+        # only proves this person controls that email inbox, a weaker bar
+        # than what TOTP/email-OTP 2FA is meant to add on top.
+        _ensure_totp_columns()
+        _ensure_email_otp_columns()
+        if user.totp_enabled or user.email_otp_enabled:
+            methods = []
+            if user.totp_enabled:
+                methods.append('totp')
+            if user.email_otp_enabled:
+                methods.append('email')
+            pending_token = user.get_token('2fa_pending', expires_sec=300)
+            if user.email_otp_enabled and not user.totp_enabled:
+                if not _send_email_otp_code(user):
+                    flash("Could not send the verification code. Please try again.", "error")
+                    return redirect(url_for('x_apps.login'))
+            flask_session.clear()
+            flask_session['oauth_2fa_pending_token'] = pending_token
+            flask_session['oauth_2fa_methods'] = methods
+            return redirect(url_for('x_apps.login', oauth_2fa='1'))
+
         # 4. LIMPIAR SESIÓN COMPLETAMENTE
         flask_session.clear()
         #print("🧹 Sesión completamente limpiada")
@@ -646,6 +690,13 @@ def _ensure_totp_columns_hook():
     memoized _TOTP_COLUMNS_READY flag makes every call after the first one
     a no-op."""
     _ensure_totp_columns()
+
+
+@auth_bp.before_app_request
+def _ensure_email_otp_columns_hook():
+    """Same rationale as _ensure_totp_columns_hook() above, for the email-OTP
+    columns — a second, independent 2FA method."""
+    _ensure_email_otp_columns()
 
 
 @auth_bp.before_app_request
@@ -759,11 +810,27 @@ def login():
     # short-lived signed token (same itsdangerous mechanism as confirm/reset
     # email links — stateless, no extra session/table) identifies WHO is
     # mid-login without granting access. The real session is only created in
-    # verify_2fa_login() below, after the TOTP/recovery code checks out.
+    # totp_verify_login() below, after the TOTP/recovery/email-OTP code
+    # checks out. Two independent methods can be active at once (totp_enabled,
+    # email_otp_enabled) — `methods` tells the frontend which challenge(s) to
+    # offer; pending_token itself is method-agnostic (just carries user.id).
     _ensure_totp_columns()
-    if user.totp_enabled:
+    _ensure_email_otp_columns()
+    if user.totp_enabled or user.email_otp_enabled:
+        methods = []
+        if user.totp_enabled:
+            methods.append('totp')
+        if user.email_otp_enabled:
+            methods.append('email')
         pending_token = user.get_token('2fa_pending', expires_sec=300)
-        return jsonify({'requires_2fa': True, 'pending_token': pending_token}), 200
+        # Email-only accounts have no other way to receive the challenge, so
+        # the code goes out right now. Accounts with TOTP also enabled keep
+        # the authenticator app as the primary path — email is available on
+        # request via /2fa/email/send-login-code (a "use email instead" link).
+        if user.email_otp_enabled and not user.totp_enabled:
+            if not _send_email_otp_code(user):
+                return jsonify({'error': 'Could not send the verification code. Please try again.'}), 502
+        return jsonify({'requires_2fa': True, 'pending_token': pending_token, 'methods': methods}), 200
 
     # Create new session (invalidates any existing session)
     session_token = user.create_session()
@@ -1621,6 +1688,70 @@ def _ensure_totp_columns():
         current_app.logger.warning("Could not ensure users.totp_* columns", exc_info=True)
 
 
+# ── Two-Factor Authentication (Email OTP) — second, independent method ───────
+# Same self-healing pattern as _ensure_totp_columns() above, own memoized flag
+# and own hook registration (see _ensure_email_otp_columns_hook near
+# security_checks()) — kept as a sibling rather than folded into the TOTP one
+# so each column set stays independently traceable in the logs.
+_EMAIL_OTP_COLUMNS_READY = False
+
+
+def _ensure_email_otp_columns():
+    global _EMAIL_OTP_COLUMNS_READY
+    if _EMAIL_OTP_COLUMNS_READY:
+        return
+    try:
+        from sqlalchemy import inspect as _sa_inspect, text as _sa_text
+        cols = {c['name']: c for c in _sa_inspect(db.engine).get_columns('users')}
+        if 'email_otp_enabled' not in cols:
+            db.session.execute(_sa_text(
+                "ALTER TABLE users ADD COLUMN email_otp_enabled BOOLEAN NOT NULL DEFAULT FALSE"))
+        if 'email_otp_code_hash' not in cols:
+            db.session.execute(_sa_text(
+                "ALTER TABLE users ADD COLUMN email_otp_code_hash VARCHAR(255) NULL"))
+        if 'email_otp_expires_at' not in cols:
+            db.session.execute(_sa_text(
+                "ALTER TABLE users ADD COLUMN email_otp_expires_at DATETIME NULL"))
+        db.session.commit()
+        _EMAIL_OTP_COLUMNS_READY = True
+    except Exception:
+        db.session.rollback()
+        current_app.logger.warning("Could not ensure users.email_otp_* columns", exc_info=True)
+
+
+def _send_email_otp_code(user):
+    """Generates a 4-digit code, stores it (hash + expiry) and emails it.
+
+    Returns True on success. On failure, rolls back instead of leaving a
+    half-saved code: one the user never received but that's still "live" in
+    the DB would just confuse a retry (and collide with the endpoint's own
+    rate limit for no reason)."""
+    _ensure_email_otp_columns()
+    code = email_otp_service.generate_code()
+    user.email_otp_code_hash = email_otp_service.hash_code(code)
+    user.email_otp_expires_at = email_otp_service.new_expiry()
+    try:
+        html_content = render_template(
+            'emails/2fa_email_code.html',
+            user_name=user.name or user.email,
+            code=code, ttl_minutes=10,
+        )
+        result = EmailService.send_email(
+            subject=f'{code} is your XplagiaX verification code',
+            recipients=[user.email], html_content=html_content,
+            provider='noreply', fallback_provider='gmail',
+        )
+        if not result.get('success'):
+            raise RuntimeError(result.get('message'))
+    except Exception:
+        current_app.logger.exception('email_otp: failed to send code to user_id=%s', user.id)
+        db.session.rollback()
+        return False
+    db.session.add(user)
+    db.session.commit()
+    return True
+
+
 # ── Activación de cuentas creadas desde xplagiax_adm ─────────────────────────
 # Token firmado por el admin con ACTIVATION_SIGNING_KEY (mismo valor de env en
 # ambos contenedores; fallback SECRET_KEY si son la misma app-key). Payload:
@@ -1797,13 +1928,102 @@ def totp_disable():
     return jsonify({'success': True})
 
 
+# ── Two-Factor Authentication — Email OTP (second method) ────────────────────
+# Same shape as the /2fa/* TOTP endpoints above, minus the QR/pairing step:
+# setup sends a code to the account's own email instead of showing a secret,
+# and verify-setup confirms that code arrived before flipping the switch on.
+
+@auth_bp.route('/2fa/email/status', methods=['GET'])
+@login_required
+def email_otp_status():
+    _ensure_email_otp_columns()
+    return jsonify({'enabled': bool(current_user.email_otp_enabled)})
+
+
+@auth_bp.route('/2fa/email/setup', methods=['POST'])
+@login_required
+@limiter.limit("5 per 15 minutes")
+def email_otp_setup():
+    """Starts enabling email OTP: sends a fresh code to the account's own
+    email and stores its hash+expiry. Mirrors totp_setup()'s guard against
+    re-enabling an already-active method."""
+    _ensure_email_otp_columns()
+    if current_user.email_otp_enabled:
+        current_app.logger.info(
+            '2fa/email/setup rejected: user_id=%s already has email_otp_enabled=True',
+            current_user.id,
+        )
+        return jsonify({'error': 'Email verification is already enabled.'}), 400
+
+    if not _send_email_otp_code(current_user):
+        return jsonify({'error': 'Could not send the verification code. Please try again.'}), 502
+    return jsonify({'success': True})
+
+
+@auth_bp.route('/2fa/email/verify-setup', methods=['POST'])
+@login_required
+@limiter.limit("10 per 15 minutes")
+def email_otp_verify_setup():
+    """Confirms the code that just arrived before turning email OTP on for
+    real — same rationale as totp_verify_setup(): without this step a code
+    that expired or got mistyped mid-setup would silently misconfigure 2FA."""
+    _ensure_email_otp_columns()
+    if current_user.email_otp_enabled:
+        return jsonify({'error': 'Email verification is already enabled.'}), 400
+
+    code = (request.get_json(silent=True) or {}).get('code', '')
+    if not email_otp_service.verify_code(code, current_user.email_otp_code_hash, current_user.email_otp_expires_at):
+        current_app.logger.info(
+            '2fa/email/verify-setup: user_id=%s submitted an invalid/expired code', current_user.id,
+        )
+        return jsonify({'error': 'Invalid or expired code. Check your email and try again.'}), 400
+
+    current_user.email_otp_enabled = True
+    current_user.email_otp_code_hash = None
+    current_user.email_otp_expires_at = None
+    db.session.add(current_user)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@auth_bp.route('/2fa/email/disable', methods=['POST'])
+@login_required
+def email_otp_disable():
+    """Requires the current password — same bar as totp_disable()."""
+    _ensure_email_otp_columns()
+    if not current_user.email_otp_enabled:
+        current_app.logger.info(
+            '2fa/email/disable rejected: user_id=%s email_otp_enabled=False already', current_user.id,
+        )
+        return jsonify({'error': 'Email verification is not enabled.'}), 400
+
+    password = (request.get_json(silent=True) or {}).get('password', '')
+    if not current_user._password_hash or not bcrypt.checkpw(
+        password.encode('utf-8'), current_user._password_hash.encode('utf-8')
+    ):
+        current_app.logger.info('2fa/email/disable: user_id=%s wrong password', current_user.id)
+        return jsonify({'error': 'Incorrect password.'}), 400
+
+    current_user.email_otp_enabled = False
+    current_user.email_otp_code_hash = None
+    current_user.email_otp_expires_at = None
+    db.session.add(current_user)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @auth_bp.route('/2fa/verify-login', methods=['POST'])
 @limiter.limit("5 per 15 minutes")
 def totp_verify_login():
     """Second half of the 2FA-gated login (see login() above). The user is
     NOT authenticated yet — identity comes only from pending_token, so this
-    mirrors login()'s own trust level, not @login_required's."""
+    mirrors login()'s own trust level, not @login_required's.
+
+    Accepts EITHER method the account has active: a TOTP/recovery code, or
+    the 4-digit email OTP — same field, tried in that order. An account can
+    have both enabled at once (see login()'s `methods` list)."""
     _ensure_totp_columns()
+    _ensure_email_otp_columns()
     data = request.get_json(silent=True) or {}
     pending_token = data.get('pending_token', '')
     code = data.get('code', '')
@@ -1812,27 +2032,37 @@ def totp_verify_login():
     user = Users.verify_token(pending_token, '2fa_pending')
     if not user:
         return jsonify({'error': 'Your session expired. Please sign in again.'}), 401
-    if not user.totp_enabled:
+    if not user.totp_enabled and not user.email_otp_enabled:
         return jsonify({'error': 'Two-factor authentication is not enabled for this account.'}), 400
 
-    secret = totp_crypto.decrypt_secret(user.totp_secret)
-    if not secret:
-        # decrypt_secret() returns None for both "no secret stored" and "stored
-        # ciphertext doesn't decrypt under the current key" — worth telling apart
-        # in the logs, since the latter means every code will fail no matter what
-        # the user enters (TOKEN_ENCRYPTION_KEY/SECRET_KEY changed since setup).
-        current_app.logger.warning(
-            '2fa/verify-login: user_id=%s totp_secret undecryptable (has_stored=%s)',
-            user.id, bool(user.totp_secret),
-        )
-    ok = bool(secret) and totp_service.verify_totp_code(secret, code)
+    ok = False
+    if user.totp_enabled:
+        secret = totp_crypto.decrypt_secret(user.totp_secret)
+        if not secret:
+            # decrypt_secret() returns None for both "no secret stored" and "stored
+            # ciphertext doesn't decrypt under the current key" — worth telling apart
+            # in the logs, since the latter means every code will fail no matter what
+            # the user enters (TOKEN_ENCRYPTION_KEY/SECRET_KEY changed since setup).
+            current_app.logger.warning(
+                '2fa/verify-login: user_id=%s totp_secret undecryptable (has_stored=%s)',
+                user.id, bool(user.totp_secret),
+            )
+        ok = bool(secret) and totp_service.verify_totp_code(secret, code)
 
-    if not ok:
-        # Fall back to a recovery code — consumes it on match so it can't be reused.
-        new_codes = totp_service.consume_recovery_code(user.totp_recovery_codes, code)
-        if new_codes is not None:
-            user.totp_recovery_codes = new_codes
-            ok = True
+        if not ok:
+            # Fall back to a recovery code — consumes it on match so it can't be reused.
+            new_codes = totp_service.consume_recovery_code(user.totp_recovery_codes, code)
+            if new_codes is not None:
+                user.totp_recovery_codes = new_codes
+                ok = True
+
+    if not ok and user.email_otp_enabled:
+        ok = email_otp_service.verify_code(code, user.email_otp_code_hash, user.email_otp_expires_at)
+        if ok:
+            # One-time use — clear it so the same code (or a leaked email)
+            # can't be replayed for a second login.
+            user.email_otp_code_hash = None
+            user.email_otp_expires_at = None
 
     if not ok:
         current_app.logger.info('2fa/verify-login: user_id=%s invalid code/recovery attempt', user.id)
@@ -1850,6 +2080,47 @@ def totp_verify_login():
         'message': 'Session started successfully',
         'redirect': sanitize_redirect_url(None),
     }), 200
+
+
+@auth_bp.route('/2fa/email/send-login-code', methods=['POST'])
+@limiter.limit("5 per 15 minutes")
+def email_otp_send_login_code():
+    """Sends (or resends) the email OTP for a pending login. Used two ways:
+    the "use email instead" link when an account has both TOTP and email OTP
+    enabled, and a manual resend if the first automatic send (see login()
+    above) got lost. Same trust level as totp_verify_login(): identity comes
+    only from pending_token, not @login_required."""
+    _ensure_email_otp_columns()
+    data = request.get_json(silent=True) or {}
+    pending_token = data.get('pending_token', '')
+
+    user = Users.verify_token(pending_token, '2fa_pending')
+    if not user:
+        return jsonify({'error': 'Your session expired. Please sign in again.'}), 401
+    if not user.email_otp_enabled:
+        return jsonify({'error': 'Email verification is not enabled for this account.'}), 400
+
+    if not _send_email_otp_code(user):
+        return jsonify({'error': 'Could not send the verification code. Please try again.'}), 502
+    return jsonify({'success': True}), 200
+
+
+@auth_bp.route('/2fa/oauth-pending', methods=['GET'])
+def oauth_2fa_pending():
+    """Bridges the OAuth callbacks (google_callbackx/microsoft_callback,
+    plain GET redirects) into the same pending_token/methods flow /login
+    uses. The callback stashes these in the Flask session server-side
+    (never in the URL — a signed token in a query string would end up in
+    server access logs and browser history) and redirects to
+    /login?oauth_2fa=1; the login page's JS calls this once on load to pick
+    them up and show the same #tfaLoginForm used for password-login 2FA.
+    Popped (not just read) so a page refresh doesn't resurrect a stale
+    pending state after the flow completes or is abandoned."""
+    pending_token = session.pop('oauth_2fa_pending_token', None)
+    methods = session.pop('oauth_2fa_methods', None)
+    if not pending_token:
+        return jsonify({'pending': False}), 200
+    return jsonify({'pending': True, 'pending_token': pending_token, 'methods': methods or []}), 200
 
 
 # ── New Security endpoints ────────────────────────────────────────────────────

@@ -90,6 +90,7 @@
 .xpa-h-item:focus-visible{outline:2px solid #064CDB;outline-offset:-2px}
 .xpa-h-item-r1{display:flex;align-items:center;gap:7px}
 .xpa-h-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--risk-c,#cbd5e1)}
+.xpa-h-src-ico{flex-shrink:0;color:#064CDB;display:inline-flex}
 .xpa-h-ititle{flex:1;min-width:0;font-size:clamp(.78rem,2vw,.83rem);font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
 .xpa-h-hl{background:#fef08a;color:inherit;border-radius:3px;padding:0 1px}
 .xpa-h-itime{font-size:.68rem;color:#94a3b8;flex-shrink:0;font-weight:500;white-space:nowrap}
@@ -157,7 +158,11 @@
 .xpa-hist-modal.minimized .xpa-h-detail-panel{display:none}
 .xpa-hist-modal.minimized .xpa-h-list{position:static;transform:none}
 .xpa-hist-modal.minimized .xpa-h-hdr-left{flex:1}
-.xpa-hist-modal.minimized .xpa-h-hdr-right{display:none}
+/* Search box hidden to save space, but NOT the whole .xpa-h-hdr-right —
+   histCloseBtn lives in there too, and hiding the container took the close
+   button down with it, leaving no way to close the modal once minimized. */
+.xpa-hist-modal.minimized .xpa-h-hdr-right{flex:0 0 auto;justify-content:flex-end}
+.xpa-hist-modal.minimized .xpa-h-search{display:none}
 
 @media(min-width:480px){
   .xpa-hist-modal{border-radius:24px 24px 0 0;height:88dvh}
@@ -656,9 +661,17 @@
                                 `<span class="xpa-h-av" style="background:${_avColor(s.email)};z-index:${9 - n}">${_esc(s.initial || (s.email || '?')[0].toUpperCase())}</span>`).join('')
                           }${e.sharedWith.length > 4 ? `<span class="xpa-h-av xpa-h-av-more">+${e.sharedWith.length - 4}</span>` : ''}</span>`
                         : '';
+                    // Document icon (file with folded corner) vs pasted-text icon
+                    // (clipboard) — outline-only, same blue as the app accent, so the
+                    // list distinguishes an uploaded-file analysis from pasted text
+                    // at a glance without reading the title.
+                    const srcIco = e.isDocument
+                        ? `<span class="xpa-h-src-ico" title="Document"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#064CDB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>`
+                        : `<span class="xpa-h-src-ico" title="Pasted text"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#064CDB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span>`;
                     html += `<div class="xpa-h-item" data-id="${e.id}" style="--risk-c:${rc};animation-delay:${delay}ms" role="option" tabindex="0" aria-label="${_esc(e.title)}">
                         <div class="xpa-h-item-r1">
                             <span class="xpa-h-dot"></span>
+                            ${srcIco}
                             <span class="xpa-h-ititle">${_highlight(e.title, textTokens)}</span>
                             ${stack}
                             <span class="xpa-h-itime">${_rel(e.ts)}</span>
@@ -1017,8 +1030,8 @@
         <input type="text" id="xpaShareInput" placeholder="Type an email and press Enter…" autocomplete="off">
       </div>
       <div class="xpa-share-err" id="xpaShareErr"></div>
-      <p class="xpa-share-hint">XplagiaX users will see this analysis in their history (marked as shared).
-      Non-users receive a professional email with the full report attached as a PDF.
+      <p class="xpa-share-hint">Everyone you add receives a professional email with the full report attached as a PDF.
+      XplagiaX users also see this analysis in their history (marked as shared).
       If you delete this analysis, it disappears for everyone you shared it with.</p>
       <div class="xpa-share-results" id="xpaShareResults"></div>
     </div>
@@ -1178,8 +1191,9 @@
         }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
           .then(function (res) {
             if (!res.ok) { sendIdle(existingShares.length ? 'Update' : 'Share'); showErr(res.d.error || 'Could not share the analysis.'); return; }
-            var LBL = { shared: ['ok', 'shared — will appear in their history'],
+            var LBL = { shared_and_emailed: ['ok', 'emailed the PDF report + added to their history'],
                         emailed: ['ok', 'emailed with the PDF report'],
+                        shared_email_failed: ['warn', 'added to their history, but the email failed to send'],
                         already_shared: ['warn', 'was already shared'],
                         skipped: ['warn', 'skipped (your own account)'],
                         error: ['err', 'failed — email could not be delivered'] };
@@ -1194,8 +1208,8 @@
             });
             // El server devuelve el set de shares actualizado — es la fuente de
             // verdad más fresca posible, así que la usamos tal cual en vez de
-            // reconstruirla a mano (cubre 'shared'/'emailed'/'already_shared'
-            // por igual, incluidos casos raros de doble submit).
+            // reconstruirla a mano (cubre 'shared_and_emailed'/'emailed'/
+            // 'already_shared' por igual, incluidos casos raros de doble submit).
             emails = [];
             existingShares = Array.isArray(res.d.shares) ? res.d.shares : existingShares;
             renderPills();
