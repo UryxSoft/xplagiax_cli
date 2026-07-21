@@ -42,6 +42,52 @@ def send_email(to_addr, subject, html):
         return False
 
 
+def send_password_set_email(admin, subject='Set your XplagiaX Admin password'):
+    """Emite el token single-use (core.tokens) y manda el link — nunca una
+    contraseña. Cubre tanto alta de admin (hash placeholder) como forgot-password."""
+    from flask import url_for
+    from core import tokens as tk
+    token = tk.make_password_reset_token(admin.id, admin.password_hash)
+    url = url_for('auth_bp.reset_password_page', token=token, _external=True)
+    hours = current_app.config.get('ADMIN_PWRESET_MAX_AGE_HOURS', 24)
+    html = password_reset_email_html(admin.username, url, expires_hours=hours)
+    return send_email(admin.email, subject, html)
+
+
+def password_reset_email_html(name, reset_url, expires_hours=24):
+    B = _B
+    first = (name or '').strip() or 'there'
+    return f"""
+<div style="margin:0;padding:24px;background:#eef2f7;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
+    <div style="background:{B['primary']};padding:22px 26px;">
+      <div style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:.02em;">
+        <span style="opacity:.85;">&times;</span>plagia<span style="opacity:.85;">&times;</span></div>
+      <div style="color:rgba(255,255,255,.78);font-size:12px;margin-top:2px;">Admin Panel</div>
+    </div>
+    <div style="padding:26px;">
+      <h2 style="margin:0 0 10px;font-size:18px;color:{B['ink']};">Hi, {first}</h2>
+      <p style="margin:0 0 18px;font-size:13.5px;line-height:1.6;color:#334155;">
+        Use the button below to set the password for your XplagiaX Admin account.</p>
+      <div style="text-align:center;margin:22px 0;">
+        <a href="{reset_url}"
+           style="display:inline-block;background:{B['primary']};color:#ffffff;text-decoration:none;
+                  font-size:14px;font-weight:700;padding:13px 30px;border-radius:10px;">
+          Set my password</a>
+      </div>
+      <p style="margin:0;font-size:12px;line-height:1.6;color:{B['muted']};">
+        This link expires in <b>{expires_hours} hours</b> and can be used only once.
+        For your security, XplagiaX never sends passwords by email. If you didn't
+        request this you can safely ignore this message — your account is unaffected.</p>
+    </div>
+    <div style="padding:14px 26px;background:{B['bg']};border-top:1px solid #e2e8f0;">
+      <p style="margin:0;font-size:11px;color:{B['muted']};">
+        Need help? Contact support · © XplagiaX — Confidential</p>
+    </div>
+  </div>
+</div>"""
+
+
 def activation_email_html(name, activation_url, plan, trial_days=None, expires_hours=72):
     B = _B
     first = (name or '').strip() or 'there'

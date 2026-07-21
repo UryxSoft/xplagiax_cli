@@ -91,6 +91,9 @@ box-shadow:0 4px 14px rgba(15,23,42,.12);display:none}
     <a class="nav-link {% block nav_dash %}{% endblock %}" href="/adminx/">📊 Dashboard</a>
     <a class="nav-link {% block nav_users %}{% endblock %}" href="/adminx/users/">👥 Users</a>
     <a class="nav-link {% block nav_institutions %}{% endblock %}" href="/adminx/institutions/">🏛 Institutions</a>
+    <div class="nav-sep">Administration</div>
+    <a class="nav-link {% block nav_admins %}{% endblock %}" href="/adminx/admins/">🛡 Admins</a>
+    <a class="nav-link {% block nav_audit %}{% endblock %}" href="/adminx/audit/">📜 Audit log</a>
     <div class="nav-sep">Legacy</div>
     <a class="nav-link" href="/">🗂 Classic panel</a>
     <div class="foot">XplagiaX Admin · {{ current_user.email if current_user.is_authenticated else '' }}<br>

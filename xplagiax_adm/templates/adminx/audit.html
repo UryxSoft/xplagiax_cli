@@ -1,0 +1,115 @@
+{% extends 'adminx/base.html' %}
+{% block title %}Audit log — XplagiaX Admin{% endblock %}
+{% block nav_audit %}active{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Audit log</h1>
+</div>
+
+<div class="card">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+    <input id="f_action" placeholder="Action contains… (e.g. user.create)" style="flex:1;min-width:170px">
+    <select id="f_entity" style="min-width:140px"><option value="">All entities</option></select>
+    <input id="f_admin" placeholder="Admin email…" style="min-width:170px">
+    <input id="f_from" type="date" title="From date">
+    <input id="f_to" type="date" title="To date">
+    <button class="btn btn-sm" onclick="resetFilters()">Clear</button>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Time (UTC)</th><th>Admin</th><th>Action</th><th>Entity</th>
+      <th>Entity ID</th><th>IP</th><th style="text-align:right">Detail</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+    <span style="font-size:12px;color:var(--muted)" id="count"></span>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm" onclick="go(-1)">← Prev</button>
+      <button class="btn btn-sm" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalBody"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let state = {action:'', entity:'', admin_email:'', date_from:'', date_to:'', page:1, per_page:30, total:0};
+
+async function loadEntities(){
+  try{
+    // Deriva entidades a partir de las acciones ya vistas (evita otra ruta):
+    const acts = await api('/adminx/audit/api/actions');
+    const entities = [...new Set(acts.actions.map(a => a.split('.')[0]))].sort();
+    const sel = document.getElementById('f_entity');
+    entities.forEach(e=>{const o=document.createElement('option');o.value=e;o.textContent=e;sel.appendChild(o);});
+  }catch(_){}
+}
+loadEntities();
+
+let _qh;
+['f_action','f_admin'].forEach(id=>{
+  document.getElementById(id).oninput=()=>{clearTimeout(_qh);
+    _qh=setTimeout(()=>{applyFilters();},350);};
+});
+['f_entity','f_from','f_to'].forEach(id=>{
+  document.getElementById(id).onchange=()=>applyFilters();
+});
+function applyFilters(){
+  state.action=val('f_action').trim();
+  state.entity=val('f_entity');
+  state.admin_email=val('f_admin').trim();
+  state.date_from=val('f_from');
+  state.date_to=val('f_to');
+  state.page=1; load();
+}
+function resetFilters(){
+  ['f_action','f_admin','f_from','f_to'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f_entity').value='';
+  applyFilters();
+}
+function val(id){return document.getElementById(id).value;}
+function go(d){const max=Math.ceil(state.total/state.per_page)||1;
+  state.page=Math.min(max,Math.max(1,state.page+d));load();}
+
+async function load(){
+  try{
+    const p=new URLSearchParams({action:state.action, entity:state.entity,
+      admin_email:state.admin_email, date_from:state.date_from, date_to:state.date_to,
+      page:state.page, per_page:state.per_page});
+    const d=await api('/adminx/audit/api/logs?'+p);
+    state.total=d.total;
+    document.getElementById('count').textContent=
+      `${d.total} entr(y/ies) · page ${d.page}/${Math.max(1,Math.ceil(d.total/d.per_page))}`;
+    document.getElementById('rows').innerHTML=d.logs.map(r=>`
+      <tr>
+        <td style="white-space:nowrap">${esc(r.created_at||'—')}</td>
+        <td>${esc(r.admin_email||'system')}</td>
+        <td><span class="chip chip-info">${esc(r.action)}</span></td>
+        <td>${esc(r.entity||'—')}</td>
+        <td>${esc(r.entity_id||'—')}</td>
+        <td style="font-size:11px;color:var(--muted)">${esc(r.ip||'—')}</td>
+        <td style="text-align:right">${r.detail?`<button class="btn btn-sm" onclick='viewDetail(${JSON.stringify(r)})'>View</button>`:'—'}</td>
+      </tr>`).join('') || '<tr><td colspan="7" style="color:var(--muted)">No audit entries found</td></tr>';
+  }catch(e){toast('Load failed: '+e.message,true);}
+}
+load();
+
+function closeModal(){document.getElementById('modalBg').classList.remove('open');}
+function viewDetail(r){
+  let pretty = r.detail;
+  try{ pretty = JSON.stringify(JSON.parse(r.detail), null, 2); }catch(_){}
+  document.getElementById('modalBody').innerHTML = `
+    <h3>${esc(r.action)} <span style="font-weight:400;color:var(--muted);font-size:12px">— ${esc(r.created_at||'')}</span></h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:10px">
+      ${esc(r.admin_email||'system')} · ${esc(r.entity||'—')}${r.entity_id?' #'+esc(r.entity_id):''} · ${esc(r.ip||'—')}</p>
+    <pre style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;
+      font-size:11.5px;max-height:50vh;overflow:auto;white-space:pre-wrap;word-break:break-word">${esc(pretty)}</pre>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px">
+      <button class="btn" onclick="closeModal()">Close</button>
+    </div>`;
+  document.getElementById('modalBg').classList.add('open');
+}
+</script>
+{% endblock %}

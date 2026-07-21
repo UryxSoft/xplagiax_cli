@@ -1,0 +1,123 @@
+{% extends 'adminx/base.html' %}
+{% block title %}Admins — XplagiaX Admin{% endblock %}
+{% block nav_admins %}active{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Admin accounts</h1>
+  {% if is_superadmin %}
+  <button class="btn btn-primary" onclick="openCreate()">＋ Add admin</button>
+  {% endif %}
+</div>
+
+{% if not is_superadmin %}
+<p style="font-size:12px;color:var(--muted);margin-bottom:12px">Read-only view — only
+  superadmins can create, edit or deactivate admin accounts.</p>
+{% endif %}
+
+<div class="card">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Admin</th><th>Role</th><th>Status</th><th>Created</th>
+      <th>Last login</th><th style="text-align:right">Actions</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalBody"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const IS_SUPERADMIN = {{ is_superadmin | tojson }};
+const ROLES = ['readonly', 'admin', 'superadmin'];
+const roleChip = r => ({superadmin:'chip-info', admin:'chip-ok', readonly:'chip-muted'}[r] || 'chip-muted');
+
+async function load(){
+  try{
+    const d = await api('/adminx/admins/api/admins');
+    document.getElementById('rows').innerHTML = d.admins.map(a => `
+      <tr>
+        <td><b style="color:var(--ink)">${esc(a.username)}</b>${a.is_self?' <span class="chip chip-info">you</span>':''}<br>
+            <span style="font-size:11px;color:var(--muted)">${esc(a.email)}</span></td>
+        <td><span class="chip ${roleChip(a.role)}">${esc(a.role)}</span></td>
+        <td>${a.is_active?'<span class="chip chip-ok">Active</span>':'<span class="chip chip-off">Inactive</span>'}</td>
+        <td>${esc(a.created_at||'—')}</td>
+        <td>${esc(a.last_login_at||'—')}</td>
+        <td style="text-align:right;white-space:nowrap">
+          ${IS_SUPERADMIN ? `<button class="btn btn-sm" onclick='openEdit(${JSON.stringify(a)})'>Edit</button>
+          <button class="btn btn-sm" onclick='openOps(${JSON.stringify(a)})'>⋯</button>` : ''}
+        </td>
+      </tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted)">No admin accounts found</td></tr>';
+  }catch(e){toast('Load failed: '+e.message,true);}
+}
+load();
+
+function closeModal(){document.getElementById('modalBg').classList.remove('open');}
+function showModal(html){document.getElementById('modalBody').innerHTML=html;
+  document.getElementById('modalBg').classList.add('open');}
+const roleOpts = sel => ROLES.map(r=>`<option value="${r}" ${r===sel?'selected':''}>${r}</option>`).join('');
+function val(id){return document.getElementById(id).value;}
+
+function openCreate(){showModal(`
+  <h3>Add admin</h3>
+  <div class="field"><label>Username *</label><input id="f_un"></div>
+  <div class="field"><label>Email *</label><input id="f_em" type="email"></div>
+  <div class="field"><label>Role</label><select id="f_rl">${roleOpts('admin')}</select></div>
+  <p style="font-size:11.5px;color:var(--muted);margin-bottom:12px">A "set your password" email
+  will be sent — passwords are never emailed or shown here.</p>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="doCreate()">Create &amp; send email</button>
+  </div>`);}
+async function doCreate(){
+  try{
+    const d=await api('/adminx/admins/api/admins',{method:'POST',body:JSON.stringify({
+      username:val('f_un'),email:val('f_em'),role:val('f_rl')})});
+    toast(d.invite_email_sent?'Admin created — email sent.':'Admin created, but the email FAILED — use "Resend link".',!d.invite_email_sent);
+    closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+
+function openEdit(a){showModal(`
+  <h3>Edit — ${esc(a.username)}</h3>
+  <div class="field"><label>Username</label><input id="e_un" value="${esc(a.username)}"></div>
+  <div class="field"><label>Role</label><select id="e_rl" ${a.is_self?'disabled':''}>${roleOpts(a.role)}</select></div>
+  ${a.is_self?'<p style="font-size:11px;color:var(--muted);margin:-6px 0 12px">You cannot change your own role.</p>':''}
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="doEdit(${a.id})">Save</button>
+  </div>`);}
+async function doEdit(id){
+  try{
+    const body = {username:val('e_un')};
+    const roleSel = document.getElementById('e_rl');
+    if(!roleSel.disabled) body.role = roleSel.value;
+    await api('/adminx/admins/api/admins/'+id,{method:'PATCH',body:JSON.stringify(body)});
+    toast('Admin updated.');closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+
+function openOps(a){showModal(`
+  <h3>${esc(a.username)}</h3>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    ${a.is_active
+      ? (a.is_self ? '<button class="btn" disabled title="You cannot deactivate your own account">⏸ Deactivate (not for your own account)</button>'
+                   : `<button class="btn" onclick="setActive(${a.id}, false)">⏸ Deactivate account</button>`)
+      : `<button class="btn" onclick="setActive(${a.id}, true)">▶ Reactivate account</button>`}
+    <button class="btn" onclick="resendInvite(${a.id})">✉ Resend set/reset password link</button>
+  </div>`);}
+async function setActive(id, active){
+  try{
+    await api('/adminx/admins/api/admins/'+id,{method:'PATCH',body:JSON.stringify({is_active:active})});
+    toast(active?'Admin reactivated.':'Admin deactivated.');closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+async function resendInvite(id){
+  try{
+    const d = await api('/adminx/admins/api/admins/'+id+'/resend-invite',{method:'POST'});
+    toast(d.email_sent?'Link sent.':'Could not send the email — check mail settings.', !d.email_sent);
+    closeModal();
+  }catch(e){toast(e.message,true);}
+}
+</script>
+{% endblock %}

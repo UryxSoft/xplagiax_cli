@@ -30,7 +30,9 @@ class AdminAuditLog(db.Model):
     created_at  = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
 
 
-def _ensure_table():
+def ensure_table():
+    """Pública: también la usa adminx_audit.py (visor) para poder listar/filtrar
+    incluso antes de que se haya escrito la primera fila."""
     global _TABLE_READY
     if _TABLE_READY:
         return
@@ -44,7 +46,7 @@ def _ensure_table():
 def log_action(action, entity=None, entity_id=None, detail=None):
     """Best-effort: la auditoría nunca debe tumbar la operación que audita."""
     try:
-        _ensure_table()
+        ensure_table()
         row = AdminAuditLog(
             admin_id=getattr(current_user, 'id', None) if current_user and current_user.is_authenticated else None,
             admin_email=getattr(current_user, 'email', None) if current_user and current_user.is_authenticated else None,

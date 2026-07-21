@@ -58,13 +58,19 @@ app.register_blueprint(auth_bp, url_prefix='/auth_bp')
 from modules.adminx_dashboard import adminx_dashboard_bp
 from modules.adminx_users import adminx_users_bp
 from modules.adminx_institutions import adminx_institutions_bp
+from modules.adminx_admins import adminx_admins_bp
+from modules.adminx_audit import adminx_audit_bp
 
 csrf_protect_blueprint(adminx_dashboard_bp)
 csrf_protect_blueprint(adminx_users_bp)
 csrf_protect_blueprint(adminx_institutions_bp)
+csrf_protect_blueprint(adminx_admins_bp)
+csrf_protect_blueprint(adminx_audit_bp)
 app.register_blueprint(adminx_dashboard_bp, url_prefix='/adminx')
 app.register_blueprint(adminx_users_bp, url_prefix='/adminx/users')
 app.register_blueprint(adminx_institutions_bp, url_prefix='/adminx/institutions')
+app.register_blueprint(adminx_admins_bp, url_prefix='/adminx/admins')
+app.register_blueprint(adminx_audit_bp, url_prefix='/adminx/audit')
 
 apply_security_headers(app)
 
