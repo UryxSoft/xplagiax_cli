@@ -4753,10 +4753,10 @@ def public_report(token):
         payload = ser.loads(token)
         hid = payload[0] if isinstance(payload, list) else payload
     except (BadSignature, ValueError, TypeError, IndexError):
-        abort(404)
+        return render_template('user/report_not_found.html'), 404
     entry = AnalysisHistory.query.filter_by(history_id=str(hid)).first()
     if not entry:
-        abort(404)
+        return render_template('user/report_not_found.html'), 404
 
     from modules.doc_service.report_pdf import (extract_report_data, risk_explanation,
                                                 risk_factors, recommendations, interpretation)

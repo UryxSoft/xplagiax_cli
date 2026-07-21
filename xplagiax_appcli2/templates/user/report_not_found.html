@@ -1,0 +1,74 @@
+{# Reemplaza el 404 genérico de Werkzeug para /x_doc/report/<token> — token
+   inválido/manipulado, o el análisis fue borrado del historial por su dueño
+   (public_report() en doc_routes.py hace abort → esta vista, status 404).
+   Mismo sistema visual que shared_report.html (misma pantalla que este link
+   normalmente abre). #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Report not available — XplagiaX</title>
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/icon/xplagiax.ico') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/icon/favicon-32x32.png') }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/icon/favicon-16x16.png') }}">
+<style>
+:root{--primary:#064CDB;--ink:#0f172a;--muted:#64748b;--body:#334155;--bg:#f8fafc;--line:#e2e8f0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Open Sans',-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+background:#eef2f7;color:var(--body);min-height:100vh;display:flex;align-items:center;
+justify-content:center;padding:24px;line-height:1.55}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;
+box-shadow:0 4px 24px rgba(15,23,42,.08);max-width:460px;width:100%;overflow:hidden;text-align:center}
+.head{background:var(--primary);padding:34px 26px 30px}
+.brand{color:#fff;font-size:20px;font-weight:800;letter-spacing:.02em}
+.brand span{opacity:.85}
+.icon-wrap{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.15);
+border:1px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;
+margin:20px auto 0}
+.body{padding:30px 30px 34px}
+h1{font-size:18px;color:var(--ink);margin-bottom:10px;letter-spacing:-.01em}
+p{font-size:13.5px;color:var(--muted);line-height:1.65;margin-bottom:8px}
+.reasons{text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:12px;
+padding:14px 18px;margin:20px 0;font-size:12.5px;color:var(--body)}
+.reasons li{margin:5px 0 5px 4px}
+.btn{display:inline-block;margin-top:8px;background:var(--primary);color:#fff;text-decoration:none;
+font-size:13.5px;font-weight:700;padding:12px 26px;border-radius:10px}
+.btn:hover{background:#0540b8}
+.foot{margin-top:22px;font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <div class="brand"><span>&times;</span>plagia<span>&times;</span></div>
+    <div class="icon-wrap">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 12h6M9 16h6M9 8h1"></path>
+        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path>
+        <path d="M14 3v5h5"></path>
+        <line x1="4" y1="4" x2="20" y2="20" stroke="#fff" stroke-width="1.6" opacity=".55"></line>
+      </svg>
+    </div>
+  </div>
+  <div class="body">
+    <h1>This report is not available</h1>
+    <p>The link you followed doesn't lead to an active Academic Integrity Report.</p>
+    <div class="reasons">
+      This usually happens because:
+      <ul>
+        <li>The analysis was deleted by the person who shared it</li>
+        <li>The link was mistyped or copied incompletely</li>
+        <li>The report link is no longer valid</li>
+      </ul>
+    </div>
+    <p>If you were expecting this report, ask the sender to share it with you again.</p>
+    <a class="btn" href="https://xplagiax.ca">Go to XplagiaX</a>
+    <div class="foot">XplagiaX · Academic Integrity Platform</div>
+  </div>
+</div>
+</body>
+</html>
