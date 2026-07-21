@@ -1,0 +1,177 @@
+{% extends 'adminx/base.html' %}
+{% block title %}Institutions — XplagiaX Admin{% endblock %}
+{% block nav_institutions %}active{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Academic Institutions</h1>
+  <button class="btn btn-primary" onclick="openCreate()">＋ Create institution</button>
+</div>
+
+<div class="card">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+    <input id="q" placeholder="Search by name…" style="flex:1;min-width:200px">
+    <select id="country"><option value="">All countries</option></select>
+    <select id="status">
+      <option value="">All statuses</option>
+      <option value="active">Active</option><option value="inactive">Inactive</option>
+    </select>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Logo</th><th>Name</th><th>Country</th><th>Type</th><th>Status</th>
+      <th>Users</th><th>Created</th><th style="text-align:right">Actions</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+    <span style="font-size:12px;color:var(--muted)" id="count"></span>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-sm" onclick="go(-1)">← Prev</button>
+      <button class="btn btn-sm" onclick="go(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalBody"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let OPTS = {countries:[], types:[], cities:[]};
+let state = {search:'', country_id:'', status:'', page:1, per_page:20, total:0};
+const logoImg = p => p ? `/static/${p}` : null;
+const logoCell = p => p
+  ? `<img src="${logoImg(p)}" alt="" style="width:32px;height:32px;object-fit:contain;border-radius:6px;border:1px solid var(--line);background:#fff">`
+  : `<div style="width:32px;height:32px;border-radius:6px;background:var(--bg);border:1px solid var(--line);
+      display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)">🏛</div>`;
+
+async function loadOptions(){
+  OPTS = await api('/adminx/institutions/api/options');
+  document.getElementById('country').innerHTML = '<option value="">All countries</option>' +
+    OPTS.countries.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+}
+document.getElementById('country').onchange=e=>{state.country_id=e.target.value;state.page=1;load();};
+document.getElementById('status').onchange=e=>{state.status=e.target.value;state.page=1;load();};
+let _qh; document.getElementById('q').oninput=e=>{clearTimeout(_qh);
+  _qh=setTimeout(()=>{state.search=e.target.value.trim();state.page=1;load();},350);};
+function go(d){const max=Math.ceil(state.total/state.per_page)||1;
+  state.page=Math.min(max,Math.max(1,state.page+d));load();}
+
+async function load(){
+  try{
+    const p=new URLSearchParams({search:state.search,country_id:state.country_id,
+      status:state.status,page:state.page,per_page:state.per_page});
+    const d=await api('/adminx/institutions/api/institutions?'+p);
+    state.total=d.total;
+    document.getElementById('count').textContent=
+      `${d.total} institution(s) · page ${d.page}/${Math.max(1,Math.ceil(d.total/d.per_page))}`;
+    document.getElementById('rows').innerHTML=d.institutions.map(i=>`
+      <tr>
+        <td>${logoCell(i.logo_path)}</td>
+        <td><b style="color:var(--ink)">${esc(i.name)}</b>
+            ${i.website?`<br><a href="${esc(i.website)}" target="_blank" rel="noopener noreferrer" style="font-size:11px">${esc(i.domain||i.website)}</a>`:''}</td>
+        <td>${esc(i.country||'—')}${i.city?', '+esc(i.city):''}</td>
+        <td>${esc(i.institution_type||'—')}</td>
+        <td>${i.status==='active'?'<span class="chip chip-ok">Active</span>':'<span class="chip chip-off">Inactive</span>'}</td>
+        <td>${i.user_count ?? 0}</td>
+        <td>${esc(i.created_date||'—')}</td>
+        <td style="text-align:right;white-space:nowrap">
+          <button class="btn btn-sm" onclick='openEdit(${JSON.stringify(i)})'>Edit</button>
+          <button class="btn btn-sm" onclick='openLogo(${JSON.stringify(i)})'>Logo</button>
+        </td>
+      </tr>`).join('') || '<tr><td colspan="8" style="color:var(--muted)">No institutions found</td></tr>';
+  }catch(e){toast('Load failed: '+e.message,true);}
+}
+(async()=>{await loadOptions();load();})();
+
+function closeModal(){document.getElementById('modalBg').classList.remove('open');}
+function showModal(html){document.getElementById('modalBody').innerHTML=html;
+  document.getElementById('modalBg').classList.add('open');}
+const opt=(list,sel)=>['<option value="">—</option>'].concat(
+  list.map(o=>`<option value="${o.id}" ${o.id==sel?'selected':''}>${esc(o.name)}</option>`)).join('');
+
+function openCreate(){showModal(`
+  <h3>Create institution</h3>
+  <div class="field"><label>Name *</label><input id="f_name"></div>
+  <div class="field"><label>Country *</label><select id="f_country">${opt(OPTS.countries)}</select></div>
+  <div class="field"><label>City</label><select id="f_city">${opt(OPTS.cities)}</select></div>
+  <div class="field"><label>Type</label><select id="f_type">${opt(OPTS.types)}</select></div>
+  <div class="field"><label>Website</label><input id="f_web" placeholder="https://university.edu"></div>
+  <div class="field"><label>Domain (for logo lookup, optional)</label><input id="f_dom" placeholder="university.edu"></div>
+  <p style="font-size:11.5px;color:var(--muted);margin-bottom:12px">If a website/domain is set, XplagiaX will try to
+  fetch the official logo automatically. You can always upload one manually afterwards.</p>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="doCreate()">Create</button>
+  </div>`);}
+async function doCreate(){
+  try{
+    const d=await api('/adminx/institutions/api/institutions',{method:'POST',body:JSON.stringify({
+      name:val('f_name'),country_id:val('f_country'),city_id:val('f_city')||null,
+      institution_type_id:val('f_type')||null,website:val('f_web'),domain:val('f_dom')})});
+    toast(d.institution.logo_path?'Institution created — logo fetched automatically.':'Institution created.');
+    closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+function val(id){return document.getElementById(id).value;}
+
+function openEdit(i){showModal(`
+  <h3>Edit — ${esc(i.name)}</h3>
+  <div class="field"><label>Name *</label><input id="e_name" value="${esc(i.name)}"></div>
+  <div class="field"><label>Country *</label><select id="e_country">${opt(OPTS.countries,i.country_id)}</select></div>
+  <div class="field"><label>City</label><select id="e_city">${opt(OPTS.cities,i.city_id)}</select></div>
+  <div class="field"><label>Type</label><select id="e_type">${opt(OPTS.types,i.institution_type_id)}</select></div>
+  <div class="field"><label>Website</label><input id="e_web" value="${esc(i.website||'')}"></div>
+  <div class="field"><label>Domain</label><input id="e_dom" value="${esc(i.domain||'')}"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn btn-danger" onclick="if(confirm('Delete this institution? Associated users keep their historical reference.'))doDelete(${i.id})">Delete</button>
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="doEdit(${i.id})">Save</button>
+  </div>`);}
+async function doEdit(id){
+  try{await api('/adminx/institutions/api/institutions/'+id,{method:'PATCH',body:JSON.stringify({
+    name:val('e_name'),country_id:val('e_country'),city_id:val('e_city')||null,
+    institution_type_id:val('e_type')||null,website:val('e_web'),domain:val('e_dom')})});
+    toast('Institution updated.');closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+async function doDelete(id){
+  try{await api('/adminx/institutions/api/institutions/'+id,{method:'DELETE'});
+    toast('Institution deleted.');closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+
+function openLogo(i){showModal(`
+  <h3>Logo — ${esc(i.name)}</h3>
+  <div style="text-align:center;margin-bottom:14px">
+    ${i.logo_path?`<img src="${logoImg(i.logo_path)}" style="max-width:140px;max-height:140px;border:1px solid var(--line);border-radius:10px;padding:8px">`
+                :`<div style="color:var(--muted);font-size:12.5px">No logo set yet.</div>`}
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <button class="btn" onclick="doFetchLogo(${i.id})" ${(i.website||i.domain)?'':'disabled title="Set a website or domain first"'}>
+      🔎 Fetch official logo automatically</button>
+    <label class="btn" style="text-align:center;cursor:pointer">
+      ⬆ Upload manually
+      <input type="file" accept=".png,.jpg,.jpeg,.svg" style="display:none" onchange="doUploadLogo(${i.id}, this.files[0])">
+    </label>
+  </div>
+  <div style="display:flex;justify-content:flex-end;margin-top:14px">
+    <button class="btn" onclick="closeModal()">Close</button>
+  </div>`);}
+async function doFetchLogo(id){
+  try{await api(`/adminx/institutions/api/institutions/${id}/logo/fetch`,{method:'POST'});
+    toast('Logo fetched.');closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+async function doUploadLogo(id,file){
+  if(!file)return;
+  try{
+    const fd=new FormData();fd.append('logo',file);
+    const r=await fetch(`/adminx/institutions/api/institutions/${id}/logo/upload`,
+      {method:'POST',headers:{'X-CSRF-Token':CSRF},body:fd});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||('HTTP '+r.status));
+    toast('Logo uploaded.');closeModal();load();
+  }catch(e){toast(e.message,true);}
+}
+</script>
+{% endblock %}

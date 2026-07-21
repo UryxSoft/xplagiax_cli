@@ -50,6 +50,17 @@ def rate_limit_decorator(max_attempts=5):
         return decorated_function
     return decorator
 
+@auth_bp.route('/login', methods=['GET'])
+def login_page():
+    """Pantalla de login. Reemplaza a admx.login_page (app_routes.py),
+    eliminado junto con el resto de módulos legacy — sin esta ruta no había
+    forma de presentar un formulario de login en absoluto."""
+    if current_user.is_authenticated:
+        return redirect(url_for('adminx_dashboard.page'))
+    from core.security import get_csrf_token
+    return render_template('adminx/login.html', csrf_token=get_csrf_token())
+
+
 @auth_bp.route('/login', methods=['POST'])
 @rate_limit_decorator(max_attempts=5)
 def login():
@@ -121,11 +132,10 @@ def login():
         
         logger.info(f"Login exitoso para usuario: {email}")
         
-        # Determinar redirect basado en rol
-        if user.role == 'admin':
-            redirect_url = url_for('admx.documents')
-        else:
-            redirect_url = url_for('user.dashboard')
+        # Todos los roles admin (superadmin/admin/readonly) comparten el
+        # mismo panel — el nivel de acceso lo decide core.security.require_role,
+        # no una pantalla de aterrizaje distinta.
+        redirect_url = url_for('adminx_dashboard.page')
         
         return jsonify({
             'success': True,
@@ -160,7 +170,7 @@ def logout():
         return jsonify({
             'success': True,
             'message': 'Sesión cerrada exitosamente',
-            'redirect_url': url_for('admx.login')
+            'redirect_url': url_for('auth_bp.login_page')
         }), 200
         
     except Exception as e:

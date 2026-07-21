@@ -20,12 +20,15 @@ socketio = SocketIO(app, cors_allowed_origins="*")  # Ajusta CORS según necesit
 # Inicializar extensiones
 db.init_app(app)
 
-Talisman(app, content_security_policy=None) 
+Talisman(app, content_security_policy=None)
 # Configurar Flask-Login
 login_manager = LoginManager()
 login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
 login_manager.login_message_category = 'info'
-login_manager.login_view = 'admx.login_page'
+# FIX: 'admx.login_page' apuntaba al blueprint app_routes.py, eliminado junto
+# con el resto de módulos legacy — el login vive ahora en auth_bp (ver
+# modules/auth_endpoints.py: GET /auth_bp/login).
+login_manager.login_view = 'auth_bp.login_page'
 login_manager.init_app(app)
 
 # Importar modelos después de inicializar db
@@ -39,84 +42,29 @@ def load_user(user_id):
     except (ValueError, TypeError):
         return None
 
-from modules.users_endpoints import users_bp
-from modules.usersadmin_endpoints import usersadmin_bp
-from modules.documents_endpoints import documents_bp
-from modules.doctypes_endpoints import doctype_bp
-from modules.languages_endpoints import languages_bp
-from modules.institutions_endpoints import institutions_bp
-from modules.institutionstype_endpoints  import institution_types_bp
-from modules.countries_endpoints import countries_bp
-from modules.cities_endpoints import cities_bp
-from modules.provinces_endpoints import provinces_bp
-from modules.sessions_endpoints import sessions_bp
-from modules.app_routes import admx
+# NOTA: los blueprints legacy (institutions_endpoints, countries_endpoints,
+# cities_endpoints, provinces_endpoints, users_endpoints, terminal_*,
+# services_*, settings_endpoints, app_routes/admx, admin, etc.) fueron
+# eliminados del repo — este app.py antes seguía importándolos y el proceso
+# no podía ni arrancar (ModuleNotFoundError en el primer import). Se
+# reemplazan por el panel adminx/* (dashboard + usuarios + instituciones).
 from modules.auth_endpoints import auth_bp
-from modules.admin import admin_bp
-from modules.sessionsssh_endpoints import sessionsssh_bp
-#from modules.monitoring_endpoints import monitoring_bp
-from modules.terminal_endpoints_enhanced import terminal_bp
-from modules.dashboardssh_endpoints import dashboardssh_bp
-from modules.reports_endpoints import reports_bp
-from modules.services_endpoints_fixed import services_bp
-from modules.settings_endpoints import settings_bp
-from modules.aianalisis_endpoints import document_analysis_bp
-from modules.contactsale_endpoints import contact_sale_bp
-# Pasar socketio al blueprint de terminal
-from modules.terminal_endpoints import socket_events
-socket_events(socketio)  # Registrar eventos de SocketIO
-
-# En tu app.py principal
-#from modules.websocket_handlers import register_websocket_handlers
-
-# Después de crear socketio
-#register_websocket_handlers(socketio)
-
-# FIX CRÍTICO (F1): varios de estos blueprints exponían su CRUD SIN ninguna
-# autenticación — cualquiera con la URL leía/escribía datos administrativos.
-# Guard único a nivel blueprint, registrado ANTES de register_blueprint
-# (Flask no admite hooks después).
 from core.security import (csrf_protect_blueprint, login_required_blueprint,
                            apply_security_headers)
-for _bp in (institutions_bp, institution_types_bp, countries_bp, cities_bp,
-            provinces_bp, documents_bp, doctype_bp, languages_bp, users_bp,
-            usersadmin_bp, reports_bp, services_bp, settings_bp,
-            document_analysis_bp, contact_sale_bp, sessions_bp,
-            sessionsssh_bp, terminal_bp, dashboardssh_bp):
-    login_required_blueprint(_bp)
 
-app.register_blueprint(users_bp, url_prefix='/users_bp')
-app.register_blueprint(usersadmin_bp, url_prefix='/usersadmin_bp')
-app.register_blueprint(documents_bp, url_prefix='/documents_bp')
-app.register_blueprint(doctype_bp, url_prefix='/doctype_bp')
-app.register_blueprint(languages_bp, url_prefix='/languages_bp')
-app.register_blueprint(institutions_bp, url_prefix='/institutions_bp')
-app.register_blueprint(institution_types_bp, url_prefix='/institution_types_bp')
-app.register_blueprint(countries_bp, url_prefix='/countries_bp')
-app.register_blueprint(cities_bp,url_prefix='/cities_bp')
-app.register_blueprint(provinces_bp, url_prefix='/provinces_bp')
-app.register_blueprint(sessions_bp, url_prefix='/sessions_bp')
-app.register_blueprint(admx, url_prefix='/')
 app.register_blueprint(auth_bp, url_prefix='/auth_bp')
-app.register_blueprint(admin_bp, url_prefix='/admin_bp')
-app.register_blueprint(sessionsssh_bp, url_prefix='/sessionsssh_bp')
-#app.register_blueprint(monitoring_bp, url_prefix='/monitoring_bp')
-app.register_blueprint(terminal_bp, url_prefix='/terminal_bp')
-app.register_blueprint(dashboardssh_bp, url_prefix='/dashboardssh_bp')
-app.register_blueprint(reports_bp, url_prefix='/reports_bp')
-app.register_blueprint(services_bp, url_prefix='/services_bp')
-app.register_blueprint(settings_bp, url_prefix='/settings_bp')
-app.register_blueprint(document_analysis_bp, url_prefix='/document_analysis_bp')
-app.register_blueprint(contact_sale_bp, url_prefix='/contact_sale_bp')
 
-# ── AdminX (rediseño F1+F2): dashboard + gestión de usuarios ─────────────────
+# ── AdminX: dashboard + gestión de usuarios + instituciones ──────────────────
 from modules.adminx_dashboard import adminx_dashboard_bp
 from modules.adminx_users import adminx_users_bp
+from modules.adminx_institutions import adminx_institutions_bp
 
 csrf_protect_blueprint(adminx_dashboard_bp)
 csrf_protect_blueprint(adminx_users_bp)
+csrf_protect_blueprint(adminx_institutions_bp)
 app.register_blueprint(adminx_dashboard_bp, url_prefix='/adminx')
 app.register_blueprint(adminx_users_bp, url_prefix='/adminx/users')
+app.register_blueprint(adminx_institutions_bp, url_prefix='/adminx/institutions')
 
 apply_security_headers(app)
 

@@ -111,18 +111,27 @@ async function doCreate(){
 }
 function val(id){return document.getElementById(id).value;}
 
-function openEdit(u){showModal(`
+async function openEdit(u){
+  let instOpts = '<option value="">— None —</option>';
+  try{
+    const d = await api('/adminx/institutions/api/institutions/lookup');
+    instOpts += d.institutions.map(i=>
+      `<option value="${i.id}" ${i.id===u.institution_id?'selected':''}>${esc(i.name)}${i.country?' ('+esc(i.country)+')':''}</option>`).join('');
+  }catch(_){}
+  showModal(`
   <h3>Edit — ${esc(u.email)}</h3>
   <div class="field"><label>First name</label><input id="e_fn" value="${esc(u.first_name||'')}"></div>
   <div class="field"><label>Last name</label><input id="e_ln" value="${esc(u.last_name||'')}"></div>
   <div class="field"><label>Plan</label><select id="e_pl">${planOpts(u.plan)}</select></div>
+  <div class="field"><label>Institution (Institutes plan)</label><select id="e_inst">${instOpts}</select></div>
   <div style="display:flex;gap:8px;justify-content:flex-end">
     <button class="btn" onclick="closeModal()">Cancel</button>
     <button class="btn btn-primary" onclick="doEdit(${u.id})">Save</button>
   </div>`);}
 async function doEdit(id){
   try{await api('/adminx/users/api/users/'+id,{method:'PATCH',body:JSON.stringify({
-    first_name:val('e_fn'),last_name:val('e_ln'),plan:val('e_pl')})});
+    first_name:val('e_fn'),last_name:val('e_ln'),plan:val('e_pl'),
+    institution_id:val('e_inst')||null})});
     toast('User updated.');closeModal();load();
   }catch(e){toast(e.message,true);}
 }

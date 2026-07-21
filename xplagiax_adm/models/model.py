@@ -61,6 +61,9 @@ class Users(UserMixin, db.Model):
     subscription_starts_at        = db.Column(db.DateTime, nullable=True)
     subscription_ends_at          = db.Column(db.DateTime, nullable=True)
     subscription_renewal_notified = db.Column(db.Boolean, default=False)
+    # F3: asociación real a Institution (FK) — users.institute (texto libre)
+    # queda de solo lectura para histórico; ver core/institution_migrate.py.
+    institution_id = db.Column(db.Integer, db.ForeignKey('Institution.id'), nullable=True)
     addon_subscriptions = db.relationship('UserAddonSubscription', backref='user', lazy=True)
     created_sessions = db.relationship('SubmissionSession', back_populates='professor', lazy='dynamic')
     student_submissions = db.relationship('StudentSubmission', back_populates='student', lazy='dynamic')
@@ -425,17 +428,54 @@ class ProvinceState(db.Model):
         #self.user_id = user_id
         
 class Institution(db.Model):
+    """Ampliado (F3) de forma ADITIVA — ver core/institution_migrate.py para
+    el ALTER TABLE en runtime. institution_type/city_id/country_id quedan con
+    el mismo nombre de columna que ya usaba la app (no se renombran) pero
+    ahora declaran FK a nivel ORM para poder hacer join/relationship."""
     __tablename__  = 'Institution'
     id                = db.Column(db.Integer, primary_key = True)
     institution       = db.Column(db.String(255), nullable=True)
-    institution_type  = db.Column(db.Integer, nullable=False)
-    city_id           = db.Column(db.Integer, nullable=False)
-    country_id        = db.Column(db.Integer, nullable=False)
+    institution_type  = db.Column(db.Integer, db.ForeignKey('Institution_type.id'), nullable=True)
+    city_id           = db.Column(db.Integer, db.ForeignKey('City.id'), nullable=True)
+    country_id         = db.Column(db.Integer, db.ForeignKey('Country.id'), nullable=False)
     created_date      = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def __init__(self,institution,country_id):
+    # Nuevos (F3)
+    logo_path         = db.Column(db.String(500), nullable=True)
+    website           = db.Column(db.String(255), nullable=True)
+    domain            = db.Column(db.String(255), nullable=True)
+    status            = db.Column(db.String(20), nullable=False, default='active')  # active | inactive
+    verified_at       = db.Column(db.DateTime, nullable=True)
+    updated_at        = db.Column(db.DateTime, nullable=True, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at        = db.Column(db.DateTime, nullable=True)  # soft delete
+
+    country = db.relationship('Country', foreign_keys=[country_id])
+    city = db.relationship('City', foreign_keys=[city_id])
+    type_ = db.relationship('Institution_type', foreign_keys=[institution_type])
+    users = db.relationship('Users', backref='institution', lazy='dynamic',
+                            foreign_keys='Users.institution_id')
+
+    def __init__(self, institution=None, country_id=None, **kw):
         self.institution  = institution
         self.country_id   = country_id
+        for k, v in kw.items():
+            if hasattr(type(self), k):
+                setattr(self, k, v)
+
+    def to_dict(self, user_count=None):
+        return {
+            'id': self.id, 'name': self.institution,
+            'country_id': self.country_id, 'country': self.country.country if self.country else None,
+            'city_id': self.city_id, 'city': self.city.city if self.city else None,
+            'institution_type_id': self.institution_type,
+            'institution_type': self.type_.institution_type if self.type_ else None,
+            'logo_path': self.logo_path, 'website': self.website, 'domain': self.domain,
+            'status': self.status or 'active',
+            'verified_at': self.verified_at.isoformat() if self.verified_at else None,
+            'created_date': self.created_date.strftime('%Y-%m-%d') if self.created_date else None,
+            'updated_at': self.updated_at.strftime('%Y-%m-%d %H:%M') if self.updated_at else None,
+            'deleted': self.deleted_at is not None,
+            'user_count': user_count,
+        }
         
 class Institution_type(db.Model):
     __tablename__  = 'Institution_type'

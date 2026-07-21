@@ -46,6 +46,10 @@ def _user_dict(u):
         'credits_limit': limit, 'credits_used_today': used,
         'credits_remaining_today': max(0, limit - used),
         'institute': u.institute, 'country': u.country,
+        # F3: institución real (FK) — 'institute' arriba es el texto libre
+        # legado, se mantiene solo para referencia histórica.
+        'institution_id': u.institution_id,
+        'institution_name': u.institution.institution if u.institution_id and u.institution else None,
     }
 
 
@@ -150,6 +154,15 @@ def update_user(uid):
         u.lastname = (data['last_name'] or '').strip() or None
     if 'active' in data:
         u.isactive = bool(data['active'])
+    if 'institution_id' in data:
+        from models.model import Institution
+        iid = data['institution_id']
+        if iid in (None, '', 0, '0'):
+            u.institution_id = None
+        elif Institution.query.filter_by(id=int(iid)).filter(Institution.deleted_at.is_(None)).first():
+            u.institution_id = int(iid)
+        else:
+            return jsonify({'error': 'Institution not found.'}), 400
     db.session.commit()
     log_action('user.update', 'users', uid, {'before': before, 'after': data})
     return jsonify({'ok': True, 'user': _user_dict(u)})

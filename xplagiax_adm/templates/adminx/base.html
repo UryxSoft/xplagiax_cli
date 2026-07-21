@@ -90,10 +90,11 @@ box-shadow:0 4px 14px rgba(15,23,42,.12);display:none}
     <div class="nav-sep">General</div>
     <a class="nav-link {% block nav_dash %}{% endblock %}" href="/adminx/">📊 Dashboard</a>
     <a class="nav-link {% block nav_users %}{% endblock %}" href="/adminx/users/">👥 Users</a>
+    <a class="nav-link {% block nav_institutions %}{% endblock %}" href="/adminx/institutions/">🏛 Institutions</a>
     <div class="nav-sep">Legacy</div>
     <a class="nav-link" href="/">🗂 Classic panel</a>
     <div class="foot">XplagiaX Admin · {{ current_user.email if current_user.is_authenticated else '' }}<br>
-      <a href="/auth_bp/logout">Sign out</a></div>
+      <a href="#" onclick="doSignOut(event)">Sign out</a></div>
   </aside>
   <main class="main">
     {% block content %}{% endblock %}
@@ -110,6 +111,14 @@ async function api(url, opts){opts=opts||{};opts.headers=Object.assign(
 const r=await fetch(url, opts);const d=await r.json().catch(()=>({}));
 if(!r.ok){throw new Error(d.error||('HTTP '+r.status));}return d;}
 function esc(s){const d=document.createElement('div');d.textContent=String(s==null?'':s);return d.innerHTML;}
+async function doSignOut(e){
+  e.preventDefault();
+  try{
+    const r = await fetch('/auth_bp/logout', {method:'POST'});
+    const d = await r.json().catch(()=>({}));
+    window.location.href = d.redirect_url || '/auth_bp/login';
+  }catch(_){ window.location.href = '/auth_bp/login'; }
+}
 </script>
 {% block scripts %}{% endblock %}
 </body>
