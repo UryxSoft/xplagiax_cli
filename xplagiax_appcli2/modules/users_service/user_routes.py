@@ -335,10 +335,15 @@ def account():
             connected_providers = set()
 
         is_on_trial = bool(getattr(current_user, 'is_on_trial', False))
+        # Google/Microsoft-only accounts have no local password — the 2FA
+        # disable modals need this to swap "enter your password" for an
+        # emailed-code confirmation instead (see disable_2fa_send_code()).
+        has_password = bool(getattr(current_user, '_password_hash', None))
 
         return render_template('/user/account.html', user_data=user_data,
                                connected_providers=connected_providers,
                                is_on_trial=is_on_trial,
+                               has_password=has_password,
                                module='account')
 
     except Exception as e:

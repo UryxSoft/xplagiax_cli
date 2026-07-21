@@ -348,6 +348,34 @@ body.xp-split-active .ai-split-view {
     max-height: none;
 }
 
+/* ── Custom scrollbar también en los contenedores #aiSplitLeft/#aiSplitRight
+   (además de sus hijos .ai-split-text-content / .ai-split-results-scroll):
+   cualquier estado que llegue a desbordar el panel completo, no solo el
+   hijo esperado, hereda el mismo scrollbar de marca en vez del del SO. */
+#aiSplitLeft,
+#aiSplitRight {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(6,76,219,0.25) transparent;
+}
+#aiSplitLeft::-webkit-scrollbar,
+#aiSplitRight::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+#aiSplitLeft::-webkit-scrollbar-track,
+#aiSplitRight::-webkit-scrollbar-track {
+    background: transparent;
+}
+#aiSplitLeft::-webkit-scrollbar-thumb,
+#aiSplitRight::-webkit-scrollbar-thumb {
+    background: rgba(6,76,219,0.25);
+    border-radius: 6px;
+}
+#aiSplitLeft::-webkit-scrollbar-thumb:hover,
+#aiSplitRight::-webkit-scrollbar-thumb:hover {
+    background: rgba(6,76,219,0.45);
+}
+
 /* ── Override results-area inside split view ── */
 .ai-split-results-scroll .results-area {
     opacity: 1 !important;

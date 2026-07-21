@@ -1258,13 +1258,18 @@
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
     </div>
     <h3 id="tfaDisableTitle">Disable Two-Factor Authentication</h3>
-    <p class="sm-danger-modal-desc">
+    <p class="sm-danger-modal-desc" id="tfaDisableDesc">
       This removes the extra verification step from your login. Enter your
       password to confirm.
     </p>
-    <div class="sm-dc-field">
+    <div class="sm-dc-field" id="tfaDisablePasswordField">
       <label for="tfaDisablePassword">Current password</label>
       <input type="password" id="tfaDisablePassword" autocomplete="current-password" placeholder="Enter your password">
+    </div>
+    <div class="sm-dc-field" id="tfaDisableCodeField" style="display:none">
+      <label for="tfaDisableCode">Enter the 4-digit code from your email</label>
+      <input type="text" id="tfaDisableCode" class="sm-tfa-code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="4" placeholder="0000">
+      <button type="button" id="tfaDisableResendBtn" class="sm-btn sm-btn-ghost" style="font-size:12px;padding:6px 14px;margin-top:8px" onclick="tfaDisableSendCode()">Resend code</button>
     </div>
     <div class="sm-danger-modal-actions">
       <button class="sm-btn sm-btn-ghost" onclick="tfaCloseDisableModal()">Cancel</button>
@@ -1308,12 +1313,17 @@
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
     </div>
     <h3 id="emailOtpDisableTitle">Disable Email Verification</h3>
-    <p class="sm-danger-modal-desc">
+    <p class="sm-danger-modal-desc" id="emailOtpDisableDesc">
       This removes the email code step from your login. Enter your password to confirm.
     </p>
-    <div class="sm-dc-field">
+    <div class="sm-dc-field" id="emailOtpDisablePasswordField">
       <label for="emailOtpDisablePassword">Current password</label>
       <input type="password" id="emailOtpDisablePassword" autocomplete="current-password" placeholder="Enter your password">
+    </div>
+    <div class="sm-dc-field" id="emailOtpDisableCodeField" style="display:none">
+      <label for="emailOtpDisableCode">Enter the 4-digit code from your email</label>
+      <input type="text" id="emailOtpDisableCode" class="sm-tfa-code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="4" placeholder="0000">
+      <button type="button" id="emailOtpDisableResendBtn" class="sm-btn sm-btn-ghost" style="font-size:12px;padding:6px 14px;margin-top:8px" onclick="emailOtpDisableSendCode()">Resend code</button>
     </div>
     <div class="sm-danger-modal-actions">
       <button class="sm-btn sm-btn-ghost" onclick="emailOtpCloseDisableModal()">Cancel</button>
@@ -1354,6 +1364,11 @@
 <script src="{{ url_for('static', filename='js/trial_status.js') }}"></script>
 
 <script>
+/* Google/Microsoft-only accounts have no local password (see account()
+   in user_routes.py) — the 2FA disable modals below use this to ask for
+   an emailed code instead of "enter your password". */
+const HAS_PASSWORD = {{ has_password | tojson }};
+
 /* ───── Panel Navigation ─────────────────────────────────── */
 const panelMeta = {
   general:       { label: 'General',          desc: 'Your account overview and key information.' },
@@ -2338,18 +2353,56 @@ async function tfaSubmitVerifySetup() {
 
 function tfaOpenDisableModal() {
   document.getElementById('tfaDisablePassword').value = '';
+  document.getElementById('tfaDisableCode').value = '';
+  document.getElementById('tfaDisablePasswordField').style.display = HAS_PASSWORD ? 'block' : 'none';
+  document.getElementById('tfaDisableCodeField').style.display = HAS_PASSWORD ? 'none' : 'block';
+  document.getElementById('tfaDisableDesc').textContent = HAS_PASSWORD
+    ? 'This removes the extra verification step from your login. Enter your password to confirm.'
+    : "This removes the extra verification step from your login. Your account has no password (Google/Microsoft sign-in), so we'll email you a code to confirm instead.";
   document.getElementById('tfaDisableOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('tfaDisablePassword').focus(), 80);
+  if (HAS_PASSWORD) {
+    setTimeout(() => document.getElementById('tfaDisablePassword').focus(), 80);
+  } else {
+    tfaDisableSendCode(/* silent */ true);
+  }
 }
 
 function tfaCloseDisableModal() {
   document.getElementById('tfaDisableOverlay').classList.remove('open');
 }
 
+async function tfaDisableSendCode(silent) {
+  const resendBtn = document.getElementById('tfaDisableResendBtn');
+  if (resendBtn) resendBtn.disabled = true;
+  try {
+    const res = await fetch('/auth_bp/2fa/disable/send-code', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (!res.ok) { smToast(data.error || 'Could not send the code.', 'error'); return; }
+    if (!silent) smToast('A new code was sent.', 'success');
+    setTimeout(() => document.getElementById('tfaDisableCode').focus(), 80);
+  } catch (_) {
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    if (resendBtn) resendBtn.disabled = false;
+  }
+}
+
 async function tfaSubmitDisable() {
-  const pwEl = document.getElementById('tfaDisablePassword');
-  if (!pwEl.value) { pwEl.classList.add('invalid'); pwEl.focus(); return; }
-  pwEl.classList.remove('invalid');
+  const body = {};
+  if (HAS_PASSWORD) {
+    const pwEl = document.getElementById('tfaDisablePassword');
+    if (!pwEl.value) { pwEl.classList.add('invalid'); pwEl.focus(); return; }
+    pwEl.classList.remove('invalid');
+    body.password = pwEl.value;
+  } else {
+    const codeEl = document.getElementById('tfaDisableCode');
+    if (!/^\d{4}$/.test(codeEl.value.trim())) { codeEl.classList.add('invalid'); codeEl.focus(); return; }
+    codeEl.classList.remove('invalid');
+    body.code = codeEl.value.trim();
+  }
 
   const confirmBtn = document.getElementById('tfaDisableConfirmBtn');
   confirmBtn.disabled = true;
@@ -2358,7 +2411,7 @@ async function tfaSubmitDisable() {
     const res = await fetch('/auth_bp/2fa/disable', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pwEl.value })
+      body: JSON.stringify(body)
     });
     const data = await res.json();
     if (res.ok) {
@@ -2366,7 +2419,7 @@ async function tfaSubmitDisable() {
       tfaCloseDisableModal();
       smToast('Two-factor authentication disabled.', 'success');
     } else {
-      smToast(data.error || 'Incorrect password.', 'error');
+      smToast(data.error || (HAS_PASSWORD ? 'Incorrect password.' : 'Invalid or expired code.'), 'error');
     }
   } catch (_) {
     smToast('Connection error. Please try again.', 'error');
@@ -2486,18 +2539,56 @@ async function emailOtpSubmitVerifySetup() {
 
 function emailOtpOpenDisableModal() {
   document.getElementById('emailOtpDisablePassword').value = '';
+  document.getElementById('emailOtpDisableCode').value = '';
+  document.getElementById('emailOtpDisablePasswordField').style.display = HAS_PASSWORD ? 'block' : 'none';
+  document.getElementById('emailOtpDisableCodeField').style.display = HAS_PASSWORD ? 'none' : 'block';
+  document.getElementById('emailOtpDisableDesc').textContent = HAS_PASSWORD
+    ? 'This removes the email code step from your login. Enter your password to confirm.'
+    : "This removes the email code step from your login. Your account has no password (Google/Microsoft sign-in), so we'll email you a code to confirm instead.";
   document.getElementById('emailOtpDisableOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('emailOtpDisablePassword').focus(), 80);
+  if (HAS_PASSWORD) {
+    setTimeout(() => document.getElementById('emailOtpDisablePassword').focus(), 80);
+  } else {
+    emailOtpDisableSendCode(/* silent */ true);
+  }
 }
 
 function emailOtpCloseDisableModal() {
   document.getElementById('emailOtpDisableOverlay').classList.remove('open');
 }
 
+async function emailOtpDisableSendCode(silent) {
+  const resendBtn = document.getElementById('emailOtpDisableResendBtn');
+  if (resendBtn) resendBtn.disabled = true;
+  try {
+    const res = await fetch('/auth_bp/2fa/disable/send-code', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (!res.ok) { smToast(data.error || 'Could not send the code.', 'error'); return; }
+    if (!silent) smToast('A new code was sent.', 'success');
+    setTimeout(() => document.getElementById('emailOtpDisableCode').focus(), 80);
+  } catch (_) {
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    if (resendBtn) resendBtn.disabled = false;
+  }
+}
+
 async function emailOtpSubmitDisable() {
-  const pwEl = document.getElementById('emailOtpDisablePassword');
-  if (!pwEl.value) { pwEl.classList.add('invalid'); pwEl.focus(); return; }
-  pwEl.classList.remove('invalid');
+  const body = {};
+  if (HAS_PASSWORD) {
+    const pwEl = document.getElementById('emailOtpDisablePassword');
+    if (!pwEl.value) { pwEl.classList.add('invalid'); pwEl.focus(); return; }
+    pwEl.classList.remove('invalid');
+    body.password = pwEl.value;
+  } else {
+    const codeEl = document.getElementById('emailOtpDisableCode');
+    if (!/^\d{4}$/.test(codeEl.value.trim())) { codeEl.classList.add('invalid'); codeEl.focus(); return; }
+    codeEl.classList.remove('invalid');
+    body.code = codeEl.value.trim();
+  }
 
   const confirmBtn = document.getElementById('emailOtpDisableConfirmBtn');
   confirmBtn.disabled = true;
@@ -2506,7 +2597,7 @@ async function emailOtpSubmitDisable() {
     const res = await fetch('/auth_bp/2fa/email/disable', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pwEl.value })
+      body: JSON.stringify(body)
     });
     const data = await res.json();
     if (res.ok) {
@@ -2514,7 +2605,7 @@ async function emailOtpSubmitDisable() {
       emailOtpCloseDisableModal();
       smToast('Email verification disabled.', 'success');
     } else {
-      smToast(data.error || 'Incorrect password.', 'error');
+      smToast(data.error || (HAS_PASSWORD ? 'Incorrect password.' : 'Invalid or expired code.'), 'error');
     }
   } catch (_) {
     smToast('Connection error. Please try again.', 'error');

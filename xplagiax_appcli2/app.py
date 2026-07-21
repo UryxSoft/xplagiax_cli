@@ -240,6 +240,34 @@ def signin_js():
     response.headers['Pragma'] = 'no-cache'
     return response
 
+@app.route('/service-worker.js')
+def service_worker_killswitch():
+    """aitestpro_mobile_fix.js used to call navigator.serviceWorker.register('/service-worker.js')
+    on every page load, but this file never existed — any browser that
+    nonetheless installed one from it is stuck running that old worker
+    forever (clearing the HTTP cache doesn't remove a service worker), and
+    it intercepts every fetch on the origin ahead of the browser cache —
+    which defeats ?v= cache-busting on scripts like enhanced_signin.js and
+    explains the "must clear cache before login" symptom independent of
+    which OAuth provider is used. This unregisters it and reloads any tab
+    it still controls; the client-side register() call has been removed."""
+    js = (
+        "self.addEventListener('install', () => self.skipWaiting());\n"
+        "self.addEventListener('activate', (event) => {\n"
+        "  event.waitUntil(\n"
+        "    self.registration.unregister()\n"
+        "      .then(() => self.clients.matchAll({ type: 'window' }))\n"
+        "      .then((clients) => clients.forEach((client) => client.navigate(client.url)))\n"
+        "  );\n"
+        "});\n"
+    )
+    response = make_response(js)
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Service-Worker-Allowed'] = '/'
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    return response
+
 @app.route('/pdf/<path:filename>')
 @login_required
 def serve_pdf(filename):

@@ -2026,13 +2026,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize the application
     window.aiDetector = new AIDetectorApp();
-    
-    // Service worker registration for progressive web app
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(registration => console.log('SW registered:', registration))
-                .catch(error => console.log('SW registration failed:', error));
-        });
-    }
 });

@@ -1900,12 +1900,56 @@ def totp_verify_setup():
     return jsonify({'success': True, 'recovery_codes': plain_codes})
 
 
+@auth_bp.route('/2fa/disable/send-code', methods=['POST'])
+@login_required
+@limiter.limit("5 per 15 minutes")
+def disable_2fa_send_code():
+    """Google/Microsoft-only accounts have no _password_hash, so totp_disable()/
+    email_otp_disable() can't ask for "your current password" to confirm —
+    there isn't one. This sends the same 4-digit code used elsewhere for
+    email OTP to the account's own verified email instead, as an equivalent
+    proof of identity; the disable endpoints below accept it in place of a
+    password whenever the account has none."""
+    _ensure_email_otp_columns()
+    if not _send_email_otp_code(current_user):
+        return jsonify({'error': 'Could not send the confirmation code. Please try again.'}), 502
+    return jsonify({'success': True})
+
+
+def _confirm_sensitive_action(data):
+    """Shared confirmation check for disabling a 2FA method: password for
+    accounts that have one, or the emailed code from disable_2fa_send_code()
+    above for OAuth-only accounts that don't. Returns an error message
+    string on failure, or None on success (and clears the used code)."""
+    if current_user._password_hash:
+        password = data.get('password', '')
+        if not bcrypt.checkpw(password.encode('utf-8'), current_user._password_hash.encode('utf-8')):
+            current_app.logger.info('2fa/disable: user_id=%s wrong password', current_user.id)
+            return 'Incorrect password.'
+        return None
+
+    _ensure_email_otp_columns()
+    code = data.get('code', '')
+    if not email_otp_service.verify_code(code, current_user.email_otp_code_hash, current_user.email_otp_expires_at):
+        current_app.logger.info(
+            '2fa/disable: user_id=%s invalid/expired confirmation code (oauth-only account)',
+            current_user.id,
+        )
+        return 'Invalid or expired code. Request a new one and try again.'
+    current_user.email_otp_code_hash = None
+    current_user.email_otp_expires_at = None
+    return None
+
+
 @auth_bp.route('/2fa/disable', methods=['POST'])
 @login_required
+@limiter.limit("5 per 15 minutes")
 def totp_disable():
-    """Requires the current password — same bar as change_password() above.
-    Disabling 2FA lowers account security, so it deserves the same proof of
-    identity as the rest of this file's sensitive actions."""
+    """Requires the current password — same bar as change_password() above —
+    or, for accounts with no password (Google/Microsoft sign-in only), the
+    emailed code from disable_2fa_send_code(). Disabling 2FA lowers account
+    security, so it deserves the same proof of identity as the rest of this
+    file's sensitive actions, in whichever form the account actually has."""
     _ensure_totp_columns()
     if not current_user.totp_enabled:
         current_app.logger.info(
@@ -1913,12 +1957,10 @@ def totp_disable():
         )
         return jsonify({'error': 'Two-factor authentication is not enabled.'}), 400
 
-    password = (request.get_json(silent=True) or {}).get('password', '')
-    if not current_user._password_hash or not bcrypt.checkpw(
-        password.encode('utf-8'), current_user._password_hash.encode('utf-8')
-    ):
-        current_app.logger.info('2fa/disable: user_id=%s wrong password', current_user.id)
-        return jsonify({'error': 'Incorrect password.'}), 400
+    data = request.get_json(silent=True) or {}
+    error = _confirm_sensitive_action(data)
+    if error:
+        return jsonify({'error': error}), 400
 
     current_user.totp_enabled = False
     current_user.totp_secret = None
@@ -1988,8 +2030,10 @@ def email_otp_verify_setup():
 
 @auth_bp.route('/2fa/email/disable', methods=['POST'])
 @login_required
+@limiter.limit("5 per 15 minutes")
 def email_otp_disable():
-    """Requires the current password — same bar as totp_disable()."""
+    """Requires the current password, or (OAuth-only accounts) the emailed
+    code from disable_2fa_send_code() — same bar as totp_disable()."""
     _ensure_email_otp_columns()
     if not current_user.email_otp_enabled:
         current_app.logger.info(
@@ -1997,12 +2041,10 @@ def email_otp_disable():
         )
         return jsonify({'error': 'Email verification is not enabled.'}), 400
 
-    password = (request.get_json(silent=True) or {}).get('password', '')
-    if not current_user._password_hash or not bcrypt.checkpw(
-        password.encode('utf-8'), current_user._password_hash.encode('utf-8')
-    ):
-        current_app.logger.info('2fa/email/disable: user_id=%s wrong password', current_user.id)
-        return jsonify({'error': 'Incorrect password.'}), 400
+    data = request.get_json(silent=True) or {}
+    error = _confirm_sensitive_action(data)
+    if error:
+        return jsonify({'error': error}), 400
 
     current_user.email_otp_enabled = False
     current_user.email_otp_code_hash = None
