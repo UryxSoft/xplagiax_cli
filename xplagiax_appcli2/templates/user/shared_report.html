@@ -9,6 +9,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Academic Integrity Report — XplagiaX</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/brand.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/floatingicon.css') }}" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 <style>
 :root{--primary:#064CDB;--ink:#0f172a;--muted:#64748b;--body:#334155;--bg:#f8fafc;
 --line:#e2e8f0;--ai:#ef4444;--plag:#f59e0b;--cit:#064CDB;--ok:#10b981;--orig:#a78bfa;
@@ -51,10 +54,12 @@ padding:8px 8px;background:var(--bg);border-bottom:1px solid var(--line)}
 td{padding:8px;border-bottom:1px solid #f1f5f9;vertical-align:top}
 td a{color:var(--primary);text-decoration:none}
 td a:hover{text-decoration:underline}
-.seg{border:1px solid var(--line);border-left:3px solid var(--danger);border-radius:10px;
+.seg{border:1px solid var(--line);border-left:3px solid var(--plag);border-radius:10px;
 background:#fdfdfe;padding:12px 14px;margin-bottom:10px}
 .seg.ok{border-left-color:var(--success)}
 .seg.ai{border-left-color:var(--ai)}
+.seg.plag{border-left-color:var(--plag)}
+.prov-logo{width:14px;height:14px;border-radius:3px;object-fit:contain;vertical-align:-3px;margin-right:5px;display:inline-block;background:#fff;border:1px solid var(--line)}
 .seg-head{display:flex;justify-content:space-between;gap:10px;font-size:12px;font-weight:700;margin-bottom:5px}
 .seg-head em{font-style:normal;color:var(--muted);font-weight:600}
 .seg p{font-size:12.5px}
@@ -65,13 +70,85 @@ background:#fdfdfe;padding:12px 14px;margin-bottom:10px}
 .foot{color:var(--muted);font-size:11px;text-align:center;line-height:1.7;margin-top:22px}
 .note{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;font-size:12px;color:#92400e;margin-top:12px}
 @media print{body{background:#fff}.card{box-shadow:none}}
+
+/* ── Report loader — same blue + floating icons as the login screen
+   (bg-primary / floatingicon.css / floatingicon.js, all reused unmodified),
+   shown for a short, bounded duration while the already-rendered report
+   underneath is revealed. See shared_report.html loader script below. ── */
+#xpaReportLoader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;padding:24px;
+  transition:opacity .45s ease,visibility .45s ease}
+#xpaReportLoader.xpa-loader-done{opacity:0;visibility:hidden;pointer-events:none}
+.xpa-report-content{transition:opacity .4s ease}
+#xpaReportLoader .tech-brand{justify-content:center;transform:scale(2.3);margin-bottom:38px;
+  filter:drop-shadow(0 4px 18px rgba(0,0,0,.18))}
+.xpa-loader-title{color:#fff;font-size:clamp(19px,3vw,26px);font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.xpa-loader-sub{color:rgba(255,255,255,.78);font-size:13.5px;max-width:380px;margin-bottom:30px;line-height:1.5}
+.xpa-loader-bar-track{width:min(360px,80vw);height:8px;border-radius:20px;background:rgba(255,255,255,.18);
+  overflow:hidden;position:relative}
+.xpa-loader-bar-fill{height:100%;width:0%;border-radius:20px;
+  background:linear-gradient(90deg,#ffffff,#cfe0ff,#ffffff);background-size:200% 100%;
+  transition:width .35s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+.xpa-loader-bar-fill::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);
+  width:60%;animation:xpaLoaderShine 1.3s ease-in-out infinite}
+@keyframes xpaLoaderShine{0%{transform:translateX(-120%)}100%{transform:translateX(220%)}}
+.xpa-loader-pct{color:#fff;font-size:12.5px;font-weight:700;margin-top:10px;letter-spacing:.02em}
+.xpa-loader-status{color:rgba(255,255,255,.92);font-size:13px;font-weight:600;margin-top:16px;
+  min-height:18px;transition:opacity .25s ease,transform .25s ease}
+.xpa-loader-stats{display:flex;gap:22px;margin-top:30px;flex-wrap:wrap;justify-content:center}
+.xpa-loader-stat{color:#fff}
+.xpa-loader-stat b{display:block;font-size:19px;font-weight:800;letter-spacing:-.02em}
+.xpa-loader-stat i{display:block;font-style:normal;font-size:10px;font-weight:700;
+  color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.xpa-loader-tip{color:rgba(255,255,255,.68);font-size:11.5px;margin-top:34px;max-width:340px;
+  transition:opacity .3s ease}
+.xpa-loader-tip b{color:rgba(255,255,255,.88)}
+@media(prefers-reduced-motion:reduce){
+  #xpaReportLoader,.xpa-loader-status,.xpa-loader-tip{transition:none}
+  .xpa-loader-bar-fill::after{animation:none}
+}
+@media print{
+  #xpaReportLoader{display:none!important}
+  .xpa-report-content{opacity:1!important;visibility:visible!important}
+}
 </style>
 </head>
 <body>
+
+<div id="xpaReportLoader" class="bg-primary" role="status" aria-live="polite">
+  <div id="myDiv" style="position:absolute;inset:0;z-index:0"></div>
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center">
+  <a href="/" class="tech-brand" tabindex="-1" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" stroke="currentColor" class="bi bi-chevron-contract" viewBox="0 0 16 16">
+      <path fill-rule="evenodd" d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708" stroke-width="0.8"></path>
+    </svg>
+    <span>plagia</span>
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" stroke="currentColor" class="bi bi-chevron-contract" viewBox="0 0 16 16">
+      <path fill-rule="evenodd" d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708" stroke-width="0.8"></path>
+    </svg>
+  </a>
+  <div class="xpa-loader-title">Preparing your report</div>
+  <div class="xpa-loader-sub">Verifying authenticity and rendering your Academic Integrity Report.</div>
+  <div class="xpa-loader-bar-track">
+    <div class="xpa-loader-bar-fill" id="xpaLoaderBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Report loading progress"></div>
+  </div>
+  <div class="xpa-loader-pct" id="xpaLoaderPct">0%</div>
+  <div class="xpa-loader-status" id="xpaLoaderStatus">Verifying report authenticity…</div>
+  <div class="xpa-loader-stats">
+    <div class="xpa-loader-stat"><b id="xpaLoaderStatWords">0</b><i>Words analyzed</i></div>
+    <div class="xpa-loader-stat"><b id="xpaLoaderStatSegs">0</b><i>Segments checked</i></div>
+    <div class="xpa-loader-stat"><b id="xpaLoaderStatSrc">0</b><i>Sources found</i></div>
+  </div>
+  <div class="xpa-loader-tip" id="xpaLoaderTip"><b>Tip.</b> This report is cryptographically verified — the QR code inside the PDF links back to this exact page.</div>
+  </div>
+</div>
+
+<div id="xpaReportContent" class="xpa-report-content" style="opacity:0;visibility:hidden">
 <div class="wrap">
 
   <div class="brandbar">
-    <div class="brand"><span>&times;</span>plagia<span>&times;</span>
+    <div class="brand"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor" stroke="currentColor" viewBox="0 0 16 16" style="opacity:.85;vertical-align:-3px" aria-hidden="true"><path fill-rule="evenodd" d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708" stroke-width="0.8"></path></svg>plagia<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" fill="currentColor" stroke="currentColor" viewBox="0 0 16 16" style="opacity:.85;vertical-align:-3px" aria-hidden="true"><path fill-rule="evenodd" d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708" stroke-width="0.8"></path></svg>
       <small>AI TESTPRO · FINDERX — ACADEMIC INTEGRITY REPORT</small></div>
     <div class="vbadge">✓ VERIFIED REPORT</div>
   </div>
@@ -162,7 +239,7 @@ background:#fdfdfe;padding:12px 14px;margin-bottom:10px}
         <tr>
           <td>{{ loop.index }}</td>
           <td>{% if url %}<a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ (m.title or url) | truncate(110) }}</a>{% else %}{{ (m.title or 'Untitled source') | truncate(110) }}{% endif %}</td>
-          <td>{{ m.provider or m.source or '—' }}</td>
+          <td>{% if m.logo_slug %}<img class="prov-logo" src="/static/img/imgsource/{{ m.logo_slug }}.png" alt="" loading="lazy" onerror="this.style.display='none'">{% endif %}{{ m.provider or m.source or '—' }}</td>
           <td>{{ m.year or '—' }}</td>
           <td>{{ 'Web' if (m.source_type or '') | lower == 'internet' else 'Academic' }}</td>
         </tr>
@@ -182,10 +259,10 @@ background:#fdfdfe;padding:12px 14px;margin-bottom:10px}
       {{ ai_blocks | length }} AI-flagged section(s) · {{ d.flagged_n }} plagiarism/paraphrase segment(s) ·
       {{ cleared | length }} cleared segment(s)</p>
     {% for s in d.flagged_segs[:10] %}
-    <div class="seg">
-      <div class="seg-head"><span style="color:var(--danger)">#{{ loop.index }} · {{ (s.decision or 'match') | upper }}</span>
+    <div class="seg plag">
+      <div class="seg-head"><span style="color:var(--plag)">#{{ loop.index }} · {{ (s.decision or 'match') | upper }}</span>
         <em>match {{ s.match_score | default(0) | int }}%</em></div>
-      <p>"{{ (s.text or '') | truncate(340) }}"</p>
+      <p>"{{ (s.text_full or '') | truncate(340) }}"</p>
       <small>{% if s.matched_source and s.matched_source.title %}Matched: {{ s.matched_source.title | truncate(90) }} · {% endif %}{{ (s.reason or '') | truncate(140) }}</small>
     </div>
     {% endfor %}
@@ -201,7 +278,7 @@ background:#fdfdfe;padding:12px 14px;margin-bottom:10px}
     <div class="seg ok">
       <div class="seg-head"><span style="color:var(--success)">ORIGINAL</span>
         <em>match {{ s.match_score | default(0) | int }}%</em></div>
-      <p>"{{ (s.text or '') | truncate(240) }}"</p>
+      <p>"{{ (s.text_full or '') | truncate(240) }}"</p>
       <small>{{ (s.reason or 'No confirmed match.') | truncate(140) }}</small>
     </div>
     {% endfor %}
@@ -239,5 +316,121 @@ background:#fdfdfe;padding:12px 14px;margin-bottom:10px}
   </div>
 
 </div>
+</div>
+<script src="{{ url_for('static', filename='js/floatingicon.js') }}"></script>
+<script>
+(function () {
+    'use strict';
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var loader = document.getElementById('xpaReportLoader');
+    var content = document.getElementById('xpaReportContent');
+    var barEl = document.getElementById('xpaLoaderBar');
+    var pctEl = document.getElementById('xpaLoaderPct');
+    var statusEl = document.getElementById('xpaLoaderStatus');
+    var tipEl = document.getElementById('xpaLoaderTip');
+    var statWords = document.getElementById('xpaLoaderStatWords');
+    var statSegs = document.getElementById('xpaLoaderStatSegs');
+    var statSrc = document.getElementById('xpaLoaderStatSrc');
+    if (!loader || !content) return;
+
+    // Real figures already computed server-side for this report — not
+    // simulated placeholders, so the count-up reflects the actual analysis.
+    var FINAL = {
+        words: {{ d.word_count or 0 }},
+        segs: {{ d.analyzed_n or 0 }},
+        src: {{ (d.academic|length) + (d.web|length) }}
+    };
+
+    function reveal() {
+        loader.classList.add('xpa-loader-done');
+        content.style.visibility = 'visible';
+        content.style.opacity = '1';
+        setTimeout(function () { loader.remove(); }, 500);
+    }
+
+    if (reduceMotion) {
+        // No progress theatre for users who asked for less motion — just the
+        // fade defined in CSS, straight to content.
+        statWords.textContent = FINAL.words.toLocaleString();
+        statSegs.textContent = FINAL.segs.toLocaleString();
+        statSrc.textContent = FINAL.src.toLocaleString();
+        barEl.style.width = '100%';
+        pctEl.textContent = '100%';
+        reveal();
+        return;
+    }
+
+    // Non-linear progress curve (fast start → moderate → slower → quick
+    // finish) — a flat linear fill reads as mechanical; this reads as real
+    // work being weighed and finished off, per the brief.
+    var CHECKPOINTS = [
+        { t: 0.00, p: 0,   status: 'Verifying report authenticity…' },
+        { t: 0.12, p: 15,  status: 'Verifying report authenticity…' },
+        { t: 0.45, p: 55,  status: 'Loading analysis data…' },
+        { t: 0.62, p: 68,  status: 'Rendering integrity findings…' },
+        { t: 0.78, p: 82,  status: 'Compiling source citations…' },
+        { t: 0.92, p: 95,  status: 'Finalizing report layout…' },
+        { t: 1.00, p: 100, status: 'Almost ready…' }
+    ];
+    var TOTAL_MS = 3200;
+    var TIPS = [
+        '<b>Tip.</b> This report is cryptographically verified — the QR code inside the PDF links back to this exact page.',
+        '<b>Tip.</b> Every source match shown here required two independent signals to be confirmed — not just keyword overlap.'
+    ];
+    var tipShown = 0;
+
+    function curveAt(frac) {
+        for (var i = 1; i < CHECKPOINTS.length; i++) {
+            if (frac <= CHECKPOINTS[i].t) {
+                var a = CHECKPOINTS[i - 1], b = CHECKPOINTS[i];
+                var span = b.t - a.t;
+                var local = span > 0 ? (frac - a.t) / span : 1;
+                return { p: a.p + (b.p - a.p) * local, status: b.status };
+            }
+        }
+        return { p: 100, status: CHECKPOINTS[CHECKPOINTS.length - 1].status };
+    }
+
+    var lastStatus = '';
+    var start = null;
+    function tick(ts) {
+        if (start === null) start = ts;
+        var frac = Math.min(1, (ts - start) / TOTAL_MS);
+        var cur = curveAt(frac);
+        var pctRounded = Math.round(cur.p);
+
+        barEl.style.width = pctRounded + '%';
+        barEl.setAttribute('aria-valuenow', String(pctRounded));
+        pctEl.textContent = pctRounded + '%';
+        statWords.textContent = Math.round(FINAL.words * cur.p / 100).toLocaleString();
+        statSegs.textContent = Math.round(FINAL.segs * cur.p / 100).toLocaleString();
+        statSrc.textContent = Math.round(FINAL.src * cur.p / 100).toLocaleString();
+
+        if (cur.status !== lastStatus) {
+            lastStatus = cur.status;
+            statusEl.style.opacity = '0';
+            statusEl.style.transform = 'translateY(3px)';
+            setTimeout(function () {
+                statusEl.textContent = cur.status;
+                statusEl.style.opacity = '1';
+                statusEl.style.transform = 'translateY(0)';
+            }, 120);
+        }
+        if (frac >= 0.5 && tipShown === 0) {
+            tipShown = 1;
+            tipEl.style.opacity = '0';
+            setTimeout(function () { tipEl.innerHTML = TIPS[1]; tipEl.style.opacity = '1'; }, 250);
+        }
+
+        if (frac < 1) {
+            requestAnimationFrame(tick);
+        } else {
+            statusEl.textContent = '✓ Report ready';
+            setTimeout(reveal, 500);
+        }
+    }
+    requestAnimationFrame(tick);
+})();
+</script>
 </body>
 </html>

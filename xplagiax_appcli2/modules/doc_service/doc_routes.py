@@ -4513,8 +4513,9 @@ def history_clear():
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# Compartir análisis (historial) — con usuarios de la plataforma (aparece en su
-# historial como "shared") o con correos externos (email HTML + PDF adjunto).
+# Compartir análisis (historial) — TODOS los destinatarios reciben el email
+# HTML + PDF adjunto; si además son usuarios de la plataforma, el análisis
+# también aparece en su historial (marcado como "shared").
 # Solo planes de pago (mismo gate que el historial: no Starter).
 # ════════════════════════════════════════════════════════════════════════════
 _SHARES_TABLE_READY = False
@@ -4590,7 +4591,7 @@ def _share_email_html(entry, sender_email):
   <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
     <div style="background:{B['primary']};padding:20px 26px;">
       <div style="color:#ffffff;font-size:17px;font-weight:800;letter-spacing:.02em;">
-        <span style="opacity:.85;">&times;</span>plagia<span style="opacity:.85;">&times;</span>
+        <img src="{PUBLIC_REPORT_BASE}/static/img/brand/chevron-white.png" width="15" height="15" alt="&times;" style="vertical-align:-2px;opacity:.85;border:0;display:inline">plagia<img src="{PUBLIC_REPORT_BASE}/static/img/brand/chevron-white.png" width="15" height="15" alt="&times;" style="vertical-align:-2px;opacity:.85;border:0;display:inline">
       </div>
       <div style="color:rgba(255,255,255,.75);font-size:12px;margin-top:2px;">AI TestPro · FinderX — Analysis Report</div>
     </div>
@@ -4668,30 +4669,38 @@ def history_share(hid):
         share = AnalysisShare(analysis_id=entry.id, owner_id=current_user.id,
                               shared_with_id=target.id if target else None, email=email)
         db.session.add(share)
-        if target:
-            results.append({'email': email, 'status': 'shared'})
-        else:
-            # Externo: email HTML profesional + PDF adjunto (best-effort por destinatario).
-            # Usa EmailService (provider + fallback) en vez del objeto `mail` global de
-            # settings.connections: ese nunca recibe mail.init_app(app) en app.py, así
-            # que mail.send() siempre lanzaba (RuntimeError: extensión no registrada) y
-            # todo external share terminaba en status 'error' pase lo que pase.
-            try:
-                from settings.email_service import EmailService
-                if pdf_bytes is None:
-                    pdf_bytes = _share_pdf_bytes(entry, current_user.email)
-                result = EmailService.send_email(
-                    subject=f'{current_user.email} shared an XplagiaX analysis with you',
-                    recipients=[email],
-                    html_content=_share_email_html(entry, current_user.email),
-                    provider='noreply', fallback_provider='gmail',
-                    attachments=[('xplagiax-analysis-report.pdf', 'application/pdf', pdf_bytes)],
-                )
-                if not result['success']:
-                    raise RuntimeError(result['message'])
-                results.append({'email': email, 'status': 'emailed'})
-            except Exception:
-                logger.exception('share email failed for %s', email)
+        # Always email the report — previously a registered recipient only got
+        # the in-app history entry and no email, so they'd never know to look
+        # unless they happened to open XplagiaX. Now everyone gets the PDF
+        # report by email regardless of account status; registered users keep
+        # the in-app share on top of that.
+        # Uses EmailService (provider + fallback) instead of the global `mail`
+        # object from settings.connections: that one never gets mail.init_app(app)
+        # in app.py, so mail.send() always raised (RuntimeError: extension not
+        # registered) and every share used to end in status 'error' regardless.
+        try:
+            from settings.email_service import EmailService
+            if pdf_bytes is None:
+                pdf_bytes = _share_pdf_bytes(entry, current_user.email)
+            result = EmailService.send_email(
+                subject=f'{current_user.email} shared an XplagiaX analysis with you',
+                recipients=[email],
+                html_content=_share_email_html(entry, current_user.email),
+                provider='noreply', fallback_provider='gmail',
+                attachments=[('xplagiax-analysis-report.pdf', 'application/pdf', pdf_bytes)],
+            )
+            if not result['success']:
+                raise RuntimeError(result['message'])
+            results.append({'email': email, 'status': 'shared_and_emailed' if target else 'emailed'})
+        except Exception:
+            logger.exception('share email failed for %s', email)
+            if target:
+                # Registered user: keep the in-app share even though the email
+                # didn't go out — they still have another way to see it.
+                results.append({'email': email, 'status': 'shared_email_failed'})
+            else:
+                # Non-user: email is their ONLY access path — no point keeping
+                # a share row they can never reach.
                 db.session.expunge(share)
                 results.append({'email': email, 'status': 'error', 'reason': 'email delivery failed'})
     db.session.commit()

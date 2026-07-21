@@ -1,0 +1,19 @@
+{% extends 'emails/base.html' %}
+{% block title %}Your verification code{% endblock %}
+{% block eyebrow %}Sign-in verification{% endblock %}
+{% block content %}
+<p style="margin:0 0 6px;font-size:13px;color:#64748b;">Hi <b style="color:#0f172a;">{{ user_name }}</b>,</p>
+<h2 style="margin:0 0 14px;font-size:17px;line-height:1.35;color:#0f172a;">Your sign-in verification code</h2>
+<p style="margin:0 0 20px;font-size:13px;line-height:1.6;color:#334155;">
+  Enter this code to finish signing in to your XplagiaX account. It expires in {{ ttl_minutes }} minutes.
+</p>
+<div style="text-align:center;margin:0 0 20px;">
+  <span style="display:inline-block;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;
+              padding:16px 28px;font-size:32px;font-weight:800;letter-spacing:.35em;color:#064CDB;">{{ code }}</span>
+</div>
+<div style="margin-top:16px;padding:14px 16px;background:#fffbeb;border-left:3px solid #d97706;
+            border-radius:0 10px 10px 0;font-size:13px;line-height:1.55;color:#92400e;">
+  <b>Didn't try to sign in?</b> Someone may have your password — change it right away and
+  contact support if this keeps happening.
+</div>
+{% endblock %}

@@ -386,7 +386,7 @@
                 <form class="form" id="tfaLoginForm" style="display:none">
                     <div class="form-header">
                         <h2>Two-Factor Authentication</h2>
-                        <p>Enter the 6-digit code from your authenticator app.</p>
+                        <p id="tfaStepDesc">Enter the 6-digit code from your authenticator app.</p>
                     </div>
 
                     <div class="form-group">
@@ -407,8 +407,11 @@
                         <div class="progress-bar" id="tfaProgressBar"></div>
                     </button>
 
-                    <div class="signup-link">
+                    <div class="signup-link" id="tfaRecoveryHint">
                         Lost access to your app? Use one of your recovery codes instead — same field.
+                    </div>
+                    <div class="signup-link" id="tfaUseEmailWrap" style="display:none;margin-top:6px">
+                        <a href="javascript:void(0)" id="tfaUseEmailLink">Send a code to my email instead</a>
                     </div>
                     <div class="signup-link" style="margin-top:6px">
                         <a href="javascript:void(0)" id="tfaBackToLoginLink">&larr; Back to sign in</a>

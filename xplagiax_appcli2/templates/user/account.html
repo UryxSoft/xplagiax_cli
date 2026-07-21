@@ -661,6 +661,16 @@
                   <span class="sm-switch-track"></span>
                 </label>
               </div>
+              <div style="display:flex;justify-content:space-between;width:100%;align-items:center;border-top:1px solid var(--sm-border);padding-top:12px">
+                <div class="sm-row-left">
+                  <div class="sm-row-label">Email Verification</div>
+                  <div class="sm-row-desc" id="emailOtpStatusDesc">Require a 4-digit code sent to your email when signing in — works with email/password, Google and Microsoft sign-in.</div>
+                </div>
+                <label class="sm-switch" aria-label="Enable Email Verification 2FA">
+                  <input type="checkbox" id="emailOtpSwitch" onchange="emailOtpOnSwitchToggle(this)">
+                  <span class="sm-switch-track"></span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -1266,6 +1276,55 @@
   </div>
 </div>
 
+<!-- ── Enable Email Verification 2FA — setup modal (send code, then confirm) ── -->
+<div class="sm-danger-modal-overlay" id="emailOtpSetupOverlay" role="dialog" aria-modal="true" aria-labelledby="emailOtpSetupTitle">
+  <div class="sm-danger-modal sm-modal-accent">
+    <div class="sm-danger-modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <h3 id="emailOtpSetupTitle">Set Up Email Verification</h3>
+    <p class="sm-danger-modal-desc" id="emailOtpSetupDesc">
+      We just sent a 4-digit code to <b id="emailOtpSetupEmail">{{ user_data.email }}</b>. Enter it below to confirm.
+    </p>
+    <div class="sm-dc-field">
+      <label for="emailOtpSetupCode">Enter the 4-digit code from your email</label>
+      <input type="text" id="emailOtpSetupCode" class="sm-tfa-code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="4" placeholder="0000">
+    </div>
+    <button type="button" id="emailOtpResendBtn" class="sm-btn sm-btn-ghost" style="font-size:12px;padding:6px 14px;margin-top:4px" onclick="emailOtpResendSetupCode()">Resend code</button>
+    <div class="sm-danger-modal-actions">
+      <button class="sm-btn sm-btn-ghost" id="emailOtpSetupCancelBtn" onclick="emailOtpCloseSetupModal()">Cancel</button>
+      <button class="sm-btn sm-btn-accent-solid" id="emailOtpSetupConfirmBtn" onclick="emailOtpSubmitVerifySetup()">
+        <span class="sm-danger-modal-spin" style="border-color:rgba(255,255,255,.35);border-top-color:#fff;display:none"></span>
+        <span>Verify &amp; Enable</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Disable Email Verification 2FA — password confirmation modal ─────── -->
+<div class="sm-danger-modal-overlay" id="emailOtpDisableOverlay" role="dialog" aria-modal="true" aria-labelledby="emailOtpDisableTitle">
+  <div class="sm-danger-modal">
+    <div class="sm-danger-modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <h3 id="emailOtpDisableTitle">Disable Email Verification</h3>
+    <p class="sm-danger-modal-desc">
+      This removes the email code step from your login. Enter your password to confirm.
+    </p>
+    <div class="sm-dc-field">
+      <label for="emailOtpDisablePassword">Current password</label>
+      <input type="password" id="emailOtpDisablePassword" autocomplete="current-password" placeholder="Enter your password">
+    </div>
+    <div class="sm-danger-modal-actions">
+      <button class="sm-btn sm-btn-ghost" onclick="emailOtpCloseDisableModal()">Cancel</button>
+      <button class="sm-btn sm-btn-danger-solid" id="emailOtpDisableConfirmBtn" onclick="emailOtpSubmitDisable()">
+        <span class="sm-danger-modal-spin"></span>
+        <span>Disable</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 
 <!-- ── Cancel Subscription Modal ────────────────────────── -->
 <div id="cancelModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);z-index:99998;display:none;align-items:center;justify-content:center;">
@@ -1642,6 +1701,7 @@ document.addEventListener('DOMContentLoaded', () => {
   smLoadAutoArchive();
   smLoadAiPlugins();
   tfaLoadStatus();
+  emailOtpLoadStatus();
 });
 
 /* ───── Privacy: Document Retention ──────────────────────── */
@@ -2305,6 +2365,154 @@ async function tfaSubmitDisable() {
       document.getElementById('tfaSwitch').checked = false;
       tfaCloseDisableModal();
       smToast('Two-factor authentication disabled.', 'success');
+    } else {
+      smToast(data.error || 'Incorrect password.', 'error');
+    }
+  } catch (_) {
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    confirmBtn.disabled = false;
+    confirmBtn.classList.remove('loading');
+  }
+}
+
+/* ───── Security: Email Verification (2FA, second method) ─────────
+   Same on/off-never-flips-until-confirmed contract as the TOTP switch above
+   (see its comment) — for the same reason: the switch must reflect what the
+   server actually has active, not what the user just clicked. No QR/pairing
+   step here — "setup" IS "send a code", confirmed by entering it back. */
+async function emailOtpLoadStatus(retrying) {
+  const el = document.getElementById('emailOtpSwitch');
+  if (!el) return;
+  try {
+    const res = await fetch('/auth_bp/2fa/email/status', { credentials: 'include' });
+    if (!res.ok) throw new Error('status ' + res.status);
+    const data = await res.json();
+    el.checked = !!data.enabled;
+    el.disabled = false;
+    el.title = '';
+  } catch (_) {
+    if (!retrying) { setTimeout(() => emailOtpLoadStatus(true), 1200); return; }
+    el.disabled = true;
+    el.title = 'Could not load status. Reload the page to try again.';
+  }
+}
+
+function emailOtpOnSwitchToggle(el) {
+  if (el.checked) {
+    el.checked = false;
+    emailOtpOpenSetupModal();
+  } else {
+    el.checked = true;
+    emailOtpOpenDisableModal();
+  }
+}
+
+async function emailOtpOpenSetupModal() {
+  const overlay = document.getElementById('emailOtpSetupOverlay');
+  document.getElementById('emailOtpSetupCode').value = '';
+  overlay.classList.add('open');
+  await emailOtpResendSetupCode(/* silent */ true);
+}
+
+async function emailOtpResendSetupCode(silent) {
+  const confirmBtn = document.getElementById('emailOtpSetupConfirmBtn');
+  const resendBtn = document.getElementById('emailOtpResendBtn');
+  if (resendBtn) resendBtn.disabled = true;
+  try {
+    const res = await fetch('/auth_bp/2fa/email/setup', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      document.getElementById('emailOtpSetupOverlay').classList.remove('open');
+      if (res.status === 400 && /already enabled/i.test(data.error || '')) {
+        smToast('Email verification is already enabled on this account.', 'error');
+        emailOtpLoadStatus();
+        return;
+      }
+      smToast(data.error || 'Could not send the code.', 'error');
+      return;
+    }
+    if (!silent) smToast('A new code was sent.', 'success');
+    setTimeout(() => document.getElementById('emailOtpSetupCode').focus(), 80);
+  } catch (_) {
+    smToast('Connection error. Please try again.', 'error');
+    document.getElementById('emailOtpSetupOverlay').classList.remove('open');
+  } finally {
+    if (resendBtn) resendBtn.disabled = false;
+  }
+}
+
+function emailOtpCloseSetupModal() {
+  document.getElementById('emailOtpSetupOverlay').classList.remove('open');
+}
+
+async function emailOtpSubmitVerifySetup() {
+  const codeEl = document.getElementById('emailOtpSetupCode');
+  const code = codeEl.value.trim();
+  if (!/^\d{4}$/.test(code)) {
+    smToast('Enter the 4-digit code from your email.', 'error');
+    codeEl.focus();
+    return;
+  }
+  const confirmBtn = document.getElementById('emailOtpSetupConfirmBtn');
+  confirmBtn.disabled = true;
+  confirmBtn.classList.add('loading');
+  confirmBtn.querySelector('.sm-danger-modal-spin').style.display = 'inline-block';
+  try {
+    const res = await fetch('/auth_bp/2fa/email/verify-setup', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      smToast(data.error || 'Invalid or expired code.', 'error');
+      return;
+    }
+    emailOtpCloseSetupModal();
+    document.getElementById('emailOtpSwitch').checked = true;
+    smToast('Email verification enabled.', 'success');
+  } catch (_) {
+    smToast('Connection error. Please try again.', 'error');
+  } finally {
+    confirmBtn.disabled = false;
+    confirmBtn.classList.remove('loading');
+    confirmBtn.querySelector('.sm-danger-modal-spin').style.display = 'none';
+  }
+}
+
+function emailOtpOpenDisableModal() {
+  document.getElementById('emailOtpDisablePassword').value = '';
+  document.getElementById('emailOtpDisableOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('emailOtpDisablePassword').focus(), 80);
+}
+
+function emailOtpCloseDisableModal() {
+  document.getElementById('emailOtpDisableOverlay').classList.remove('open');
+}
+
+async function emailOtpSubmitDisable() {
+  const pwEl = document.getElementById('emailOtpDisablePassword');
+  if (!pwEl.value) { pwEl.classList.add('invalid'); pwEl.focus(); return; }
+  pwEl.classList.remove('invalid');
+
+  const confirmBtn = document.getElementById('emailOtpDisableConfirmBtn');
+  confirmBtn.disabled = true;
+  confirmBtn.classList.add('loading');
+  try {
+    const res = await fetch('/auth_bp/2fa/email/disable', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwEl.value })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('emailOtpSwitch').checked = false;
+      emailOtpCloseDisableModal();
+      smToast('Email verification disabled.', 'success');
     } else {
       smToast(data.error || 'Incorrect password.', 'error');
     }

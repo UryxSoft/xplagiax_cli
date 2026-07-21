@@ -21,20 +21,56 @@
     // pending_token identifica la sesión a medio autenticar (firmado server-side,
     // expira en 5 min — ver auth_routes_fixed.py). remember_me viaja aparte porque
     // el checkbox pertenece al form de login, que queda oculto durante este paso.
+    // tfaMethods: qué método(s) tiene activos la cuenta ('totp' y/o 'email') —
+    // controla el texto/maxlength del paso y si se ofrece "usar email en su lugar".
     let tfaPendingToken = null;
     let tfaRememberMe = false;
+    let tfaMethods = ['totp'];
+    let tfaActiveMethod = 'totp'; // cuál de los dos está mostrando el input ahora mismo
 
     const tfaLoginForm = document.getElementById('tfaLoginForm');
     const tfaBackLink = document.getElementById('tfaBackToLoginLink');
+    const tfaUseEmailLink = document.getElementById('tfaUseEmailLink');
 
-    function showTfaStep(pendingToken, rememberMe) {
+    // Adapta copy/maxlength/hints del paso 2FA al método activo. Se llama al
+    // entrar al paso y de nuevo si el usuario pasa a "usar email en su lugar".
+    function applyTfaMethodUI(method) {
+        tfaActiveMethod = method;
+        const desc = document.getElementById('tfaStepDesc');
+        const codeInput = document.getElementById('tfa_code');
+        const recoveryHint = document.getElementById('tfaRecoveryHint');
+        const useEmailWrap = document.getElementById('tfaUseEmailWrap');
+        const bothMethods = tfaMethods.includes('totp') && tfaMethods.includes('email');
+
+        if (method === 'email') {
+            if (desc) desc.textContent = 'Enter the 4-digit code we emailed you.';
+            if (codeInput) { codeInput.maxLength = 4; codeInput.placeholder = '0000'; }
+            if (recoveryHint) recoveryHint.style.display = 'none';
+            if (useEmailWrap) useEmailWrap.style.display = 'none';
+        } else {
+            if (desc) desc.textContent = 'Enter the 6-digit code from your authenticator app.';
+            if (codeInput) { codeInput.maxLength = 6; codeInput.placeholder = '000000'; }
+            if (recoveryHint) recoveryHint.style.display = '';
+            // Solo se ofrece el atajo "usar email" cuando la cuenta de verdad
+            // tiene AMBOS métodos activos — si solo tiene TOTP, no hay a dónde
+            // mandar el código.
+            if (useEmailWrap) useEmailWrap.style.display = bothMethods ? '' : 'none';
+        }
+    }
+
+    function showTfaStep(pendingToken, rememberMe, methods) {
         tfaPendingToken = pendingToken;
         tfaRememberMe = rememberMe;
+        tfaMethods = Array.isArray(methods) && methods.length ? methods : ['totp'];
         loginForm.style.display = 'none';
         if (tfaLoginForm) {
             tfaLoginForm.style.display = 'block';
             const codeInput = document.getElementById('tfa_code');
             if (codeInput) { codeInput.value = ''; setTimeout(() => codeInput.focus(), 60); }
+            // Método por defecto al entrar: TOTP si la cuenta lo tiene (ya se
+            // mostró el paso porque el código llegó vía app), si no, email
+            // (que login()/las OAuth callbacks ya dispararon el envío para).
+            applyTfaMethodUI(tfaMethods.includes('totp') ? 'totp' : 'email');
         }
     }
 
@@ -47,6 +83,32 @@
 
     if (tfaBackLink) {
         tfaBackLink.addEventListener('click', backToLoginStep);
+    }
+
+    if (tfaUseEmailLink) {
+        tfaUseEmailLink.addEventListener('click', async function () {
+            if (!tfaPendingToken) return;
+            tfaUseEmailLink.textContent = 'Sending…';
+            try {
+                const res = await fetch('/auth_bp/2fa/email/send-login-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify({ pending_token: tfaPendingToken })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    showError(data.error || 'Could not send the code.');
+                    tfaUseEmailLink.textContent = 'Send a code to my email instead';
+                    return;
+                }
+                applyTfaMethodUI('email');
+                const codeInput = document.getElementById('tfa_code');
+                if (codeInput) { codeInput.value = ''; setTimeout(() => codeInput.focus(), 60); }
+            } catch (_) {
+                showError('Connection error. Please try again.');
+                tfaUseEmailLink.textContent = 'Send a code to my email instead';
+            }
+        });
     }
 
     if (tfaLoginForm) {
@@ -112,6 +174,33 @@
             }
         });
     }
+
+    // ── OAuth → 2FA bridge ────────────────────────────────────────────────
+    // google_callbackx()/microsoft_callback() are plain GET redirects, not
+    // fetch() calls — they can't hand the pending_token back the way login()
+    // does. Instead they stash it server-side (Flask session) and redirect
+    // here with ?oauth_2fa=1; this reads it once via a dedicated endpoint
+    // and drops straight into the same #tfaLoginForm used for password
+    // login. remember_me defaults true for OAuth, matching login_user
+    // (remember=True) in both OAuth callbacks.
+    (function bootstrapOAuthTfaIfPending() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('oauth_2fa') !== '1') return;
+        // Strip the marker immediately so a refresh/back-navigation doesn't
+        // re-trigger this against an already-consumed (or absent) token.
+        params.delete('oauth_2fa');
+        const cleanQs = params.toString();
+        history.replaceState(null, '', window.location.pathname + (cleanQs ? '?' + cleanQs : ''));
+
+        fetch('/auth_bp/2fa/oauth-pending', { credentials: 'include' })
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.pending && data.pending_token) {
+                    showTfaStep(data.pending_token, true, data.methods);
+                }
+            })
+            .catch(() => { /* best-effort — user can just sign in again */ });
+    })();
 
     loginForm.addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -179,7 +268,7 @@
                 submitBtn.disabled = false;
                 btnText.textContent = 'Sign In';
                 inputs.forEach(input => { input.disabled = false; });
-                showTfaStep(data.pending_token, rememberMe);
+                showTfaStep(data.pending_token, rememberMe, data.methods);
                 return;
             }
 

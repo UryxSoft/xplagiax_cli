@@ -27,7 +27,32 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import re
 from datetime import datetime
+
+# Provider name -> static/img/imgsource/<slug>.png slug. Mirrors
+# analysis_smartinput.html's _providerLogoHtml (JS) exactly — keep both in
+# sync if either changes. A mismatch just means a missing icon (both the
+# HTML <img onerror> and the PDF's try/except degrade gracefully), never a
+# broken report.
+_PROVIDER_LOGO_ALIASES = {
+    'archive': 'internetarchive', 'wayback': 'internetarchive',
+    'pubmedcentral': 'pmc', 'scholar': 'googlescholar',
+    'bielefeld': 'base', 'thelens': 'lens', 'faoagris': 'agris',
+    'crossrefapi': 'crossref', 'crossreftdm': 'crossref', 'crossmark': 'crossref',
+    'datacitecommons': 'datacite', 'ada': 'nasaads', 'adsabs': 'nasaads',
+    'nasaadsabs': 'nasaads', 'inspire': 'inspirehep',
+}
+
+
+def _provider_logo_slug(provider):
+    p = str(provider or '').lower().strip()
+    if not p or p == 'searxng':  # meta-search aggregator, no logo of its own
+        return None
+    p = re.sub(r'_[a-z]{2,3}$', '', p)   # language suffix: "wikipedia_en" -> "wikipedia"
+    p = re.sub(r'[^a-z0-9]', '', p)      # "semantic_scholar" -> "semanticscholar"
+    return _PROVIDER_LOGO_ALIASES.get(p, p) or None
+
 
 BRAND = {
     'primary': '#064CDB', 'ink': '#0f172a', 'muted': '#64748b',
@@ -89,8 +114,13 @@ def extract_report_data(entry):
         max(0, 100 - (overall or 0)) if src else None)
 
     matches = list((src or {}).get('academic_matches') or [])
-    web = [m for m in matches if str(m.get('source_type', '')).lower() == 'internet']
-    academic = [m for m in matches if str(m.get('source_type', '')).lower() != 'internet']
+    # Shallow copy (not mutation) — these dicts are the same objects cached
+    # inside entry.source's JSON; adding logo_slug in place would risk
+    # SQLAlchemy flagging the JSON column dirty on a read-only route.
+    def _with_logo(m):
+        return dict(m, logo_slug=_provider_logo_slug(m.get('provider') or m.get('source')))
+    web = [_with_logo(m) for m in matches if str(m.get('source_type', '')).lower() == 'internet']
+    academic = [_with_logo(m) for m in matches if str(m.get('source_type', '')).lower() != 'internet']
 
     cit_score = int(_num(entry.cit_score, _num((cit or {}).get('citation_quality_score')))) if (entry.cit_score is not None or cit) else None
     citations_found = int(_num((cit or {}).get('citations_found'))) if cit else None
@@ -262,6 +292,22 @@ def build_report_pdf(entry, sender_email, public_url=None):
     from reportlab.platypus import (Paragraph, Spacer, Table, TableStyle,
                                     HRFlowable, Image, KeepTogether)
     from reportlab.graphics.shapes import Drawing, Rect, String, Wedge, Circle
+    import os
+    from flask import current_app
+
+    def _logo_flowable(slug, size=3.4 * mm):
+        """Provider icon for the Sources table — None if unresolvable, so the
+        caller can fall back to plain text (same graceful degradation as the
+        HTML <img onerror>)."""
+        if not slug:
+            return None
+        try:
+            path = os.path.join(current_app.static_folder, 'img', 'imgsource', f'{slug}.png')
+            if not os.path.isfile(path):
+                return None
+            return Image(path, width=size, height=size)
+        except Exception:
+            return None
 
     d = extract_report_data(entry)
     B = BRAND
@@ -487,8 +533,16 @@ def build_report_pdf(entry, sender_email, public_url=None):
             url = m.get('url') or (('https://doi.org/' + str(m['doi'])) if m.get('doi') else None)
             tcell = (f'<link href="{esc(url)}"><font color="{B["primary"]}">{esc(title)}</font></link>'
                      if url else esc(title))
+            logo = _logo_flowable(m.get('logo_slug'))
+            provider_cell = (
+                Table([[logo, Paragraph(esc(provider), s_small)]], colWidths=[4.4 * mm, 21.6 * mm],
+                      style=TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                                        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                                        ('RIGHTPADDING', (0, 0), (0, -1), 2)]))
+                if logo else Paragraph(esc(provider), s_small)
+            )
             rows.append([Paragraph(str(i), s_small), Paragraph(tcell, s_small),
-                         Paragraph(esc(provider), s_small), Paragraph(esc(year), s_small),
+                         provider_cell, Paragraph(esc(year), s_small),
                          Paragraph(kind, s_small)])
         stbl = Table(rows, colWidths=[8 * mm, 108 * mm, 26 * mm, 14 * mm, 20 * mm], repeatRows=1)
         stbl.setStyle(TableStyle([
@@ -543,13 +597,13 @@ def build_report_pdf(entry, sender_email, public_url=None):
             n += 1
             src_m = s.get('matched_source') or {}
             meta = ' · '.join(x for x in (
-                f"chars {s.get('start_char', '?')}–{s.get('end_char', '?')}" if s.get('start_char') is not None else '',
+                f"chars {s.get('char_start', '?')}–{s.get('char_end', '?')}" if s.get('char_start') is not None else '',
                 f"matched: {str(src_m.get('title') or '')[:80]}" if src_m.get('title') else '',
                 str(s.get('reason') or '')[:120]) if x)
             story.append(seg_card(
-                n, str(s.get('decision', 'match')).upper(), B['danger'],
+                n, str(s.get('decision', 'match')).upper(), B['plag'],
                 f"match {int(_num(s.get('match_score')))}%",
-                str(s.get('text') or '')[:340], meta))
+                str(s.get('text_full') or '')[:340], meta))
         for b in ai_blocks[:8]:
             n += 1
             story.append(seg_card(
@@ -563,7 +617,7 @@ def build_report_pdf(entry, sender_email, public_url=None):
             story.append(seg_card(
                 n, 'ORIGINAL', B['success'],
                 f"match {int(_num(s.get('match_score')))}%",
-                str(s.get('text') or '')[:220],
+                str(s.get('text_full') or '')[:220],
                 str(s.get('reason') or 'No confirmed match.')[:140]))
         if len(cleared) > 3:
             story.append(Paragraph(f'+ {len(cleared) - 3} additional cleared segment(s) omitted for brevity — '
