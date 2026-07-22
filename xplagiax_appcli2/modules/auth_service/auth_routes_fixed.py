@@ -72,6 +72,21 @@ def sanitize_redirect_url(url):
         return url_for('x_users.analysis')
     return url
 
+def append_welcome_flag(url):
+    """Marca la URL de destino con ?welcome=1 solo cuando aterriza en la
+    pantalla de analysis, para que el loader de bienvenida se dispare
+    únicamente en la transición login -> analysis. El flag se quita de la
+    barra de direcciones en el propio front-end en cuanto se lee, así que
+    un refresh/recarga de /analysiss nunca lo vuelve a mostrar."""
+    try:
+        analysis_path = url_for('x_users.analysis')
+    except Exception:
+        return url
+    if url == analysis_path or url.startswith(analysis_path + '?') or url.startswith(analysis_path + '#'):
+        sep = '&' if '?' in url else '?'
+        return f"{url}{sep}welcome=1"
+    return url
+
 def require_active_subscription_or_trial():
     """Decorator to require active subscription or trial"""
     def decorator(f):
@@ -425,11 +440,13 @@ def google_callbackx():
 
         # 10.  REDIRECT ROBUSTO
         next_url = flask_session.pop('oauth_next', None) or url_for('x_users.analysis')
-        
+
         #  ASEGURAR QUE EL REDIRECT SEA ABSOLUTO
         if not next_url.startswith(('http://', 'https://', '/')):
             next_url = url_for('x_users.analysis')
-            
+
+        next_url = append_welcome_flag(next_url)
+
         #print(f"🔄 Redirigiendo a: {next_url}")
         
         #  USAR MAKE_RESPONSE PARA MÁS CONTROL
@@ -684,10 +701,12 @@ def microsoft_callback():
 
         # 10. REDIRECT ROBUSTO
         next_url = flask_session.pop('oauth_next', None) or url_for('x_users.analysis')
-        
+
         if not next_url.startswith(('http://', 'https://', '/')):
             next_url = url_for('x_users.analysis')
-            
+
+        next_url = append_welcome_flag(next_url)
+
         print(f"🔄 Redirigiendo a: {next_url}")
         
         response = make_response(redirect(next_url))
@@ -877,7 +896,7 @@ def login():
     # POSTs to a bare /auth_bp/login with no query params, so request.args
     # never had it to begin with (this silently dropped the "return to where
     # you were" destination for every password login, not just 2FA ones).
-    next_url = sanitize_redirect_url(data.get('next'))
+    next_url = append_welcome_flag(sanitize_redirect_url(data.get('next')))
     return jsonify({
         'message': 'Session started successfully',
         'redirect': next_url
@@ -1953,10 +1972,26 @@ def disable_2fa_send_code():
 
 
 def _confirm_sensitive_action(data):
-    """Shared confirmation check for disabling a 2FA method: password for
-    accounts that have one, or the emailed code from disable_2fa_send_code()
-    above for OAuth-only accounts that don't. Returns an error message
-    string on failure, or None on success (and clears the used code)."""
+    """Shared confirmation check for disabling a 2FA method: the emailed
+    code from disable_2fa_send_code() whenever one was submitted (this is
+    the only option for OAuth-only accounts, and an always-available
+    alternative for accounts that also have a password — e.g. a user
+    currently signed in via Google/Microsoft who doesn't have their
+    password on hand), otherwise the account password. Returns an error
+    message string on failure, or None on success (and clears the used
+    code)."""
+    code = data.get('code', '')
+    if code:
+        _ensure_email_otp_columns()
+        if not email_otp_service.verify_code(code, current_user.email_otp_code_hash, current_user.email_otp_expires_at):
+            current_app.logger.info(
+                '2fa/disable: user_id=%s invalid/expired confirmation code', current_user.id,
+            )
+            return 'Invalid or expired code. Request a new one and try again.'
+        current_user.email_otp_code_hash = None
+        current_user.email_otp_expires_at = None
+        return None
+
     if current_user._password_hash:
         password = data.get('password', '')
         if not bcrypt.checkpw(password.encode('utf-8'), current_user._password_hash.encode('utf-8')):
@@ -1964,17 +1999,7 @@ def _confirm_sensitive_action(data):
             return 'Incorrect password.'
         return None
 
-    _ensure_email_otp_columns()
-    code = data.get('code', '')
-    if not email_otp_service.verify_code(code, current_user.email_otp_code_hash, current_user.email_otp_expires_at):
-        current_app.logger.info(
-            '2fa/disable: user_id=%s invalid/expired confirmation code (oauth-only account)',
-            current_user.id,
-        )
-        return 'Invalid or expired code. Request a new one and try again.'
-    current_user.email_otp_code_hash = None
-    current_user.email_otp_expires_at = None
-    return None
+    return 'A confirmation code is required.'
 
 
 @auth_bp.route('/2fa/disable', methods=['POST'])
@@ -2162,7 +2187,7 @@ def totp_verify_login():
 
     return jsonify({
         'message': 'Session started successfully',
-        'redirect': sanitize_redirect_url(next_url),
+        'redirect': append_welcome_flag(sanitize_redirect_url(next_url)),
     }), 200
 
 

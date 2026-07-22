@@ -1,6 +1,179 @@
 <!-- templates/user_base.html -->
 {% extends "user/user_base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/brand.css') }}">
+<style>
+/* Login -> Analysis welcome loader (see #xpaWelcomeLoader in the content
+   block below). Body stays hidden only for the instant right after login
+   (?welcome=1 on the URL, added server-side only on the post-login
+   redirect) so there's no flash of the page underneath — never on a
+   refresh/direct visit, since there's no synchronous script anywhere else
+   that adds this class. */
+html.xpa-welcome-pending body{visibility:hidden}
+</style>
+<script>
+(function () {
+    if (/[?&]welcome=1(&|$)/.test(window.location.search)) {
+        document.documentElement.classList.add('xpa-welcome-pending');
+    }
+})();
+</script>
+{% endblock %}
+
 {% block content %}
+
+<!-- Login -> Analysis welcome loader — only rendered visible when the URL
+     carries ?welcome=1 (set once, server-side, by the post-login redirect;
+     stripped client-side below on first read so a refresh never re-shows
+     it). Visual language matches /x_doc/report/<token>'s loader. -->
+<div id="xpaWelcomeLoader" role="status" aria-live="polite">
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center">
+  <a href="/" class="tech-brand" tabindex="-1" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" stroke="currentColor" class="bi bi-chevron-contract" viewBox="0 0 16 16">
+      <path fill-rule="evenodd" d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708" stroke-width="0.8"></path>
+    </svg>
+    <span>plagia</span>
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" stroke="currentColor" class="bi bi-chevron-contract" viewBox="0 0 16 16">
+      <path fill-rule="evenodd" d="M3.646 13.854a.5.5 0 0 0 .708 0L8 10.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708m0-11.708a.5.5 0 0 1 .708 0L8 5.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708" stroke-width="0.8"></path>
+    </svg>
+  </a>
+  <div class="xpa-welcome-title">Welcome{{ ', ' + user_data.name if user_data and user_data.name else '' }}!</div>
+  <div class="xpa-welcome-sub">Preparing your workspace…</div>
+  <div class="xpa-welcome-bar-track">
+    <div class="xpa-welcome-bar-fill" id="xpaWelcomeBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Workspace loading progress"></div>
+  </div>
+  <div class="xpa-welcome-pct" id="xpaWelcomePct">0%</div>
+  <div class="xpa-welcome-status" id="xpaWelcomeStatus">Signing you in…</div>
+  <div class="xpa-welcome-tip" id="xpaWelcomeTip"><b>Tip.</b> Drop a file or paste your text on the next screen to run your first check.</div>
+  </div>
+</div>
+<style>
+#xpaWelcomeLoader{display:none;position:fixed;inset:0;z-index:2147483000;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;padding:24px;
+  background:#064CDB;transition:opacity .45s ease,visibility .45s ease}
+html.xpa-welcome-pending #xpaWelcomeLoader{display:flex;visibility:visible}
+#xpaWelcomeLoader.xpa-loader-done{opacity:0;visibility:hidden!important;pointer-events:none}
+#xpaWelcomeLoader .tech-brand{justify-content:center;transform:scale(2.3);margin-bottom:38px;
+  filter:drop-shadow(0 4px 18px rgba(0,0,0,.18))}
+.xpa-welcome-title{color:#fff;font-size:clamp(19px,3vw,26px);font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.xpa-welcome-sub{color:rgba(255,255,255,.78);font-size:13.5px;max-width:380px;margin-bottom:30px;line-height:1.5}
+.xpa-welcome-bar-track{width:min(360px,80vw);height:8px;border-radius:20px;background:rgba(255,255,255,.18);
+  overflow:hidden;position:relative}
+.xpa-welcome-bar-fill{height:100%;width:0%;border-radius:20px;
+  background:linear-gradient(90deg,#ffffff,#cfe0ff,#ffffff);background-size:200% 100%;
+  transition:width .35s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+.xpa-welcome-bar-fill::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);
+  width:60%;animation:xpaWelcomeShine 1.3s ease-in-out infinite}
+@keyframes xpaWelcomeShine{0%{transform:translateX(-120%)}100%{transform:translateX(220%)}}
+.xpa-welcome-pct{color:#fff;font-size:12.5px;font-weight:700;margin-top:10px;letter-spacing:.02em}
+.xpa-welcome-status{color:rgba(255,255,255,.92);font-size:13px;font-weight:600;margin-top:16px;
+  min-height:18px;transition:opacity .25s ease,transform .25s ease}
+.xpa-welcome-tip{color:rgba(255,255,255,.68);font-size:11.5px;margin-top:34px;max-width:340px}
+@media(prefers-reduced-motion:reduce){
+  #xpaWelcomeLoader,.xpa-welcome-status{transition:none}
+  .xpa-welcome-bar-fill::after{animation:none}
+}
+</style>
+<script>
+(function () {
+    'use strict';
+    if (!/[?&]welcome=1(&|$)/.test(window.location.search)) return;
+
+    // Strip the flag immediately so a refresh/back navigation never
+    // re-triggers this loader — it must only ever fire right after login.
+    var params = new URLSearchParams(window.location.search);
+    params.delete('welcome');
+    var qs = params.toString();
+    history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+
+    var loader = document.getElementById('xpaWelcomeLoader');
+    if (!loader) { document.documentElement.classList.remove('xpa-welcome-pending'); return; }
+
+    function reveal() {
+        loader.classList.add('xpa-loader-done');
+        document.documentElement.classList.remove('xpa-welcome-pending');
+        setTimeout(function () { loader.remove(); }, 500);
+    }
+    // Hard safety net: whatever else happens (slow device, a script error
+    // elsewhere on this large page), the workspace must never stay hidden.
+    var safety = setTimeout(reveal, 6000);
+
+    try {
+        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var barEl = document.getElementById('xpaWelcomeBar');
+        var pctEl = document.getElementById('xpaWelcomePct');
+        var statusEl = document.getElementById('xpaWelcomeStatus');
+
+        if (reduceMotion) {
+            barEl.style.width = '100%';
+            pctEl.textContent = '100%';
+            clearTimeout(safety);
+            reveal();
+            return;
+        }
+
+        var CHECKPOINTS = [
+            { t: 0.00, p: 0,   status: 'Signing you in…' },
+            { t: 0.15, p: 20,  status: 'Loading your account…' },
+            { t: 0.45, p: 55,  status: 'Preparing your workspace…' },
+            { t: 0.70, p: 80,  status: 'Setting up your tools…' },
+            { t: 0.92, p: 96,  status: 'Almost ready…' },
+            { t: 1.00, p: 100, status: 'Almost ready…' }
+        ];
+        var TOTAL_MS = 2400;
+
+        function curveAt(frac) {
+            for (var i = 1; i < CHECKPOINTS.length; i++) {
+                if (frac <= CHECKPOINTS[i].t) {
+                    var a = CHECKPOINTS[i - 1], b = CHECKPOINTS[i];
+                    var span = b.t - a.t;
+                    var local = span > 0 ? (frac - a.t) / span : 1;
+                    return { p: a.p + (b.p - a.p) * local, status: b.status };
+                }
+            }
+            return { p: 100, status: CHECKPOINTS[CHECKPOINTS.length - 1].status };
+        }
+
+        var lastStatus = '';
+        var start = null;
+        function tick(ts) {
+            if (start === null) start = ts;
+            var frac = Math.min(1, (ts - start) / TOTAL_MS);
+            var cur = curveAt(frac);
+            var pctRounded = Math.round(cur.p);
+
+            barEl.style.width = pctRounded + '%';
+            barEl.setAttribute('aria-valuenow', String(pctRounded));
+            pctEl.textContent = pctRounded + '%';
+
+            if (cur.status !== lastStatus) {
+                lastStatus = cur.status;
+                statusEl.style.opacity = '0';
+                statusEl.style.transform = 'translateY(3px)';
+                setTimeout(function () {
+                    statusEl.textContent = cur.status;
+                    statusEl.style.opacity = '1';
+                    statusEl.style.transform = 'translateY(0)';
+                }, 120);
+            }
+
+            if (frac < 1) {
+                requestAnimationFrame(tick);
+            } else {
+                statusEl.textContent = '✓ Workspace ready';
+                clearTimeout(safety);
+                setTimeout(reveal, 500);
+            }
+        }
+        requestAnimationFrame(tick);
+    } catch (e) {
+        clearTimeout(safety);
+        reveal();
+    }
+})();
+</script>
 
 <!-- FilePond CSS -->
 <link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet">

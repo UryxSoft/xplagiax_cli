@@ -1319,11 +1319,13 @@
     <div class="sm-dc-field" id="emailOtpDisablePasswordField">
       <label for="emailOtpDisablePassword">Current password</label>
       <input type="password" id="emailOtpDisablePassword" autocomplete="current-password" placeholder="Enter your password">
+      <a href="javascript:void(0)" id="emailOtpDisableUseCodeLink" class="sm-tfa-switch-link" onclick="emailOtpDisableSwitchMode('code')" style="display:none">Use the code sent to my email instead</a>
     </div>
     <div class="sm-dc-field" id="emailOtpDisableCodeField" style="display:none">
       <label for="emailOtpDisableCode">Enter the 4-digit code from your email</label>
       <input type="text" id="emailOtpDisableCode" class="sm-tfa-code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="4" placeholder="0000">
       <button type="button" id="emailOtpDisableResendBtn" class="sm-btn sm-btn-ghost" style="font-size:12px;padding:6px 14px;margin-top:8px" onclick="emailOtpDisableSendCode()">Resend code</button>
+      <a href="javascript:void(0)" id="emailOtpDisableUsePasswordLink" class="sm-tfa-switch-link" onclick="emailOtpDisableSwitchMode('password')" style="display:none">Use my password instead</a>
     </div>
     <div class="sm-danger-modal-actions">
       <button class="sm-btn sm-btn-ghost" onclick="emailOtpCloseDisableModal()">Cancel</button>
@@ -2540,16 +2542,31 @@ async function emailOtpSubmitVerifySetup() {
 function emailOtpOpenDisableModal() {
   document.getElementById('emailOtpDisablePassword').value = '';
   document.getElementById('emailOtpDisableCode').value = '';
-  document.getElementById('emailOtpDisablePasswordField').style.display = HAS_PASSWORD ? 'block' : 'none';
-  document.getElementById('emailOtpDisableCodeField').style.display = HAS_PASSWORD ? 'none' : 'block';
-  document.getElementById('emailOtpDisableDesc').textContent = HAS_PASSWORD
-    ? 'This removes the email code step from your login. Enter your password to confirm.'
-    : "This removes the email code step from your login. Your account has no password (Google/Microsoft sign-in), so we'll email you a code to confirm instead.";
+  emailOtpDisableSwitchMode(HAS_PASSWORD ? 'password' : 'code');
   document.getElementById('emailOtpDisableOverlay').classList.add('open');
-  if (HAS_PASSWORD) {
-    setTimeout(() => document.getElementById('emailOtpDisablePassword').focus(), 80);
-  } else {
+}
+
+// Accounts with a password default to the password field, but a signed-in
+// Google/Microsoft session may not have it handy — this link swaps to the
+// emailed-code path instead (already accepted server-side for any account,
+// see _confirm_sensitive_action). Accounts with no password never see the
+// link at all: the code path is already the only option for them.
+function emailOtpDisableSwitchMode(mode) {
+  const useCode = mode === 'code';
+  document.getElementById('emailOtpDisablePasswordField').style.display = useCode ? 'none' : 'block';
+  document.getElementById('emailOtpDisableCodeField').style.display = useCode ? 'block' : 'none';
+  document.getElementById('emailOtpDisableUseCodeLink').style.display = (!useCode && HAS_PASSWORD) ? 'inline-block' : 'none';
+  document.getElementById('emailOtpDisableUsePasswordLink').style.display = (useCode && HAS_PASSWORD) ? 'inline-block' : 'none';
+  document.getElementById('emailOtpDisableDesc').textContent = useCode
+    ? (HAS_PASSWORD
+        ? "This removes the email code step from your login. We'll email you a code to confirm."
+        : "This removes the email code step from your login. Your account has no password (Google/Microsoft sign-in), so we'll email you a code to confirm instead.")
+    : 'This removes the email code step from your login. Enter your password to confirm.';
+  if (useCode) {
     emailOtpDisableSendCode(/* silent */ true);
+    setTimeout(() => document.getElementById('emailOtpDisableCode').focus(), 80);
+  } else {
+    setTimeout(() => document.getElementById('emailOtpDisablePassword').focus(), 80);
   }
 }
 
@@ -2577,17 +2594,18 @@ async function emailOtpDisableSendCode(silent) {
 }
 
 async function emailOtpSubmitDisable() {
+  const useCode = document.getElementById('emailOtpDisableCodeField').style.display !== 'none';
   const body = {};
-  if (HAS_PASSWORD) {
-    const pwEl = document.getElementById('emailOtpDisablePassword');
-    if (!pwEl.value) { pwEl.classList.add('invalid'); pwEl.focus(); return; }
-    pwEl.classList.remove('invalid');
-    body.password = pwEl.value;
-  } else {
+  if (useCode) {
     const codeEl = document.getElementById('emailOtpDisableCode');
     if (!/^\d{4}$/.test(codeEl.value.trim())) { codeEl.classList.add('invalid'); codeEl.focus(); return; }
     codeEl.classList.remove('invalid');
     body.code = codeEl.value.trim();
+  } else {
+    const pwEl = document.getElementById('emailOtpDisablePassword');
+    if (!pwEl.value) { pwEl.classList.add('invalid'); pwEl.focus(); return; }
+    pwEl.classList.remove('invalid');
+    body.password = pwEl.value;
   }
 
   const confirmBtn = document.getElementById('emailOtpDisableConfirmBtn');
@@ -2605,7 +2623,7 @@ async function emailOtpSubmitDisable() {
       emailOtpCloseDisableModal();
       smToast('Email verification disabled.', 'success');
     } else {
-      smToast(data.error || (HAS_PASSWORD ? 'Incorrect password.' : 'Invalid or expired code.'), 'error');
+      smToast(data.error || (useCode ? 'Invalid or expired code.' : 'Incorrect password.'), 'error');
     }
   } catch (_) {
     smToast('Connection error. Please try again.', 'error');
