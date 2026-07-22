@@ -3801,18 +3801,27 @@ AI_ANALYZE_MAX_WORDS = int(os.environ.get('AI_ANALYZE_MAX_WORDS', '600'))
 # quedarían en 'pending' para siempre. Poner en 0 (o un número muy alto)
 # desactiva la promoción a async y vuelve al comportamiento previo.
 #
-# Derivado del propio código de xota (app/routes.py), no a ojo:
-#   - adaptive_timeout(word_count) ≈ base(30s) + per_kwords(15s) * (words/1000),
-#     tope _SYNC_TIMEOUT_CAP=100s en los endpoints síncronos.
-#   - En 2000 palabras ese presupuesto YA iguala los 60s de nginx (30+15*2=60)
-#     con margen cero — y esto es por UN plugin; analyze_text() pide 3
-#     (ai_detection + citation_check + stylometric_analysis) por defecto, y no
-#     tenemos visibilidad de si registry.run() los corre secuencial o en
-#     paralelo. Por eso el default queda bien por debajo de ese cruce (1500,
-#     ~52.5s de presupuesto para 1 plugin) en vez de pegado al límite.
-#   - Ajustar con los logs de 'AI submit finished in Xs' que se agregan más
-#     abajo en analyze_text() una vez haya tráfico real.
-AI_ASYNC_THRESHOLD_WORDS = int(os.environ.get('AI_ASYNC_THRESHOLD_WORDS', '1500'))
+# El default anterior (1500) se derivó del presupuesto TEÓRICO de xota
+# (adaptive_timeout ≈ 30s + 15s por cada 1000 palabras, tope 100s en los
+# endpoints síncronos), estimando que el cruce con los 60s de nginx caía cerca
+# de las 2000 palabras. El tráfico real lo desmintió: un texto de 1261 palabras
+# —muy por debajo de 1500— se fue por la vía síncrona y murió con 504 Gateway
+# Timeout en nginx. El presupuesto teórico no era el tiempo real de pared: es
+# por plugin, analyze_text() pide varios, y el trabajo pesado de ai_detection
+# escala con el número de chunks, no linealmente con las palabras.
+#
+# Ahora el umbral se alinea con AI_ANALYZE_MAX_WORDS (600): por encima de ese
+# tamaño el texto ya deja de ir al endpoint corto /analyze, y es exactamente
+# donde el trabajo empieza a ser lo bastante pesado como para arriesgar el
+# límite de nginx. Por debajo sigue yendo síncrono (respuesta inmediata, sin el
+# ida y vuelta del polling); por encima va async, que es inmune al
+# proxy_read_timeout porque el submit devuelve 202 al instante y cada poll es
+# una petición corta.
+#
+# Requiere un worker Celery vivo en xota (GUNICORN_SPAWN_CELERY=1); sin él
+# estos jobs quedan 'pending' para siempre. Poner en 0 (o un número muy alto)
+# desactiva la promoción a async y vuelve al comportamiento previo.
+AI_ASYNC_THRESHOLD_WORDS = int(os.environ.get('AI_ASYNC_THRESHOLD_WORDS', '600'))
 
 
 def _user_ai_plugins():

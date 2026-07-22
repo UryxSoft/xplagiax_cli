@@ -2030,6 +2030,23 @@ body.xp-file-preview .mode-switch-container {
             ['Springer Nature', 'springer'], ['BASE', 'base']
         ];
 
+        // Fases del detector de IA. Un run sin FinderX no consulta ninguna de
+        // las APIs de arriba, así que anunciar proveedores ahí sería describir
+        // trabajo que no está ocurriendo: se listan las etapas del análisis de
+        // IA, sin logos (no hay proveedor externo que mostrar).
+        const AI_PHASES = [
+            ['writing patterns', null], ['sentence structure', null],
+            ['perplexity & burstiness', null], ['stylometric fingerprint', null],
+            ['token distribution', null], ['semantic coherence', null],
+            ['vocabulary diversity', null], ['syntactic rhythm', null],
+            ['paragraph transitions', null], ['model likelihood signals', null]
+        ];
+
+        const MODES = {
+            providers: { verb: 'Searching', pool: PROVIDERS, withLogo: true },
+            ai:        { verb: 'Analyzing', pool: AI_PHASES,  withLogo: false }
+        };
+
         const ANALYZE_DURATION = 1500; // ms showing "Loading..." before the ticker starts
         const TICK_MIN = 250;          // ms, min time between provider changes
         const TICK_MAX = 400;          // ms, max time between provider changes
@@ -2038,14 +2055,29 @@ body.xp-file-preview .mode-switch-container {
         const GENERIC_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.2" stroke="currentColor" stroke-width="1.8"/><line x1="15.1" y1="15.1" x2="20.5" y2="20.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 
         let textEl = null, tickEl = null, logoEl = null, nameEl = null;
+        let mode = MODES.providers;
         let queue = [];
         let queueIndex = 0;
         let analyzeTimer = null;
         let tickTimer = null;
         let running = false;
 
+        // Sólo FinderX (search_source) golpea las APIs externas del listado —
+        // ver wantSource en runAnalysesOnText. Cualquier otra combinación
+        // (AI TestPro solo, o AI + citas) se anuncia como análisis de IA.
+        function detectMode() {
+            try {
+                const comp = window._advComp;
+                const types = (comp && typeof comp.getSelectedAnalysisTypes === 'function')
+                    ? (comp.getSelectedAnalysisTypes() || []) : [];
+                return types.includes('search_source') ? MODES.providers : MODES.ai;
+            } catch (_) {
+                return MODES.ai;
+            }
+        }
+
         function shuffledQueue() {
-            const arr = PROVIDERS.slice();
+            const arr = mode.pool.slice();
             for (let i = arr.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -2067,39 +2099,46 @@ body.xp-file-preview .mode-switch-container {
             return `hsl(${hash % 360}, 62%, 42%)`;
         }
 
-        // Construye una única vez "Searching [logo] Provider" dentro de #pftText,
-        // reemplazando el "Loading..." original.
+        // Construye una única vez "<verbo> [logo] <item>" dentro de #pftText,
+        // reemplazando el "Loading..." original. La clase pft-ready activa el
+        // layout de dos columnas que ancla el verbo (ver analysis_overlay.css).
         function buildTickerDom() {
             textEl.innerHTML = '';
 
             const verb = document.createElement('span');
             verb.className = 'pft-verb';
-            verb.textContent = 'Searching';
+            verb.textContent = mode.verb;
 
             tickEl = document.createElement('span');
             tickEl.className = 'pft-tick';
 
-            logoEl = document.createElement('span');
-            logoEl.className = 'pft-logo';
+            logoEl = null;
+            if (mode.withLogo) {
+                logoEl = document.createElement('span');
+                logoEl.className = 'pft-logo';
+                tickEl.appendChild(logoEl);
+            }
 
             nameEl = document.createElement('span');
             nameEl.className = 'pft-name';
 
-            tickEl.appendChild(logoEl);
             tickEl.appendChild(nameEl);
             textEl.appendChild(verb);
             textEl.appendChild(tickEl);
+            textEl.classList.add('pft-ready');
         }
 
-        function renderProvider([name, slug]) {
-            logoEl.style.setProperty('--pft-logo-color', hashColor(slug));
-            logoEl.innerHTML = '';
-            const img = document.createElement('img');
-            img.loading = 'lazy';
-            img.alt = '';
-            img.src = `/static/img/imgsource/${slug}.png`;
-            img.onerror = () => { logoEl.innerHTML = GENERIC_ICON_SVG; };
-            logoEl.appendChild(img);
+        function renderItem([name, slug]) {
+            if (logoEl && slug) {
+                logoEl.style.setProperty('--pft-logo-color', hashColor(slug));
+                logoEl.innerHTML = '';
+                const img = document.createElement('img');
+                img.loading = 'lazy';
+                img.alt = '';
+                img.src = `/static/img/imgsource/${slug}.png`;
+                img.onerror = () => { logoEl.innerHTML = GENERIC_ICON_SVG; };
+                logoEl.appendChild(img);
+            }
             nameEl.textContent = name;
         }
 
@@ -2108,7 +2147,7 @@ body.xp-file-preview .mode-switch-container {
             tickEl.classList.add('is-fading');
             tickTimer = setTimeout(() => {
                 if (!running) return;
-                renderProvider(nextProvider());
+                renderItem(nextProvider());
                 tickEl.classList.remove('is-fading');
                 tickTimer = setTimeout(tick, TICK_MIN + Math.random() * (TICK_MAX - TICK_MIN));
             }, FADE_DURATION);
@@ -2122,6 +2161,10 @@ body.xp-file-preview .mode-switch-container {
             if (!textEl) init();
             if (!textEl || running) return;
             running = true;
+            // El modo se fija al arrancar: los tipos ya están elegidos cuando
+            // se muestra el overlay, y no cambian durante el run.
+            mode = detectMode();
+            textEl.classList.remove('pft-ready');
             textEl.textContent = 'Loading...';
 
             analyzeTimer = setTimeout(() => {
@@ -2129,7 +2172,7 @@ body.xp-file-preview .mode-switch-container {
                 queue = shuffledQueue();
                 queueIndex = 0;
                 buildTickerDom();
-                renderProvider(nextProvider());
+                renderItem(nextProvider());
                 tickTimer = setTimeout(tick, TICK_MIN + Math.random() * (TICK_MAX - TICK_MIN));
             }, ANALYZE_DURATION);
         }
@@ -2141,7 +2184,12 @@ body.xp-file-preview .mode-switch-container {
             analyzeTimer = null;
             tickTimer = null;
             tickEl = null;
-            if (textEl) textEl.textContent = 'Loading...';
+            logoEl = null;
+            nameEl = null;
+            if (textEl) {
+                textEl.classList.remove('pft-ready');
+                textEl.textContent = 'Loading...';
+            }
         }
 
         return { start, stop };
