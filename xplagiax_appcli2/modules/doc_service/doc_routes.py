@@ -4372,15 +4372,33 @@ def _trim_history_result(r):
         return r
     import copy
     c = copy.deepcopy(r)
-    for key in ('academic_matches', 'internet_matches'):
-        arr = c.get(key)
-        if isinstance(arr, list):
-            arr = arr[:12]
-            for m in arr:
-                if isinstance(m, dict):
-                    m.pop('full_text', None)
-                    m.pop('abstract', None)
-            c[key] = arr
+
+    def _slim(arr, limit):
+        arr = arr[:limit]
+        for m in arr:
+            if isinstance(m, dict):
+                m.pop('full_text', None)
+                m.pop('abstract', None)
+        return arr
+
+    def _is_web(m):
+        return isinstance(m, dict) and str(m.get('source_type') or '').lower() == 'internet'
+
+    # academic_matches llega fusionado desde el front (_normalizeFinderxResult
+    # concatena al final las fuentes web, marcadas con source_type "internet")
+    # y es esa lista la que se re-renderiza al reabrir del historial. Recortar
+    # la lista plana descartaba todas las web cuando había 12+ académicas, así
+    # que cada grupo se recorta por separado. Mismos límites que _trimResult()
+    # en analysis_smartinput.html.
+    arr = c.get('academic_matches')
+    if isinstance(arr, list):
+        c['academic_matches'] = (_slim([m for m in arr if not _is_web(m)], 12)
+                                 + _slim([m for m in arr if _is_web(m)], 8))
+
+    arr = c.get('internet_matches')
+    if isinstance(arr, list):
+        c['internet_matches'] = _slim(arr, 8)
+
     return c
 
 

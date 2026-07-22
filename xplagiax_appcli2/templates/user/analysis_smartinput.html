@@ -6189,7 +6189,20 @@ body.xp-file-preview .mode-switch-container {
             if (!r || typeof r !== 'object') return r;
             const c = JSON.parse(JSON.stringify(r));
             const slim = m => { if (m && typeof m === 'object') { delete m.full_text; delete m.abstract; } return m; };
-            if (Array.isArray(c.academic_matches)) c.academic_matches = c.academic_matches.slice(0, 12).map(slim);
+            // academic_matches llega YA FUSIONADO: _normalizeFinderxResult
+            // concatena las entradas web (source_type "internet") al final de
+            // las académicas, y es esa lista la que renderiza el panel — al
+            // reabrir desde el historial nadie vuelve a fusionar nada. Recortar
+            // la lista plana a 12 borraba entonces TODAS las fuentes web en
+            // cuanto había 12+ académicas: se veían al terminar el análisis
+            // pero desaparecían del guardado. Se recorta cada grupo por
+            // separado para que siempre sobreviva algo de web.
+            if (Array.isArray(c.academic_matches)) {
+                const isWeb = m => m && String(m.source_type || '').toLowerCase() === 'internet';
+                const acad = c.academic_matches.filter(m => !isWeb(m)).slice(0, 12).map(slim);
+                const web  = c.academic_matches.filter(isWeb).slice(0, 8).map(slim);
+                c.academic_matches = acad.concat(web);
+            }
             if (Array.isArray(c.internet_matches)) c.internet_matches = c.internet_matches.slice(0, 8).map(slim);
             return c;
         }
