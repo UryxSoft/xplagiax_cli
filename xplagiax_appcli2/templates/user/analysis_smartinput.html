@@ -10,11 +10,19 @@
    block below). This whole block only renders when the post-login redirect
    put ?welcome=1 on this exact request — never on a refresh/direct visit,
    since that URL is stripped client-side (history.replaceState) before the
-   user can reload with it still attached. Body stays hidden until the
-   loader's own script reveals it, so there's no flash of the page
-   underneath. */
-body{visibility:hidden}
+   user can reload with it still attached. The page underneath stays hidden
+   until the loader's script removes the class below, so there's no flash of
+   a half-built dashboard.
+   The gate is a class on <html>, not a bare `body{visibility:hidden}`:
+   clearing an inline style (`el.style.visibility = ''`) just falls back to
+   the stylesheet rule, so a bare rule could never be turned off again and
+   the page would stay blank. The loader needs its own visibility:visible
+   because visibility inherits — as a child of the hidden body it would
+   otherwise be invisible too, which is exactly what hid it before. */
+html.xpa-welcome-pending body{visibility:hidden}
+html.xpa-welcome-pending #xpaWelcomeLoader{visibility:visible}
 </style>
+<script>document.documentElement.classList.add('xpa-welcome-pending');</script>
 {% endif %}
 {% endblock %}
 
@@ -88,7 +96,7 @@ body{visibility:hidden}
     history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
 
     var loader = document.getElementById('xpaWelcomeLoader');
-    if (!loader) { document.body.style.visibility = ''; return; }
+    if (!loader) { document.documentElement.classList.remove('xpa-welcome-pending'); return; }
 
     // Move out from under #mainDashboard (backdrop-filter -> containing
     // block for position:fixed) so `inset:0` covers the real viewport, not
@@ -98,7 +106,7 @@ body{visibility:hidden}
 
     function reveal() {
         loader.classList.add('xpa-loader-done');
-        document.body.style.visibility = '';
+        document.documentElement.classList.remove('xpa-welcome-pending');
         setTimeout(function () { loader.remove(); }, 500);
     }
     // Hard safety net: whatever else happens (slow device, a script error
