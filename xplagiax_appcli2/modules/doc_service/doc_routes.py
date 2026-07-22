@@ -3777,8 +3777,13 @@ AI_POLL_TIMEOUT = float(os.environ.get('AI_POLL_TIMEOUT', '120'))
 # 'pending' para siempre. El síncrono procesa en la misma petición.
 AI_SERVICE_MODE = os.environ.get('AI_SERVICE_MODE', 'sync').strip().lower()
 
-# Plugins por defecto: idénticos a marktrack (el resultado de ai_detection se usa igual).
-AI_DEFAULT_PLUGINS = ['ai_detection', 'citation_check', 'stylometric_analysis']
+# Plugins por defecto. 'citation_check' se sacó de la lista: no existe como
+# plugin en xota (ver app/plugins/ en xplagiax_xota — no hay citation_check.py),
+# así que se pedía y fallaba con "Plugin 'citation_check' not found" en el 100%
+# de los análisis, en todo tamaño de documento. La validación de citas real de
+# esta pantalla es un servicio aparte (FinderX /api/v1/citation-validation, ver
+# citation_validation() más abajo), no un plugin de xota.
+AI_DEFAULT_PLUGINS = ['ai_detection', 'stylometric_analysis']
 
 # El endpoint corto del servicio (POST /analyze) admite textos limitados; por
 # encima de este umbral (palabras) se usa /analyze_document, que procesa el
@@ -4398,13 +4403,21 @@ def history_save():
     try:
         db.session.add(entry)
         db.session.flush()
-        # Conservar solo las últimas N por usuario.
-        stale = (AnalysisHistory.query
-                 .filter_by(user_id=current_user.id)
-                 .order_by(AnalysisHistory.created_at.desc())
-                 .offset(HISTORY_MAX_PER_USER).all())
-        for s in stale:
-            db.session.delete(s)
+        # Conservar solo las últimas N por usuario. Bounded top-N (.limit() real
+        # en la subquery) en vez de .offset(N).all() sin .limit(): SQLAlchemy
+        # traduce ese offset-sin-limit a LIMIT 18446744073709551615 OFFSET N,
+        # forzando a MySQL a hacer filesort de TODA la tabla del usuario en vez
+        # de un top-N acotado — con suficientes filas, agota sort_buffer_size
+        # (error 1038) y tira 500 aunque el análisis ya se haya guardado bien.
+        keep_ids = (db.session.query(AnalysisHistory.id)
+                    .filter_by(user_id=current_user.id)
+                    .order_by(AnalysisHistory.created_at.desc())
+                    .limit(HISTORY_MAX_PER_USER)
+                    .subquery())
+        (AnalysisHistory.query
+         .filter_by(user_id=current_user.id)
+         .filter(~AnalysisHistory.id.in_(db.session.query(keep_ids.c.id)))
+         .delete(synchronize_session=False))
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
