@@ -60,6 +60,28 @@ csrf.init_app(app)
 limiter.init_app(app)
 migrate = Migrate(app, db)
 
+# ── Cache-busting for static assets ───────────────────────────────────────
+# nginx (and browsers) cache /static/ aggressively; a bare
+# url_for('static', ...) keeps the exact same URL forever, so shipping a fix
+# to a .js/.css file doesn't reach anyone whose browser already cached the
+# old copy — they'd need to manually clear their cache. This bit the
+# email-OTP 2FA rollout: enhanced_signin.js had the fix, but cached browsers
+# kept running the pre-fix version until a hard refresh. A hand-written
+# version string (?v=otp1) is fragile — it silently stops protecting the
+# next time someone edits the file and forgets to bump it. static_url()
+# appends ?v=<mtime> instead, so the URL itself changes automatically
+# whenever the file's contents actually change — no manual bookkeeping,
+# works the same way for every static file forever.
+@app.template_global()
+def static_url(filename):
+    from flask import url_for
+    path = os.path.join(app.static_folder, filename)
+    try:
+        v = int(os.path.getmtime(path))
+    except OSError:
+        v = 0
+    return url_for('static', filename=filename) + f'?v={v}'
+
 #  USER LOADER OPTIMIZADO Y ROBUSTO
 @login_manager.user_loader
 def load_user(user_id):

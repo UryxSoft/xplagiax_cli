@@ -337,9 +337,17 @@ def google_callbackx():
                 if not _send_email_otp_code(user):
                     flash("Could not send the verification code. Please try again.", "error")
                     return redirect(url_for('x_apps.login'))
+            # Preserve where the user was headed before flask_session.clear()
+            # wipes it — without this, oauth_next (set in google_login()/
+            # microsoft_login() before the redirect to the provider) was lost
+            # the instant 2FA got involved, and every OAuth+2FA login landed
+            # on the generic analysis page instead of the original destination.
+            oauth_next = flask_session.get('oauth_next')
             flask_session.clear()
             flask_session['oauth_2fa_pending_token'] = pending_token
             flask_session['oauth_2fa_methods'] = methods
+            if oauth_next:
+                flask_session['oauth_2fa_next'] = oauth_next
             return redirect(url_for('x_apps.login', oauth_2fa='1'))
 
         # 4. LIMPIAR SESIÓN COMPLETAMENTE
@@ -583,9 +591,17 @@ def microsoft_callback():
                 if not _send_email_otp_code(user):
                     flash("Could not send the verification code. Please try again.", "error")
                     return redirect(url_for('x_apps.login'))
+            # Preserve where the user was headed before flask_session.clear()
+            # wipes it — without this, oauth_next (set in google_login()/
+            # microsoft_login() before the redirect to the provider) was lost
+            # the instant 2FA got involved, and every OAuth+2FA login landed
+            # on the generic analysis page instead of the original destination.
+            oauth_next = flask_session.get('oauth_next')
             flask_session.clear()
             flask_session['oauth_2fa_pending_token'] = pending_token
             flask_session['oauth_2fa_methods'] = methods
+            if oauth_next:
+                flask_session['oauth_2fa_next'] = oauth_next
             return redirect(url_for('x_apps.login', oauth_2fa='1'))
 
         # 4. LIMPIAR SESIÓN COMPLETAMENTE
@@ -841,7 +857,11 @@ def login():
     session['session_token'] = session_token
     login_user(user, remember = remember_me)
 
-    next_url = sanitize_redirect_url(request.args.get('next'))
+    # 'next' travels in the JSON body, not the query string — the fetch() call
+    # POSTs to a bare /auth_bp/login with no query params, so request.args
+    # never had it to begin with (this silently dropped the "return to where
+    # you were" destination for every password login, not just 2FA ones).
+    next_url = sanitize_redirect_url(data.get('next'))
     return jsonify({
         'message': 'Session started successfully',
         'redirect': next_url
@@ -927,8 +947,8 @@ def signup():
         db.session.add(user)
         db.session.commit()
 
-        # Send confirmation email
-        token = user.get_token('confirm')
+        # Send confirmation email — 24h to match what confirm_email.html tells the user.
+        token = user.get_token('confirm', expires_sec=86400)
         confirm_url = url_for('auth_bp.confirm_email', token = token, _external=True)
         
         #try:
@@ -999,7 +1019,7 @@ def forgot_password():
     
     if user and user.isactive:
         try:
-            token = user.get_token('reset')
+            token = user.get_token('reset', expires_sec=86400)  # 24h — matches reset_password.html's email copy
             reset_url = url_for('auth_bp.reset_password', token=token, _external=True)
             
             # Usar EmailService para envío de reset
@@ -1097,7 +1117,7 @@ def resend_confirmation():
     #try:
     # user.generate_token no existe (el método del modelo es get_token) y el
     # blueprint se llama auth_bp, no auth — ambos producían 500 en esta ruta.
-    token = user.get_token('confirm')
+    token = user.get_token('confirm', expires_sec=86400)  # 24h — matches confirm_email.html's email copy
     confirm_url = url_for('auth_bp.confirm_email', token=token, _external=True)
     
     # Usar EmailService
@@ -2070,6 +2090,12 @@ def totp_verify_login():
     pending_token = data.get('pending_token', '')
     code = data.get('code', '')
     remember_me = bool(data.get('remember_me', False))
+    # 'next' is client-remembered state either way: for password-login 2FA the
+    # JS already had it from window.location before showing this step; for
+    # OAuth-login 2FA it came back from /2fa/oauth-pending's own 'next' field.
+    # Either way it converges here — this endpoint is the single place both
+    # 2FA paths finish at.
+    next_url = data.get('next')
 
     user = Users.verify_token(pending_token, '2fa_pending')
     if not user:
@@ -2120,7 +2146,7 @@ def totp_verify_login():
 
     return jsonify({
         'message': 'Session started successfully',
-        'redirect': sanitize_redirect_url(None),
+        'redirect': sanitize_redirect_url(next_url),
     }), 200
 
 
@@ -2160,9 +2186,11 @@ def oauth_2fa_pending():
     pending state after the flow completes or is abandoned."""
     pending_token = session.pop('oauth_2fa_pending_token', None)
     methods = session.pop('oauth_2fa_methods', None)
+    next_url = session.pop('oauth_2fa_next', None)
     if not pending_token:
         return jsonify({'pending': False}), 200
-    return jsonify({'pending': True, 'pending_token': pending_token, 'methods': methods or []}), 200
+    return jsonify({'pending': True, 'pending_token': pending_token, 'methods': methods or [],
+                    'next': next_url}), 200
 
 
 # ── New Security endpoints ────────────────────────────────────────────────────

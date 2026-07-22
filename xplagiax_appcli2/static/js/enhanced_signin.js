@@ -27,6 +27,14 @@
     let tfaRememberMe = false;
     let tfaMethods = ['totp'];
     let tfaActiveMethod = 'totp'; // cuál de los dos está mostrando el input ahora mismo
+    let tfaNextUrl = null;
+
+    // Flask-Login's login_manager puts ?next=<original url> on this page's own
+    // URL when it redirects an unauthenticated user here. Neither the password
+    // POST nor the Google/Microsoft links used to forward it anywhere, so every
+    // login — 2FA or not — always landed on the generic analysis page instead
+    // of wherever the user actually came from.
+    const nextUrlFromPage = new URLSearchParams(window.location.search).get('next');
 
     const tfaLoginForm = document.getElementById('tfaLoginForm');
     const tfaBackLink = document.getElementById('tfaBackToLoginLink');
@@ -58,10 +66,11 @@
         }
     }
 
-    function showTfaStep(pendingToken, rememberMe, methods) {
+    function showTfaStep(pendingToken, rememberMe, methods, nextUrl) {
         tfaPendingToken = pendingToken;
         tfaRememberMe = rememberMe;
         tfaMethods = Array.isArray(methods) && methods.length ? methods : ['totp'];
+        tfaNextUrl = nextUrl || null;
         loginForm.style.display = 'none';
         if (tfaLoginForm) {
             tfaLoginForm.style.display = 'block';
@@ -137,7 +146,8 @@
                     body: JSON.stringify({
                         pending_token: tfaPendingToken,
                         code: code,
-                        remember_me: tfaRememberMe
+                        remember_me: tfaRememberMe,
+                        next: tfaNextUrl
                     })
                 });
                 const data = await response.json();
@@ -196,7 +206,7 @@
             .then(r => r.json())
             .then(data => {
                 if (data && data.pending && data.pending_token) {
-                    showTfaStep(data.pending_token, true, data.methods);
+                    showTfaStep(data.pending_token, true, data.methods, data.next);
                 }
             })
             .catch(() => { /* best-effort — user can just sign in again */ });
@@ -243,7 +253,8 @@
             const formData = {
                 email: email,
                 password: password,
-                remember_me: rememberMe
+                remember_me: rememberMe,
+                next: nextUrlFromPage
             };
 
             const response = await fetch('/auth_bp/login', {
@@ -268,7 +279,7 @@
                 submitBtn.disabled = false;
                 btnText.textContent = 'Sign In';
                 inputs.forEach(input => { input.disabled = false; });
-                showTfaStep(data.pending_token, rememberMe, data.methods);
+                showTfaStep(data.pending_token, rememberMe, data.methods, nextUrlFromPage);
                 return;
             }
 
