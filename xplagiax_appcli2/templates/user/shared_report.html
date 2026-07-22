@@ -197,26 +197,32 @@ background:#fdfdfe;padding:12px 14px;margin-bottom:10px}
 
   <div class="card">
     <h2>Key Indicators</h2>
+    {# KPIs ordenados de mayor a menor por valor. La tupla lleva el valor
+       numérico primero para poder ordenar por él (sort attribute='0'); `unit`
+       decide cómo se pinta ('%' , '/100' o conteo sin sufijo). #}
+    {% set kpis = [] %}
+    {% if d.ai_pct is not none %}{% set _ = kpis.append((d.ai_pct, 'var(--ai)', '%', 'AI Generated', 'Probability of AI-generated text')) %}{% endif %}
+    {% if d.plag_pct is not none %}{% set _ = kpis.append((d.plag_pct, 'var(--plag)', '%', 'Plagiarism', 'Confirmed source matches')) %}{% endif %}
+    {% if d.cit_score is not none %}{% set _ = kpis.append((d.cit_score, 'var(--cit)', '/100', 'Citations', 'Referencing quality')) %}{% endif %}
+    {% if d.references_found is not none %}{% set _ = kpis.append((d.references_found, 'var(--cit)', '', 'References', 'Bibliographic entries')) %}{% endif %}
+    {% if d.original_pct is not none %}{% set _ = kpis.append((d.original_pct, 'var(--orig)', '%', 'Original', 'No confirmed match')) %}{% endif %}
+    {% if d.human_pct is not none %}{% set _ = kpis.append((d.human_pct, 'var(--ok)', '%', 'Human', 'Naturally written')) %}{% endif %}
     <div class="kpis">
-      {% if d.ai_pct is not none %}<div class="kpi"><b style="color:var(--ai)">{{ d.ai_pct }}%</b><i>AI Generated</i><small>Probability of AI-generated text</small></div>{% endif %}
-      {% if d.plag_pct is not none %}<div class="kpi"><b style="color:var(--plag)">{{ d.plag_pct }}%</b><i>Plagiarism</i><small>Confirmed source matches</small></div>{% endif %}
-      {% if d.cit_score is not none %}<div class="kpi"><b style="color:var(--cit)">{{ d.cit_score }}<span style="font-size:13px">/100</span></b><i>Citations</i><small>Referencing quality</small></div>{% endif %}
-      {% if d.references_found is not none %}<div class="kpi"><b style="color:var(--cit)">{{ d.references_found }}</b><i>References</i><small>Bibliographic entries</small></div>{% endif %}
-      {% if d.original_pct is not none %}<div class="kpi"><b style="color:var(--orig)">{{ d.original_pct }}%</b><i>Original</i><small>No confirmed match</small></div>{% endif %}
-      {% if d.human_pct is not none %}<div class="kpi"><b style="color:var(--ok)">{{ d.human_pct }}%</b><i>Human</i><small>Naturally written</small></div>{% endif %}
+      {% for v, c, unit, label, desc in kpis | sort(attribute='0', reverse=true) %}<div class="kpi"><b style="color:{{ c }}">{{ v }}{% if unit == '%' %}%{% elif unit == '/100' %}<span style="font-size:13px">/100</span>{% endif %}</b><i>{{ label }}</i><small>{{ desc }}</small></div>{% endfor %}
     </div>
     {% set dist = [] %}
-    {% if d.ai_pct is not none %}{% set _ = dist.append(('AI', d.ai_pct, 'var(--ai)')) %}{% endif %}
-    {% if d.plag_pct is not none %}{% set _ = dist.append(('Plagiarism', d.plag_pct, 'var(--plag)')) %}{% endif %}
-    {% if d.cit_score is not none %}{% set _ = dist.append(('Citations', d.cit_score, 'var(--cit)')) %}{% endif %}
-    {% if d.human_pct is not none %}{% set _ = dist.append(('Human', d.human_pct, 'var(--ok)')) %}{% endif %}
-    {% if d.original_pct is not none %}{% set _ = dist.append(('Original', d.original_pct, 'var(--orig)')) %}{% endif %}
+    {% if d.ai_pct is not none %}{% set _ = dist.append((d.ai_pct, 'AI', 'var(--ai)')) %}{% endif %}
+    {% if d.plag_pct is not none %}{% set _ = dist.append((d.plag_pct, 'Plagiarism', 'var(--plag)')) %}{% endif %}
+    {% if d.cit_score is not none %}{% set _ = dist.append((d.cit_score, 'Citations', 'var(--cit)')) %}{% endif %}
+    {% if d.human_pct is not none %}{% set _ = dist.append((d.human_pct, 'Human', 'var(--ok)')) %}{% endif %}
+    {% if d.original_pct is not none %}{% set _ = dist.append((d.original_pct, 'Original', 'var(--orig)')) %}{% endif %}
     {% if dist %}
+    {% set dist_sorted = dist | sort(attribute='0', reverse=true) %}
     <div class="distbar">
-      {% for name, v, c in dist %}<div title="{{ name }}: {{ v }}%" style="flex:{{ [v, 1] | max }} 1 0%;background:{{ c }}"></div>{% endfor %}
+      {% for v, name, c in dist_sorted %}<div title="{{ name }}: {{ v }}%" style="flex:{{ [v, 1] | max }} 1 0%;background:{{ c }}"></div>{% endfor %}
     </div>
     <div class="legend">
-      {% for name, v, c in dist %}<span><i style="background:{{ c }}"></i>{{ name }} {{ v }}%</span>{% endfor %}
+      {% for v, name, c in dist_sorted %}<span><i style="background:{{ c }}"></i>{{ name }} {{ v }}%</span>{% endfor %}
     </div>
     {% endif %}
   </div>
