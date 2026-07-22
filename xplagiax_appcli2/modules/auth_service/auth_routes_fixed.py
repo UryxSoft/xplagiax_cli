@@ -337,22 +337,26 @@ def google_callbackx():
                 if not _send_email_otp_code(user):
                     flash("Could not send the verification code. Please try again.", "error")
                     return redirect(url_for('x_apps.login'))
-            # Preserve where the user was headed before flask_session.clear()
-            # wipes it — without this, oauth_next (set in google_login()/
-            # microsoft_login() before the redirect to the provider) was lost
-            # the instant 2FA got involved, and every OAuth+2FA login landed
-            # on the generic analysis page instead of the original destination.
             oauth_next = flask_session.get('oauth_next')
             flask_session.clear()
-            flask_session['oauth_2fa_pending_token'] = pending_token
-            flask_session['oauth_2fa_methods'] = methods
+            # pending_token travels in the URL, not the session cookie set
+            # right before this redirect: confirmed via production logs that
+            # a same-site cookie set here doesn't survive the round trip
+            # through accounts.google.com and back (oauth_state — set the
+            # SAME way — was independently lost the same way, moments
+            # earlier in this same request chain). Modern browsers' anti-
+            # bounce-tracking heuristics clear storage for a site that looks
+            # like it's being used as a redirect waypoint through a third
+            # party, which is exactly this shape. pending_token is already a
+            # short-lived (5 min), scoped, itsdangerous-signed token — same
+            # risk profile as the tokens this codebase already puts directly
+            # in confirm-email/reset-password links. Stripped from the URL
+            # client-side immediately (see enhanced_signin.js) so it doesn't
+            # linger in the visible address bar.
+            redirect_kwargs = {'oauth_2fa': '1', 'pt': pending_token, 'm': ','.join(methods)}
             if oauth_next:
-                flask_session['oauth_2fa_next'] = oauth_next
-            current_app.logger.info(
-                '2fa gate (oauth): user_id=%s methods=%s session_keys_after=%s',
-                user.id, methods, list(flask_session.keys()),
-            )
-            return redirect(url_for('x_apps.login', oauth_2fa='1'))
+                redirect_kwargs['next'] = oauth_next
+            return redirect(url_for('x_apps.login', **redirect_kwargs))
 
         # 4. LIMPIAR SESIÓN COMPLETAMENTE
         flask_session.clear()
@@ -595,22 +599,26 @@ def microsoft_callback():
                 if not _send_email_otp_code(user):
                     flash("Could not send the verification code. Please try again.", "error")
                     return redirect(url_for('x_apps.login'))
-            # Preserve where the user was headed before flask_session.clear()
-            # wipes it — without this, oauth_next (set in google_login()/
-            # microsoft_login() before the redirect to the provider) was lost
-            # the instant 2FA got involved, and every OAuth+2FA login landed
-            # on the generic analysis page instead of the original destination.
             oauth_next = flask_session.get('oauth_next')
             flask_session.clear()
-            flask_session['oauth_2fa_pending_token'] = pending_token
-            flask_session['oauth_2fa_methods'] = methods
+            # pending_token travels in the URL, not the session cookie set
+            # right before this redirect: confirmed via production logs that
+            # a same-site cookie set here doesn't survive the round trip
+            # through accounts.google.com and back (oauth_state — set the
+            # SAME way — was independently lost the same way, moments
+            # earlier in this same request chain). Modern browsers' anti-
+            # bounce-tracking heuristics clear storage for a site that looks
+            # like it's being used as a redirect waypoint through a third
+            # party, which is exactly this shape. pending_token is already a
+            # short-lived (5 min), scoped, itsdangerous-signed token — same
+            # risk profile as the tokens this codebase already puts directly
+            # in confirm-email/reset-password links. Stripped from the URL
+            # client-side immediately (see enhanced_signin.js) so it doesn't
+            # linger in the visible address bar.
+            redirect_kwargs = {'oauth_2fa': '1', 'pt': pending_token, 'm': ','.join(methods)}
             if oauth_next:
-                flask_session['oauth_2fa_next'] = oauth_next
-            current_app.logger.info(
-                '2fa gate (oauth): user_id=%s methods=%s session_keys_after=%s',
-                user.id, methods, list(flask_session.keys()),
-            )
-            return redirect(url_for('x_apps.login', oauth_2fa='1'))
+                redirect_kwargs['next'] = oauth_next
+            return redirect(url_for('x_apps.login', **redirect_kwargs))
 
         # 4. LIMPIAR SESIÓN COMPLETAMENTE
         flask_session.clear()
@@ -2100,9 +2108,9 @@ def totp_verify_login():
     remember_me = bool(data.get('remember_me', False))
     # 'next' is client-remembered state either way: for password-login 2FA the
     # JS already had it from window.location before showing this step; for
-    # OAuth-login 2FA it came back from /2fa/oauth-pending's own 'next' field.
-    # Either way it converges here — this endpoint is the single place both
-    # 2FA paths finish at.
+    # OAuth-login 2FA it came in via the ?next= query param on the callback's
+    # redirect (see google_callbackx()/microsoft_callback()). Either way it
+    # converges here — this endpoint is the single place both 2FA paths finish at.
     next_url = data.get('next')
 
     user = Users.verify_token(pending_token, '2fa_pending')
@@ -2179,35 +2187,6 @@ def email_otp_send_login_code():
     if not _send_email_otp_code(user):
         return jsonify({'error': 'Could not send the verification code. Please try again.'}), 502
     return jsonify({'success': True}), 200
-
-
-@auth_bp.route('/2fa/oauth-pending', methods=['GET'])
-def oauth_2fa_pending():
-    """Bridges the OAuth callbacks (google_callbackx/microsoft_callback,
-    plain GET redirects) into the same pending_token/methods flow /login
-    uses. The callback stashes these in the Flask session server-side
-    (never in the URL — a signed token in a query string would end up in
-    server access logs and browser history) and redirects to
-    /login?oauth_2fa=1; the login page's JS calls this once on load to pick
-    them up and show the same #tfaLoginForm used for password-login 2FA.
-    Popped (not just read) so a page refresh doesn't resurrect a stale
-    pending state after the flow completes or is abandoned."""
-    pending_token = session.pop('oauth_2fa_pending_token', None)
-    methods = session.pop('oauth_2fa_methods', None)
-    next_url = session.pop('oauth_2fa_next', None)
-    # Temporary diagnostic: the only way this legitimately returns
-    # pending=False is if the session cookie set by the OAuth callback's
-    # redirect didn't survive to this follow-up request (or was already
-    # consumed by an earlier call). Logging the session's own id/keys here
-    # tells us which of those it is instead of guessing from the browser side.
-    current_app.logger.info(
-        '2fa/oauth-pending: found_token=%s session_keys=%s cookies_present=%s',
-        bool(pending_token), list(session.keys()), bool(request.cookies),
-    )
-    if not pending_token:
-        return jsonify({'pending': False}), 200
-    return jsonify({'pending': True, 'pending_token': pending_token, 'methods': methods or [],
-                    'next': next_url}), 200
 
 
 # ── New Security endpoints ────────────────────────────────────────────────────
