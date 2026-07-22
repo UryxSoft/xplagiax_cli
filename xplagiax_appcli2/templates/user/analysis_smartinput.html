@@ -3403,13 +3403,18 @@ body.xp-file-preview .mode-switch-container {
                 const taskId = submitData.task_id;
                 if (!taskId) throw new Error('Analysis service did not return a task id.');
                 // Mirrors xota's own Celery budget (app/routes.py, analyze_document_async):
-                // soft_limit = clamp(240s, 30s + 15s per 1000 words, 3600s cap), and the
+                // soft_limit = clamp(240s, 120s + 60s per 1000 words, 3600s cap), and the
                 // task's hard time_limit is soft_limit + 60s. Polling less than that would
                 // give up client-side while xota is still legitimately working — this bit
                 // the 20k-word case that motivated this fix (fixed 420s ceiling copied from
                 // FinderX, which has no relation to xota's own per-size budget).
+                // The slope MUST track the server's: it was 30s + 15s/kword here and there,
+                // which floors at 240s until ~14k words — so an 8.5k-word document got the
+                // same 240s budget as a 500-word abstract, the client gave up at 330s, and
+                // xota's own logs showed the task still running at 370-400s. Both sides now
+                // use the measured slope (~60s per 1000 words). Keep them in sync.
                 const wordCount = (text.match(/\S+/g) || []).length;
-                const softLimitMs = Math.min(3600000, Math.max(240000, 30000 + 15000 * (wordCount / 1000)));
+                const softLimitMs = Math.min(3600000, Math.max(240000, 120000 + 60000 * (wordCount / 1000)));
                 const pollTimeoutMs = softLimitMs + 60000 + 30000; // hard limit + polling/network margin
                 aiJson = await this._pollJson(
                     `/x_doc/analyze_status/${encodeURIComponent(taskId)}`,
