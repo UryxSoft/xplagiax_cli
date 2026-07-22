@@ -348,6 +348,10 @@ def google_callbackx():
             flask_session['oauth_2fa_methods'] = methods
             if oauth_next:
                 flask_session['oauth_2fa_next'] = oauth_next
+            current_app.logger.info(
+                '2fa gate (oauth): user_id=%s methods=%s session_keys_after=%s',
+                user.id, methods, list(flask_session.keys()),
+            )
             return redirect(url_for('x_apps.login', oauth_2fa='1'))
 
         # 4. LIMPIAR SESIÓN COMPLETAMENTE
@@ -602,6 +606,10 @@ def microsoft_callback():
             flask_session['oauth_2fa_methods'] = methods
             if oauth_next:
                 flask_session['oauth_2fa_next'] = oauth_next
+            current_app.logger.info(
+                '2fa gate (oauth): user_id=%s methods=%s session_keys_after=%s',
+                user.id, methods, list(flask_session.keys()),
+            )
             return redirect(url_for('x_apps.login', oauth_2fa='1'))
 
         # 4. LIMPIAR SESIÓN COMPLETAMENTE
@@ -2187,6 +2195,15 @@ def oauth_2fa_pending():
     pending_token = session.pop('oauth_2fa_pending_token', None)
     methods = session.pop('oauth_2fa_methods', None)
     next_url = session.pop('oauth_2fa_next', None)
+    # Temporary diagnostic: the only way this legitimately returns
+    # pending=False is if the session cookie set by the OAuth callback's
+    # redirect didn't survive to this follow-up request (or was already
+    # consumed by an earlier call). Logging the session's own id/keys here
+    # tells us which of those it is instead of guessing from the browser side.
+    current_app.logger.info(
+        '2fa/oauth-pending: found_token=%s session_keys=%s cookies_present=%s',
+        bool(pending_token), list(session.keys()), bool(request.cookies),
+    )
     if not pending_token:
         return jsonify({'pending': False}), 200
     return jsonify({'pending': True, 'pending_token': pending_token, 'methods': methods or [],
