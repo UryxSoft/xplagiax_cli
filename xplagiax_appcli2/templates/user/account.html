@@ -1319,13 +1319,12 @@
     <div class="sm-dc-field" id="emailOtpDisablePasswordField">
       <label for="emailOtpDisablePassword">Current password</label>
       <input type="password" id="emailOtpDisablePassword" autocomplete="current-password" placeholder="Enter your password">
-      <a href="javascript:void(0)" id="emailOtpDisableUseCodeLink" class="sm-tfa-switch-link" onclick="emailOtpDisableSwitchMode('code')" style="display:none">Use the code sent to my email instead</a>
     </div>
-    <div class="sm-dc-field" id="emailOtpDisableCodeField" style="display:none">
-      <label for="emailOtpDisableCode">Enter the 4-digit code from your email</label>
+    <div class="sm-dc-or-divider" id="emailOtpDisableOrDivider">or</div>
+    <div class="sm-dc-field" id="emailOtpDisableCodeField">
+      <label for="emailOtpDisableCode">4-digit code from your email</label>
       <input type="text" id="emailOtpDisableCode" class="sm-tfa-code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="4" placeholder="0000">
-      <button type="button" id="emailOtpDisableResendBtn" class="sm-btn sm-btn-ghost" style="font-size:12px;padding:6px 14px;margin-top:8px" onclick="emailOtpDisableSendCode()">Resend code</button>
-      <a href="javascript:void(0)" id="emailOtpDisableUsePasswordLink" class="sm-tfa-switch-link" onclick="emailOtpDisableSwitchMode('password')" style="display:none">Use my password instead</a>
+      <button type="button" id="emailOtpDisableResendBtn" class="sm-btn sm-btn-ghost" style="font-size:12px;padding:6px 14px;margin-top:8px" onclick="emailOtpDisableSendCode()">Send code to my email</button>
     </div>
     <div class="sm-danger-modal-actions">
       <button class="sm-btn sm-btn-ghost" onclick="emailOtpCloseDisableModal()">Cancel</button>
@@ -2542,31 +2541,20 @@ async function emailOtpSubmitVerifySetup() {
 function emailOtpOpenDisableModal() {
   document.getElementById('emailOtpDisablePassword').value = '';
   document.getElementById('emailOtpDisableCode').value = '';
-  emailOtpDisableSwitchMode(HAS_PASSWORD ? 'password' : 'code');
+  document.getElementById('emailOtpDisablePasswordField').style.display = HAS_PASSWORD ? 'block' : 'none';
+  document.getElementById('emailOtpDisableOrDivider').style.display = HAS_PASSWORD ? 'flex' : 'none';
+  document.getElementById('emailOtpDisableDesc').textContent = HAS_PASSWORD
+    // Both fields are shown at once — a signed-in Google/Microsoft session
+    // may not have the account password handy, so the emailed code is
+    // always offered as an equally valid alternative (see
+    // _confirm_sensitive_action, which accepts either).
+    ? 'This removes the email code step from your login. Confirm with your password, or a code sent to your email.'
+    : "This removes the email code step from your login. Your account has no password (Google/Microsoft sign-in), so we'll email you a code to confirm instead.";
   document.getElementById('emailOtpDisableOverlay').classList.add('open');
-}
-
-// Accounts with a password default to the password field, but a signed-in
-// Google/Microsoft session may not have it handy — this link swaps to the
-// emailed-code path instead (already accepted server-side for any account,
-// see _confirm_sensitive_action). Accounts with no password never see the
-// link at all: the code path is already the only option for them.
-function emailOtpDisableSwitchMode(mode) {
-  const useCode = mode === 'code';
-  document.getElementById('emailOtpDisablePasswordField').style.display = useCode ? 'none' : 'block';
-  document.getElementById('emailOtpDisableCodeField').style.display = useCode ? 'block' : 'none';
-  document.getElementById('emailOtpDisableUseCodeLink').style.display = (!useCode && HAS_PASSWORD) ? 'inline-block' : 'none';
-  document.getElementById('emailOtpDisableUsePasswordLink').style.display = (useCode && HAS_PASSWORD) ? 'inline-block' : 'none';
-  document.getElementById('emailOtpDisableDesc').textContent = useCode
-    ? (HAS_PASSWORD
-        ? "This removes the email code step from your login. We'll email you a code to confirm."
-        : "This removes the email code step from your login. Your account has no password (Google/Microsoft sign-in), so we'll email you a code to confirm instead.")
-    : 'This removes the email code step from your login. Enter your password to confirm.';
-  if (useCode) {
-    emailOtpDisableSendCode(/* silent */ true);
-    setTimeout(() => document.getElementById('emailOtpDisableCode').focus(), 80);
-  } else {
+  if (HAS_PASSWORD) {
     setTimeout(() => document.getElementById('emailOtpDisablePassword').focus(), 80);
+  } else {
+    emailOtpDisableSendCode(/* silent */ true);
   }
 }
 
@@ -2594,19 +2582,26 @@ async function emailOtpDisableSendCode(silent) {
 }
 
 async function emailOtpSubmitDisable() {
-  const useCode = document.getElementById('emailOtpDisableCodeField').style.display !== 'none';
+  const pwEl = document.getElementById('emailOtpDisablePassword');
+  const codeEl = document.getElementById('emailOtpDisableCode');
+  const codeVal = codeEl.value.trim();
+  pwEl.classList.remove('invalid');
+  codeEl.classList.remove('invalid');
+
+  // Either credential is accepted (see _confirm_sensitive_action) — a typed
+  // code wins if present, since requesting one is the deliberate action;
+  // otherwise fall back to the password field.
   const body = {};
-  if (useCode) {
-    const codeEl = document.getElementById('emailOtpDisableCode');
-    if (!/^\d{4}$/.test(codeEl.value.trim())) { codeEl.classList.add('invalid'); codeEl.focus(); return; }
-    codeEl.classList.remove('invalid');
-    body.code = codeEl.value.trim();
-  } else {
-    const pwEl = document.getElementById('emailOtpDisablePassword');
-    if (!pwEl.value) { pwEl.classList.add('invalid'); pwEl.focus(); return; }
-    pwEl.classList.remove('invalid');
+  if (/^\d{4}$/.test(codeVal)) {
+    body.code = codeVal;
+  } else if (HAS_PASSWORD && pwEl.value) {
     body.password = pwEl.value;
+  } else if (!HAS_PASSWORD) {
+    codeEl.classList.add('invalid'); codeEl.focus(); return;
+  } else {
+    pwEl.classList.add('invalid'); pwEl.focus(); return;
   }
+  const useCode = !!body.code;
 
   const confirmBtn = document.getElementById('emailOtpDisableConfirmBtn');
   confirmBtn.disabled = true;

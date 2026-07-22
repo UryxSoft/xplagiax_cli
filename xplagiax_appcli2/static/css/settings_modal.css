@@ -782,11 +782,13 @@
   transition: border-color .15s var(--sm-ease), box-shadow .15s var(--sm-ease);
 }
 .sm-dc-field input:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.12); }
-.sm-tfa-switch-link {
-  display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 600;
-  color: var(--sm-accent); text-decoration: none; cursor: pointer;
+.sm-dc-or-divider {
+  display: flex; align-items: center; gap: 10px; margin: 2px 0 16px;
+  font-size: 11px; font-weight: 700; color: var(--sm-t3); text-transform: uppercase; letter-spacing: .04em;
 }
-.sm-tfa-switch-link:hover { text-decoration: underline; }
+.sm-dc-or-divider::before, .sm-dc-or-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--sm-border);
+}
 .sm-dc-field input.invalid { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.16); }
 .sm-dc-blocked {
   display: flex; align-items: flex-start; gap: 9px;

@@ -4117,15 +4117,22 @@ def finderx_check():
     # Cache hit de FinderX: el submit devuelve el reporte completo directamente
     # ({'cached': True, 'report': {...}}) en vez de un task_id — sin este manejo
     # un texto repetido fallaba con "did not return a job id".
-    if inner.get('cached') and isinstance(inner.get('report'), dict):
-        rep = inner['report']
+    rep = inner['report'] if isinstance(inner.get('report'), dict) else None
+    if inner.get('cached') and rep:
         res = rep.get('result') if isinstance(rep.get('result'), dict) else (
             rep if 'scores' in rep else None)
         if res:
             return jsonify({'done': True, 'status': 'completed', 'result': res}), 200
 
+    # Un cache hit cuyo 'report' trae metadatos (job_id/text_hash/keywords…)
+    # pero todavía no los 'scores' embebidos: el id vive DENTRO de 'report',
+    # no al nivel de 'inner'. Sin este fallback caía en el 502 de abajo y el
+    # análisis de plagio se perdía entero (las otras pestañas sí respondían).
+    # Con el id, el front-end hace el poll normal a /finderx_report/<job_id>,
+    # que ya desenvuelve result/scores igual que en el camino no cacheado.
     job_id = (inner.get('task_id') or inner.get('job_id')
-              or inner.get('id') or inner.get('taskId'))
+              or inner.get('id') or inner.get('taskId')
+              or (rep or {}).get('job_id') or (rep or {}).get('task_id'))
     if not job_id:
         logger.error('FinderX submit missing task_id: %s', str(sd)[:300])
         return jsonify({'error': 'FinderX did not return a job id.'}), 502
@@ -4432,44 +4439,65 @@ def history_list():
     if not _history_allowed():
         return jsonify({'items': [], 'allowed': False}), 200
     from modules.models.model import AnalysisHistory, AnalysisShare, Users
+    from sqlalchemy import func as _sa_func
     _ensure_analysis_shares_table()
-    rows = (AnalysisHistory.query
-            .filter_by(user_id=current_user.id)
+
+    # Solo las columnas que to_summary() necesita — nunca ai/source/citation
+    # (JSON de cientos de KB cada uno: un reporte de FinderX ronda los 470 KB).
+    # Con SELECT * el ORDER BY created_at obligaba a MySQL a arrastrar esos
+    # blobs por el filesort y reventaba el sort buffer (error 1038 → 500 en
+    # todo el historial). 'text' se recorta en el propio SQL a los 160 chars
+    # que to_summary() usa de preview, así que la fila que se ordena pasa de
+    # centenares de KB a unos pocos cientos de bytes.
+    _PREVIEW = _sa_func.substr(AnalysisHistory.text, 1, 160)
+    _SUMMARY_COLS = (
+        AnalysisHistory.id, AnalysisHistory.history_id, AnalysisHistory.created_at,
+        AnalysisHistory.title, _PREVIEW, AnalysisHistory.ai_pct,
+        AnalysisHistory.overall, AnalysisHistory.cit_score, AnalysisHistory.result_view,
+    )
+
+    def _summary(row):
+        # row: (id, history_id, created_at, title, preview, ai_pct, overall,
+        #       cit_score, result_view) — mismo orden que _SUMMARY_COLS.
+        return AnalysisHistory.summary_from_parts(*row[1:])
+
+    rows = (db.session.query(*_SUMMARY_COLS)
+            .filter(AnalysisHistory.user_id == current_user.id)
             .order_by(AnalysisHistory.created_at.desc())
             .limit(HISTORY_MAX_PER_USER).all())
     items = []
     try:
-        own_ids = [r.id for r in rows]
+        own_ids = [r[0] for r in rows]
         shares_by_analysis = {}
         if own_ids:
             for s in AnalysisShare.query.filter(AnalysisShare.analysis_id.in_(own_ids)).all():
                 shares_by_analysis.setdefault(s.analysis_id, []).append(s.to_dict())
         for r in rows:
-            d = r.to_summary()
-            if shares_by_analysis.get(r.id):
-                d['sharedWith'] = shares_by_analysis[r.id]
+            d = _summary(r)
+            if shares_by_analysis.get(r[0]):
+                d['sharedWith'] = shares_by_analysis[r[0]]
             items.append(d)
 
         # Análisis que OTROS usuarios compartieron conmigo (siguen viviendo en la
         # fila del dueño: si él la borra, el join deja de devolverla — cascade real).
-        incoming = (db.session.query(AnalysisShare, AnalysisHistory)
-                    .join(AnalysisHistory, AnalysisShare.analysis_id == AnalysisHistory.id)
+        incoming = (db.session.query(AnalysisHistory.user_id, *_SUMMARY_COLS)
+                    .join(AnalysisShare, AnalysisShare.analysis_id == AnalysisHistory.id)
                     .filter(AnalysisShare.shared_with_id == current_user.id)
                     .order_by(AnalysisHistory.created_at.desc())
                     .limit(HISTORY_MAX_PER_USER).all())
-        owner_ids = {h.user_id for _, h in incoming}
+        owner_ids = {r[0] for r in incoming}
         owners = {u.id: u.email for u in Users.query.filter(Users.id.in_(owner_ids)).all()} if owner_ids else {}
-        for s, h in incoming:
-            d = h.to_summary()
+        for r in incoming:
+            d = _summary(r[1:])
             d['shared'] = True
-            d['sharedBy'] = owners.get(h.user_id, 'another user')
+            d['sharedBy'] = owners.get(r[0], 'another user')
             items.append(d)
         items.sort(key=lambda x: x.get('ts') or 0, reverse=True)
     except Exception:
         # Si la tabla de shares aún no existe (primer despliegue), el historial
         # propio sigue funcionando sin la capa de compartidos.
         logger.warning('history_list: shares layer unavailable', exc_info=True)
-        items = [r.to_summary() for r in rows]
+        items = [_summary(r) for r in rows]
     return jsonify({'items': items, 'allowed': True}), 200
 
 

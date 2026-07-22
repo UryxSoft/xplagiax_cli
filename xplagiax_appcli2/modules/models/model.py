@@ -1319,18 +1319,32 @@ class AnalysisHistory(db.Model):
         import calendar
         return int(calendar.timegm(self.created_at.utctimetuple()) * 1000) if self.created_at else 0
 
-    def to_summary(self):
+    @staticmethod
+    def summary_from_parts(history_id, created_at, title, preview,
+                           ai_pct, overall, cit_score, result_view):
+        """Shape of a history list entry, built from plain values instead of a
+        loaded row. The list endpoint selects only these few columns (never the
+        ai/source/citation JSON blobs, which run to hundreds of KB each) so
+        MySQL doesn't have to carry them through the ORDER BY filesort — doing
+        so blew the sort buffer (error 1038) once a user had a handful of large
+        analyses. to_summary() below feeds this from a real row."""
+        import calendar
         return {
-            'id': self.history_id,
-            'ts': self._ts_ms(),
-            'title': self.title or 'Untitled analysis',
-            'preview': (self.text or '')[:160],
-            'aiPct': self.ai_pct, 'overall': self.overall, 'cit': self.cit_score,
+            'id': history_id,
+            'ts': int(calendar.timegm(created_at.utctimetuple()) * 1000) if created_at else 0,
+            'title': title or 'Untitled analysis',
+            'preview': (preview or '')[:160],
+            'aiPct': ai_pct, 'overall': overall, 'cit': cit_score,
             # result_view is only ever set for the uploaded-document flow (the
             # server-rendered result.html to reopen) — its presence is already
             # a reliable document-vs-pasted-text signal, no new column needed.
-            'isDocument': bool(self.result_view),
+            'isDocument': bool(result_view),
         }
+
+    def to_summary(self):
+        return self.summary_from_parts(
+            self.history_id, self.created_at, self.title, self.text,
+            self.ai_pct, self.overall, self.cit_score, self.result_view)
 
     def to_full(self):
         d = self.to_summary()

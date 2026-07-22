@@ -2,32 +2,33 @@
 {% extends "user/user_base.html" %}
 
 {% block head %}
+{% if request.args.get('welcome') == '1' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/brand.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/floatingicon.css') }}">
 <style>
 /* Login -> Analysis welcome loader (see #xpaWelcomeLoader in the content
-   block below). Body stays hidden only for the instant right after login
-   (?welcome=1 on the URL, added server-side only on the post-login
-   redirect) so there's no flash of the page underneath — never on a
-   refresh/direct visit, since there's no synchronous script anywhere else
-   that adds this class. */
-html.xpa-welcome-pending body{visibility:hidden}
+   block below). This whole block only renders when the post-login redirect
+   put ?welcome=1 on this exact request — never on a refresh/direct visit,
+   since that URL is stripped client-side (history.replaceState) before the
+   user can reload with it still attached. Body stays hidden until the
+   loader's own script reveals it, so there's no flash of the page
+   underneath. */
+body{visibility:hidden}
 </style>
-<script>
-(function () {
-    if (/[?&]welcome=1(&|$)/.test(window.location.search)) {
-        document.documentElement.classList.add('xpa-welcome-pending');
-    }
-})();
-</script>
+{% endif %}
 {% endblock %}
 
 {% block content %}
 
-<!-- Login -> Analysis welcome loader — only rendered visible when the URL
-     carries ?welcome=1 (set once, server-side, by the post-login redirect;
-     stripped client-side below on first read so a refresh never re-shows
-     it). Visual language matches /x_doc/report/<token>'s loader. -->
+{% if request.args.get('welcome') == '1' %}
+<!-- Visual language matches /x_doc/report/<token>'s loader, including the
+     floating-icon background (floatingicon.css/js, unmodified). Appended to
+     <body> by its own script below instead of staying here: #mainDashboard
+     has backdrop-filter, which makes it a containing block for
+     position:fixed descendants — left in place, this loader would only
+     ever cover the dashboard card instead of the full viewport. -->
 <div id="xpaWelcomeLoader" role="status" aria-live="polite">
+  <div id="myDiv" style="position:absolute;inset:0;z-index:0"></div>
   <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center">
   <a href="/" class="tech-brand" tabindex="-1" aria-hidden="true">
     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" stroke="currentColor" class="bi bi-chevron-contract" viewBox="0 0 16 16">
@@ -49,10 +50,9 @@ html.xpa-welcome-pending body{visibility:hidden}
   </div>
 </div>
 <style>
-#xpaWelcomeLoader{display:none;position:fixed;inset:0;z-index:2147483000;flex-direction:column;
+#xpaWelcomeLoader{display:flex;position:fixed;inset:0;z-index:2147483000;flex-direction:column;
   align-items:center;justify-content:center;text-align:center;padding:24px;
   background:#064CDB;transition:opacity .45s ease,visibility .45s ease}
-html.xpa-welcome-pending #xpaWelcomeLoader{display:flex;visibility:visible}
 #xpaWelcomeLoader.xpa-loader-done{opacity:0;visibility:hidden!important;pointer-events:none}
 #xpaWelcomeLoader .tech-brand{justify-content:center;transform:scale(2.3);margin-bottom:38px;
   filter:drop-shadow(0 4px 18px rgba(0,0,0,.18))}
@@ -79,7 +79,6 @@ html.xpa-welcome-pending #xpaWelcomeLoader{display:flex;visibility:visible}
 <script>
 (function () {
     'use strict';
-    if (!/[?&]welcome=1(&|$)/.test(window.location.search)) return;
 
     // Strip the flag immediately so a refresh/back navigation never
     // re-triggers this loader — it must only ever fire right after login.
@@ -89,11 +88,17 @@ html.xpa-welcome-pending #xpaWelcomeLoader{display:flex;visibility:visible}
     history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
 
     var loader = document.getElementById('xpaWelcomeLoader');
-    if (!loader) { document.documentElement.classList.remove('xpa-welcome-pending'); return; }
+    if (!loader) { document.body.style.visibility = ''; return; }
+
+    // Move out from under #mainDashboard (backdrop-filter -> containing
+    // block for position:fixed) so `inset:0` covers the real viewport, not
+    // just the dashboard card. Existing DOM references (incl. #myDiv, read
+    // by floatingicon.js right after this runs) stay valid across the move.
+    document.body.appendChild(loader);
 
     function reveal() {
         loader.classList.add('xpa-loader-done');
-        document.documentElement.classList.remove('xpa-welcome-pending');
+        document.body.style.visibility = '';
         setTimeout(function () { loader.remove(); }, 500);
     }
     // Hard safety net: whatever else happens (slow device, a script error
@@ -174,6 +179,8 @@ html.xpa-welcome-pending #xpaWelcomeLoader{display:flex;visibility:visible}
     }
 })();
 </script>
+<script src="{{ url_for('static', filename='js/floatingicon.js') }}"></script>
+{% endif %}
 
 <!-- FilePond CSS -->
 <link href="https://unpkg.com/filepond/dist/filepond.css" rel="stylesheet">
