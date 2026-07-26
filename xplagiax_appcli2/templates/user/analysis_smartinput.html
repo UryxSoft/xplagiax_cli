@@ -3577,7 +3577,11 @@ body.xp-file-preview .mode-switch-container {
                                       : p.zone === 'HUMAN' ? 'human'
                                       : ((p.ai_score || 0) >= 50 ? 'ai' : 'human'),
                         score: p.zone === 'AI' ? (p.ai_score || 0) : (p.human_score || 0),
-                        text: p.text_preview || '',
+                        // text_full covers the whole paragraph so _highlightSegments can
+                        // match and color it entirely; text_preview (80 chars, older/
+                        // cached results without text_full) only highlights the start of
+                        // each paragraph, leaving the rest of the text unmarked.
+                        text: p.text_full || p.text_preview || '',
                     })),
                 };
             }
@@ -6804,7 +6808,13 @@ body.xp-file-preview .mode-switch-container {
                 if (idx + len > full.length) len = full.length - idx;
                 const color = b.type === 'ai' ? 'var(--ai, #f43f5e)' : 'var(--human, #10b981)';
                 html += esc(full.slice(cursor, idx));
-                html += `<mark id="xpaSeg${i}" data-seg="${i}" class="xpa-seg-hl" style="background:${color}26;color:inherit;border-radius:3px;padding:0 1px;box-shadow:inset 0 -2px 0 ${color};scroll-margin:60px">${esc(full.slice(idx, idx + len))}</mark>`;
+                // id="xpaAi{i}" — MUST match the prefix _focusFinding('ai', i) looks up
+                // (used by every result-row click handler, including the document/iframe
+                // case). This used to be "xpaSeg{i}", a name only _focusSegment() (below,
+                // now unused) ever searched for — every click handler in the combined
+                // view already called _focusFinding('ai', i), so the mark it needed to
+                // find was never created and the scroll silently did nothing.
+                html += `<mark id="xpaAi${i}" data-seg="${i}" class="xpa-seg-hl" style="background:${color}26;color:inherit;border-radius:3px;padding:0 1px;box-shadow:inset 0 -2px 0 ${color};scroll-margin:60px">${esc(full.slice(idx, idx + len))}</mark>`;
                 cursor = idx + len;
             });
             if (!html) return;            // no se pudo mapear ningún segmento → dejar el texto tal cual
@@ -6813,8 +6823,11 @@ body.xp-file-preview .mode-switch-container {
         }
 
         // Desplaza y resalta el segmento i en el panel de texto (click desde un bloque).
+        // Kept for the legacy single-AI split view (_enterSplitMode); the combined view
+        // (_enterMarktrackView) uses _focusFinding('ai', i) instead, which also handles
+        // the document/iframe case this function does not.
         _focusSegment(i) {
-            const mark = document.getElementById('xpaSeg' + i);
+            const mark = document.getElementById('xpaAi' + i);
             if (!mark) return;
             mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
             mark.classList.remove('xpa-seg-pulse');

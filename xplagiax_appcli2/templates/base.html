@@ -6,8 +6,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{% block description %}Plataforma segura para gestión de archivos{% endblock %}">
+    <!-- Diseño fijo en claro: "only light" le dice al navegador que esta página
+         no tiene variante oscura, para que no adapte scrollbars/checkboxes/
+         <select> etc. al modo oscuro del SO. Había además un bloque
+         @media (prefers-color-scheme: dark) que repintaba body/card/
+         form-control a oscuro — eliminado, porque color-scheme no frena el
+         CSS propio, solo los controles nativos del navegador. -->
+    <meta name="color-scheme" content="only light">
     <title>{% block title %}Mi App{% endblock %}</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -15,6 +22,7 @@
     <!-- Custom CSS -->
     <style>
         :root {
+            color-scheme: only light;
             --primary-color: #0d6efd;
             --secondary-color: #6c757d;
             --success-color: #198754;
@@ -150,24 +158,6 @@
             }
         }
 
-        /* Dark mode support */
-        @media (prefers-color-scheme: dark) {
-            body {
-                background-color: #212529;
-                color: #fff;
-            }
-            
-            .card {
-                background-color: #343a40;
-                color: #fff;
-            }
-            
-            .form-control, .form-select {
-                background-color: #495057;
-                border-color: #6c757d;
-                color: #fff;
-            }
-        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>

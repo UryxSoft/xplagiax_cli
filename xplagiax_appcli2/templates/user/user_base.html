@@ -5,6 +5,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
+  <!-- Diseño fijo en claro: sin esto, el navegador pinta scrollbars, checkboxes,
+       <select>/<input type="date">, etc. con la paleta oscura del SO aunque
+       ningún CSS propio pida modo oscuro — se ve roto contra un diseño pensado
+       solo para claro. "only light" (no solo "light") le dice al navegador que
+       la página NO tiene variante oscura, para que no intente adaptarla igual. -->
+  <meta name="color-scheme" content="only light">
+  <style>:root { color-scheme: only light; }</style>
   <title>XplagiaX.ai</title>
   <script>
     // CSRF: añade el token a todos los fetch no-GET (mismo mecanismo que base.html).

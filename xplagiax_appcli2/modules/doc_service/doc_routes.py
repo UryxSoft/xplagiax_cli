@@ -1279,7 +1279,14 @@ def convert_images_to_urls(images, user_id):
     
     return images_urls
 
-@x_doc.route('/uploadanalysis_', methods=['POST'])   
+# ══════════════════════════════════════════════════════════════════════════
+# MUERTO — sin clientes (verificado sobre templates/ y static/). Su búsqueda de
+# similitud usa db_batch_search(), que postea al blueprint x_search borrado del
+# repo → 404 siempre. El análisis VIVO es la pantalla "analysiss", que va por
+# /x_doc/extract_text + /x_doc/finderx_check contra el microservicio FinderX.
+# Pendiente de borrado en un commit propio.
+# ══════════════════════════════════════════════════════════════════════════
+@x_doc.route('/uploadanalysis_', methods=['POST'])
 def upload_analysis_():
     """
     Endpoint para cargar, procesar y guardar un documento en múltiples sistemas:
@@ -1617,7 +1624,15 @@ def upload_analysis_():
     else:
         return jsonify({'error': 'Unsupported file type'}), 400
 
-@x_doc.route('/uploadanalysis', methods=['POST'])   
+# ══════════════════════════════════════════════════════════════════════════
+# MUERTO — sin clientes (verificado sobre templates/ y static/). Usa
+# qdrant_search_fulltext(), que lee la colección essays_index con vectores
+# nombrados (semantic/paraphrase) de modelos MiniLM: un espacio vectorial
+# DISTINTO al E5 de FinderX, y una colección que ningún código escribe hoy.
+# El análisis VIVO es la pantalla "analysiss" (extract_text + finderx_check).
+# Pendiente de borrado en un commit propio.
+# ══════════════════════════════════════════════════════════════════════════
+@x_doc.route('/uploadanalysis', methods=['POST'])
 def upload_analysis():
     """
     Endpoint completo y optimizado para análisis de documentos.
@@ -2137,7 +2152,15 @@ def convert_images_to_urls(images_list, user_id=None):
     
     return converted_images
 
-@x_doc.route('/uploadsave_', methods=['POST'])   
+# ══════════════════════════════════════════════════════════════════════════
+# MUERTO — no lo llama ningún cliente (verificado sobre templates/ y static/).
+# Conserva el patrón roto que se arregló en /uploadsave: exige el doc_id al
+# blueprint x_search (comentado en app.py, módulo borrado del repo) y corta con
+# 500 si no responde, así que NINGUNA subida por acá puede funcionar.
+# El endpoint VIVO es /uploadsave (usado por static/js/test/filepond_upload_js.js).
+# Pendiente de borrado en un commit propio, separado del arreglo del 500.
+# ══════════════════════════════════════════════════════════════════════════
+@x_doc.route('/uploadsave_', methods=['POST'])
 def upload_save_():
     """
     Endpoint optimizado para cargar, procesar y guardar un documento en múltiples sistemas:
@@ -2537,46 +2560,17 @@ def upload_save():
     logger.info(f"   Image count: {extracted_image_count}\n")
     
     # =================== FUNCIONES PARA REQUESTS PARALELOS ===================
-    
-    def elasticsearch_request():
-        """
-        Request a Qdrant - Debe ejecutarse primero para obtener doc_id
-        """
-        #try:
-        logger.info("🔍 Indexando en Qdrant (Search Service)...")
-        
-        response = session_pool.post(
-            'http://localhost:5000/x_search/api/documents/essays_index',
-            json=es_document, 
-            headers={'Content-Type': 'application/json'},
-            timeout=30
-        )
-        
-        success = response.status_code == 200
-        
-        if success:
-            data = response.json()
-            doc_id = data.get('id')
-            logger.info(f"✅ Qdrant: Documento indexado (ID: {doc_id})")
-        else:
-            logger.error(f"❌ Qdrant: Error {response.status_code}")
-            logger.error(f"   Response: {response.text[:200]}")
-        
-        return {
-            'success': success,
-            'response': response,
-            'data': data if success else None,
-            'error': response.text if not success else None
-        }
-        #except Exception as e:
-        #    logger.error(f"❌ Qdrant: Excepción - {str(e)}")
-        #    return {
-        #        'success': False,
-        #        'response': None,
-        #        'data': None,
-        #        'error': str(e)
-        #    }
-    
+
+    # NOTA: aquí vivía elasticsearch_request(), que posteaba a
+    # localhost:5000/x_search/api/documents/essays_index para obtener el doc_id
+    # ANTES de guardar el archivo. Ese blueprint (x_search) está comentado en
+    # app.py y su módulo (modules/finderx_service/) ya no existe en el repo, así
+    # que la llamada devolvía 404 SIEMPRE y el chequeo de más abajo cortaba con
+    # un 500 — ninguna subida de documento llegaba nunca a guardarse, ni en
+    # SeaweedFS. El doc_id ahora se genera localmente (ver PASO 1) y la
+    # indexación para búsqueda de plagio pasa a ser un paso posterior,
+    # NO BLOQUEANTE, contra el endpoint de corpus de FinderX.
+
     def seaweedfs_request(doc_id, file_content):
         """
         Request a SeaweedFS - Ejecutar en paralelo con Milvus
@@ -2653,46 +2647,16 @@ def upload_save():
     
     # =================== EJECUTAR REQUESTS ===================
     
-    # PASO 1: Qdrant (obligatorio primero para obtener doc_id)
-    logger.info(f"\n{'='*70}")
-    logger.info("PASO 1: INDEXACIÓN EN QDRANT / SEARCH SERVICE")
-    logger.info(f"{'='*70}\n")
-    
-    elastic_start = time.time()
-    elastic_result = elasticsearch_request()
-    elastic_time = time.time() - elastic_start
-    
-    if not elastic_result['success']:
-        logger.error(f"\n{'='*70}")
-        logger.error("❌ FALLO CRÍTICO: Error en Qdrant")
-        logger.error(f"{'='*70}")
-        logger.error(f"   Error: {elastic_result['error']}")
-        logger.error(f"   Tiempo: {elastic_time:.2f}s")
-        logger.error(f"{'='*70}\n")
-        
-        return jsonify({
-            'error': 'Error indexing document in Qdrant',
-            'details': elastic_result['error'],
-            'processing_time': f"{time.time() - start_time:.2f}s"
-        }), 500
-    
-    doc_id = elastic_result['data'].get('id')
-    if not doc_id:
-        logger.error(f"\n{'='*70}")
-        logger.error("❌ ERROR: No se obtuvo document_id de Qdrant")
-        logger.error(f"{'='*70}")
-        logger.error(f"   Response: {elastic_result['data']}")
-        logger.error(f"{'='*70}\n")
-        
-        return jsonify({
-            'error': 'Could not get the indexed document ID',
-            'elastic_response': elastic_result['data'],
-            'processing_time': f"{time.time() - start_time:.2f}s"
-        }), 500
-    
-    logger.info(f"✅ Qdrant completado en {elastic_time:.2f}s")
-    logger.info(f"   Document ID: {doc_id}\n")
-    
+    # PASO 1: doc_id local — ya NO depende de ningún servicio externo.
+    # Antes el id lo devolvía el índice de búsqueda, lo que ataba el guardado del
+    # documento a que ese servicio estuviera vivo (y como no lo está, nada se
+    # guardaba). Un uuid4 local cumple el mismo rol: identificar el documento en
+    # SeaweedFS y en las tablas propias. La indexación para plagio se hace
+    # después y usa este mismo id, así el documento queda referenciable en el
+    # corpus sin invertir la dependencia.
+    doc_id = str(uuid.uuid4())
+    logger.info(f"🆔 Document ID generado localmente: {doc_id}\n")
+
     # PASO 2: SeaweedFS y Milvus EN PARALELO
     logger.info(f"{'='*70}")
     logger.info("PASO 2: ALMACENAMIENTO PARALELO (SeaweedFS + Milvus)")
@@ -2768,13 +2732,13 @@ def upload_save():
         logger.error("❌ ERROR CRÍTICO: Fallo en SeaweedFS")
         logger.error(f"{'='*70}")
         logger.error(f"   Error: {seaweedfs_result.get('error')}")
-        logger.error(f"   Qdrant ID: {doc_id} (documento indexado)")
+        logger.error(f"   Document ID: {doc_id}")
         logger.error(f"   Milvus status: {milvus_status}")
         logger.error(f"{'='*70}\n")
         
         return jsonify({
             'error': 'Error saving file in SeaweedFS',
-            'elastic_id': doc_id,
+            'document_id': doc_id,
             'details': seaweedfs_result.get('error'),
             'qdrant_images_status': qdrant_imgs_status,
             'processing_time': f"{time.time() - start_time:.2f}s"
@@ -2797,9 +2761,7 @@ def upload_save():
     logger.info(f"\n   MÉTRICAS DE RENDIMIENTO:")
     logger.info(f"   • Tiempo total: {total_time:.2f}s")
     logger.info(f"   • Extracción: {extraction_time:.2f}s")
-    logger.info(f"   • Qdrant: {elastic_time:.2f}s")
     logger.info(f"   • Operaciones paralelas: {parallel_time:.2f}s")
-    logger.info(f"   • Qdrant status: ✅ success")
     logger.info(f"   • SeaweedFS status: ✅ success")
     logger.info(f"   • Qdrant Images status: {'✅ success' if qdrant_imgs_result.get('success') else '⚠️  warning'}")
     logger.info(f"{'='*70}\n")
@@ -2808,7 +2770,6 @@ def upload_save():
         'success': True,
         'message': 'Document processed and saved successfully',
         'document_id': doc_id,
-        'elasticsearch_id': doc_id,
         'seaweed_status': 'success',
         'qdrant_images_status': qdrant_imgs_status,
         'document_info': {
@@ -2823,9 +2784,7 @@ def upload_save():
         'performance_metrics': {
             'total_time': f"{total_time:.2f}s",
             'extraction_time': f"{extraction_time:.2f}s",
-            'qdrant_time': f"{elastic_time:.2f}s",
-            'parallel_operations_time': f"{parallel_time:.2f}s",
-            'speedup_factor': f"{(elastic_time + parallel_time) / total_time:.2f}x"
+            'parallel_operations_time': f"{parallel_time:.2f}s"
         }
     }), 200
         
@@ -4003,6 +3962,27 @@ def analyze_text():
     # Token firmado sin estado (evita la carrera de la cookie con analisis en paralelo).
     token = _sign_job('ai', task_id)
 
+    # Registrar el trabajo del lado servidor — sobrevive si el navegador se cierra
+    # antes de que termine (ver AiAnalysisJob). Best-effort: si falla, el análisis
+    # sigue funcionando igual que antes (solo se pierde la recuperación en
+    # background para ESTE trabajo puntual), así que un error acá no debe romper
+    # la respuesta al usuario.
+    try:
+        from modules.models.model import AiAnalysisJob
+        _ensure_ai_analysis_job_table()
+        db.session.add(AiAnalysisJob(
+            user_id=current_user.id,
+            task_id=str(task_id),
+            text=text[:15000],
+            word_count=word_count,
+            plugins=plugins,
+            status='pending',
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.warning('Could not create AiAnalysisJob for task %s', task_id, exc_info=True)
+
     return jsonify({'done': False, 'task_id': token}), 202
 
 
@@ -4352,6 +4332,64 @@ def _ensure_result_view_column():
         db.session.rollback()
         # No marcar READY: se reintentará en el próximo guardado.
         logger.warning('Could not ensure analysis_history.result_view column', exc_info=True)
+
+
+_AI_TASK_ID_COL_READY = False
+_AI_ANALYSIS_JOB_TABLE_READY = False
+
+
+def _ensure_ai_task_id_column():
+    """Auto-migración idempotente: añade `ai_task_id` a analysis_history si falta.
+    Mismo patrón que _ensure_result_view_column() — ver ese docstring."""
+    global _AI_TASK_ID_COL_READY
+    if _AI_TASK_ID_COL_READY:
+        return
+    try:
+        from sqlalchemy import inspect as _sa_inspect, text as _sa_text
+        cols = [c['name'] for c in _sa_inspect(db.engine).get_columns('analysis_history')]
+        if 'ai_task_id' not in cols:
+            db.session.execute(_sa_text(
+                "ALTER TABLE analysis_history ADD COLUMN ai_task_id VARCHAR(64) NULL UNIQUE"))
+            db.session.commit()
+        _AI_TASK_ID_COL_READY = True
+    except Exception:
+        db.session.rollback()
+        logger.warning('Could not ensure analysis_history.ai_task_id column', exc_info=True)
+
+
+def _ensure_ai_analysis_job_table():
+    """Auto-migración idempotente: crea `ai_analysis_job` si falta (ver el modelo
+    AiAnalysisJob). CREATE TABLE IF NOT EXISTS en vez de un inspect() de columnas
+    porque la tabla entera es nueva, no una columna sobre una tabla existente."""
+    global _AI_ANALYSIS_JOB_TABLE_READY
+    if _AI_ANALYSIS_JOB_TABLE_READY:
+        return
+    try:
+        from sqlalchemy import text as _sa_text
+        db.session.execute(_sa_text("""
+            CREATE TABLE IF NOT EXISTS ai_analysis_job (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                task_id VARCHAR(64) NOT NULL UNIQUE,
+                text TEXT,
+                word_count INT,
+                plugins JSON,
+                status VARCHAR(16) NOT NULL DEFAULT 'pending',
+                result JSON,
+                credited TINYINT(1) NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL,
+                resolved_at DATETIME NULL,
+                INDEX ix_ai_analysis_job_user_id (user_id),
+                INDEX ix_ai_analysis_job_status (status),
+                INDEX ix_ai_analysis_job_credited (credited),
+                INDEX ix_ai_analysis_job_created_at (created_at)
+            )
+        """))
+        db.session.commit()
+        _AI_ANALYSIS_JOB_TABLE_READY = True
+    except Exception:
+        db.session.rollback()
+        logger.warning('Could not ensure ai_analysis_job table', exc_info=True)
 
 
 def _sanitize_result_view(value):
