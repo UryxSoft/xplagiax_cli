@@ -1,0 +1,293 @@
+{% extends 'adminx/base.html' %}
+{% block title %}Bulk user creation — XplagiaX Admin{% endblock %}
+{% block nav_bulk_users %}active{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Bulk institutional user creation</h1>
+</div>
+
+<div class="card">
+  <h3 style="margin:0 0 12px;font-size:14px">1. Institution</h3>
+  <div class="field"><label for="bu_inst">Institution</label>
+    <select id="bu_inst" onchange="onInstitutionChange()">
+      <option value="">Select an institution…</option>
+    </select>
+  </div>
+  <div id="bu_inst_preview" style="display:none;margin-top:10px;padding:14px;border:1px solid var(--line);
+       border-radius:var(--radius);background:var(--bg);display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+  </div>
+  <p style="font-size:11.5px;color:var(--muted);margin:10px 0 0">
+    Only active institutions are listed. Manage logo/colors from
+    <a href="/adminx/institutions/">Institutions</a>.</p>
+</div>
+
+<div class="card">
+  <h3 style="margin:0 0 12px;font-size:14px">2. Account settings</h3>
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <div class="field" style="min-width:180px"><label for="bu_plan">Plan</label>
+      <select id="bu_plan">
+        {% for p in plans %}<option value="{{ p }}" {{ 'selected' if p=='Institutes' else '' }}>{{ p }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field" style="min-width:160px">
+      <label for="bu_trial" style="display:flex;align-items:center;gap:6px;margin-top:22px">
+        <input type="checkbox" id="bu_trial" onchange="toggleTrialDays()" style="width:auto"> Start on trial</label>
+    </div>
+    <div class="field" id="bu_trial_days_wrap" style="display:none;min-width:140px">
+      <label for="bu_trial_days">Trial days</label>
+      <input type="number" id="bu_trial_days" value="14" min="1" max="365">
+    </div>
+  </div>
+  <div class="field">
+    <label>Welcome email accent color</label>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:4px" id="bu_accent_wrap">
+      <label style="display:flex;align-items:center;gap:6px;font-weight:400">
+        <input type="radio" name="bu_accent" value="primary" checked style="width:auto"> Primary</label>
+      <label style="display:flex;align-items:center;gap:6px;font-weight:400">
+        <input type="radio" name="bu_accent" value="secondary" style="width:auto"> Secondary</label>
+    </div>
+    <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0">
+      Falls back to the default XplagiaX blue if the institution has no colors set.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin:0 0 4px;font-size:14px">3. Users</h3>
+  <p style="font-size:11.5px;color:var(--muted);margin:0 0 12px">
+    Add rows manually and/or import a CSV. Columns: <code>email</code> (required),
+    <code>first_name</code>, <code>last_name</code> (optional). Excel files: save as
+    CSV first — this imports .csv only, no spreadsheet parsing.</p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+    <button class="btn btn-sm" type="button" onclick="addRow()">
+      <svg class="icon" width="13" height="13" aria-hidden="true"><use href="#ic-plus"></use></svg> Add row</button>
+    <label for="bu_csv_file" class="btn btn-sm" style="cursor:pointer;margin:0">
+      <svg class="icon" width="13" height="13" aria-hidden="true"><use href="#ic-upload"></use></svg> Import CSV</label>
+    <input type="file" id="bu_csv_file" accept=".csv,text/csv" style="display:none" onchange="onCsvChosen(this.files[0]); this.value='';">
+    <button class="btn btn-sm" type="button" onclick="clearRows()">
+      <svg class="icon" width="13" height="13" aria-hidden="true"><use href="#ic-trash"></use></svg> Clear all</button>
+    <span id="bu_row_count" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+  <div id="bu_csv_errors" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:var(--radius);
+       background:#fffbeb;color:#b45309;font-size:12.5px"></div>
+  <div class="table-wrap"><table class="responsive-stack">
+    <thead><tr><th>Email</th><th>First name</th><th>Last name</th><th style="text-align:right">Remove</th></tr></thead>
+    <tbody id="bu_rows"></tbody>
+  </table></div>
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+    <div>
+      <button class="btn btn-primary" id="bu_submit" type="button" onclick="submitBatch()">
+        <svg class="icon" width="14" height="14" aria-hidden="true"><use href="#ic-upload"></use></svg> Create accounts</button>
+      <span id="bu_submit_hint" style="font-size:12px;color:var(--muted);margin-left:8px"></span>
+    </div>
+    <div id="bu_progress_wrap" style="display:none;flex:1;min-width:180px;max-width:320px">
+      <div class="progress indeterminate"><span></span></div>
+      <p style="font-size:11.5px;color:var(--muted);margin:6px 0 0">Creating accounts and sending activation emails…</p>
+    </div>
+  </div>
+  <div id="bu_results" style="display:none;margin-top:16px"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let institutions = [];
+let selectedInstitution = null;
+let lastResult = null;
+
+async function loadInstitutions(){
+  try{
+    const d = await api('/adminx/institutions/api/institutions/lookup');
+    institutions = d.institutions || [];
+    const sel = document.getElementById('bu_inst');
+    sel.innerHTML = '<option value="">Select an institution…</option>' +
+      institutions.map(i => `<option value="${i.id}">${esc(i.name)}${i.country ? ' — ' + esc(i.country) : ''}</option>`).join('');
+  }catch(e){toast('Could not load institutions: ' + e.message, true);}
+}
+
+function swatch(color, label){
+  if(!color) return '';
+  return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted)">
+    <span style="width:14px;height:14px;border-radius:4px;border:1px solid var(--line);background:${esc(color)};display:inline-block"></span>${label}</span>`;
+}
+
+async function onInstitutionChange(){
+  const id = document.getElementById('bu_inst').value;
+  const box = document.getElementById('bu_inst_preview');
+  if(!id){ box.style.display='none'; selectedInstitution=null; updateAccentAvailability(); return; }
+  try{
+    const d = await api(`/adminx/institutions/api/institutions/${id}`);
+    selectedInstitution = d.institution;
+    const i = selectedInstitution;
+    const logo = i.logo_path
+      ? `<img src="/static/${i.logo_path}" alt="" style="width:44px;height:44px;object-fit:contain;border-radius:8px;border:1px solid var(--line);background:#fff">`
+      : `<div style="width:44px;height:44px;border-radius:8px;border:1px dashed var(--line);display:flex;align-items:center;
+           justify-content:center;font-size:10px;color:var(--muted)">No logo</div>`;
+    box.innerHTML = `${logo}
+      <div style="min-width:160px">
+        <div style="font-weight:700;font-size:13.5px">${esc(i.name)}</div>
+        <div style="font-size:11.5px;color:var(--muted)">${esc(i.country||'—')} · ${i.user_count||0} user(s) already</div>
+      </div>
+      <span class="chip ${i.status==='active'?'chip-ok':'chip-off'}">${esc(i.status||'active')}</span>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${swatch(i.primary_color, 'Primary')}${swatch(i.secondary_color, 'Secondary')}
+      </div>`;
+    box.style.display = 'flex';
+    updateAccentAvailability();
+  }catch(e){toast('Could not load institution details: ' + e.message, true); box.style.display='none';}
+}
+
+function updateAccentAvailability(){
+  const secRadio = document.querySelector('input[name="bu_accent"][value="secondary"]');
+  const hasSecondary = !!(selectedInstitution && selectedInstitution.secondary_color);
+  secRadio.disabled = !hasSecondary;
+  if(!hasSecondary && secRadio.checked){
+    document.querySelector('input[name="bu_accent"][value="primary"]').checked = true;
+  }
+}
+
+function toggleTrialDays(){
+  document.getElementById('bu_trial_days_wrap').style.display =
+    document.getElementById('bu_trial').checked ? '' : 'none';
+}
+
+function rowHtml(email, first_name, last_name){
+  return `<tr class="bu-row">
+    <td data-label="Email"><input class="bu-email" value="${esc(email||'')}" placeholder="name@example.com"></td>
+    <td data-label="First name"><input class="bu-fname" value="${esc(first_name||'')}"></td>
+    <td data-label="Last name"><input class="bu-lname" value="${esc(last_name||'')}"></td>
+    <td data-label="Remove" style="text-align:right">
+      <button class="btn btn-sm" type="button" aria-label="Remove row" onclick="this.closest('tr').remove(); updateRowCount();">
+        <svg class="icon" width="12" height="12" aria-hidden="true"><use href="#ic-minus"></use></svg></button>
+    </td>
+  </tr>`;
+}
+
+function addRow(prefill){
+  prefill = prefill || {};
+  document.getElementById('bu_rows').insertAdjacentHTML('beforeend',
+    rowHtml(prefill.email, prefill.first_name, prefill.last_name));
+  updateRowCount();
+}
+
+function clearRows(){
+  document.getElementById('bu_rows').innerHTML = '';
+  addRow();
+  document.getElementById('bu_csv_errors').style.display = 'none';
+}
+
+function updateRowCount(){
+  const n = document.querySelectorAll('#bu_rows .bu-row').length;
+  document.getElementById('bu_row_count').textContent = n ? `${n} row(s)` : '';
+}
+
+function collectRows(){
+  return Array.from(document.querySelectorAll('#bu_rows .bu-row')).map(tr => ({
+    email: tr.querySelector('.bu-email').value.trim().toLowerCase(),
+    first_name: tr.querySelector('.bu-fname').value.trim(),
+    last_name: tr.querySelector('.bu-lname').value.trim(),
+  })).filter(r => r.email || r.first_name || r.last_name);
+}
+
+async function onCsvChosen(file){
+  if(!file) return;
+  const errBox = document.getElementById('bu_csv_errors');
+  errBox.style.display = 'none';
+  const fd = new FormData();
+  fd.append('file', file);
+  try{
+    const r = await fetch('/adminx/bulk-users/api/parse-csv', {method:'POST', headers:{'X-CSRF-Token':CSRF}, body:fd});
+    const d = await r.json().catch(() => ({}));
+    if(!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    // Reemplaza filas vacías iniciales, conserva filas ya tipeadas manualmente con contenido.
+    const existing = collectRows();
+    document.getElementById('bu_rows').innerHTML = '';
+    existing.forEach(r => addRow(r));
+    (d.rows || []).forEach(r => addRow(r));
+    if(!document.querySelectorAll('#bu_rows .bu-row').length) addRow();
+    if(d.parse_errors && d.parse_errors.length){
+      errBox.style.display = 'block';
+      errBox.innerHTML = `<b>${d.parse_errors.length} row(s) skipped:</b><br>` +
+        d.parse_errors.slice(0, 10).map(e => `Row ${e.row}: ${esc(e.reason)}${e.email ? ' (' + esc(e.email) + ')' : ''}`).join('<br>') +
+        (d.parse_errors.length > 10 ? `<br>…and ${d.parse_errors.length - 10} more.` : '');
+    }
+    toast(`Imported ${d.total_parsed} row(s).`);
+  }catch(e){toast('CSV import failed: ' + e.message, true);}
+}
+
+function renderResults(d){
+  const box = document.getElementById('bu_results');
+  const s = d.summary;
+  const failedRows = (d.failed || []).map(f =>
+    `<tr><td data-label="Email">${esc(f.email)}</td><td data-label="Reason" colspan="2">${esc(f.reason)}</td></tr>`).join('');
+  const createdRows = (d.created || []).map(c =>
+    `<tr><td data-label="Email">${esc(c.email)}</td>
+       <td data-label="Status"><span class="chip ${c.activation_email_sent ? 'chip-ok' : 'chip-warn'}">
+         ${c.activation_email_sent ? 'Created · email sent' : 'Created · email FAILED'}</span></td></tr>`).join('');
+  box.innerHTML = `
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      <span class="chip chip-ok">${s.created} created</span>
+      <span class="chip ${s.failed ? 'chip-off' : 'chip-muted'}">${s.failed} failed</span>
+      <span class="chip chip-info">${s.emails_sent}/${s.created} emails sent</span>
+      <button class="btn btn-sm" type="button" onclick="downloadReport()">
+        <svg class="icon" width="12" height="12" aria-hidden="true"><use href="#ic-file"></use></svg> Download report (CSV)</button>
+    </div>
+    ${d.created && d.created.length ? `<div class="table-wrap"><table class="responsive-stack">
+      <thead><tr><th>Email</th><th>Result</th></tr></thead><tbody>${createdRows}</tbody></table></div>` : ''}
+    ${d.failed && d.failed.length ? `<div class="table-wrap" style="margin-top:12px"><table class="responsive-stack">
+      <thead><tr><th>Email</th><th colspan="2">Failure reason</th></tr></thead><tbody>${failedRows}</tbody></table></div>` : ''}
+  `;
+  box.style.display = 'block';
+}
+
+function downloadReport(){
+  if(!lastResult) return;
+  const lines = [['email', 'status', 'reason']];
+  (lastResult.created || []).forEach(c => lines.push([c.email, c.activation_email_sent ? 'created (email sent)' : 'created (email failed)', '']));
+  (lastResult.failed || []).forEach(f => lines.push([f.email, 'failed', f.reason || '']));
+  const csv = lines.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `bulk_users_report_${Date.now()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function submitBatch(){
+  const instId = document.getElementById('bu_inst').value;
+  if(!instId){ toast('Select an institution first.', true); return; }
+  const rows = collectRows();
+  if(!rows.length){ toast('Add at least one user row.', true); return; }
+  const invalid = rows.filter(r => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email));
+  if(invalid.length){ toast(`${invalid.length} row(s) have an invalid email — fix or remove them first.`, true); return; }
+
+  const btn = document.getElementById('bu_submit');
+  btn.disabled = true;
+  document.getElementById('bu_progress_wrap').style.display = 'block';
+  document.getElementById('bu_results').style.display = 'none';
+  try{
+    const payload = {
+      institution_id: Number(instId),
+      plan: document.getElementById('bu_plan').value,
+      trial: document.getElementById('bu_trial').checked,
+      trial_days: Number(document.getElementById('bu_trial_days').value || 14),
+      accent: document.querySelector('input[name="bu_accent"]:checked').value,
+      users: rows,
+    };
+    const d = await api('/adminx/bulk-users/api/bulk-create', {method: 'POST', body: JSON.stringify(payload)});
+    lastResult = d;
+    renderResults(d);
+    toast(`${d.summary.created} account(s) created.`, false, {celebrate: d.summary.created > 0});
+  }catch(e){toast('Bulk creation failed: ' + e.message, true);}
+  finally{
+    btn.disabled = false;
+    document.getElementById('bu_progress_wrap').style.display = 'none';
+  }
+}
+
+loadInstitutions();
+addRow(); addRow(); addRow();
+</script>
+{% endblock %}

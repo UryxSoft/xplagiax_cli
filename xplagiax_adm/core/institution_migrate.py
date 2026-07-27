@@ -36,6 +36,10 @@ def ensure_institution_schema():
             adds.append("ADD COLUMN updated_at DATETIME NULL")
         if 'deleted_at' not in inst_cols:
             adds.append("ADD COLUMN deleted_at DATETIME NULL")
+        if 'primary_color' not in inst_cols:
+            adds.append("ADD COLUMN primary_color VARCHAR(7) NULL")
+        if 'secondary_color' not in inst_cols:
+            adds.append("ADD COLUMN secondary_color VARCHAR(7) NULL")
         # institution_type/city_id ya existían pero como NOT NULL sin default —
         # permitir NULL es lo que habilita el selector opcional de ciudad/tipo
         # en el panel sin romper filas viejas que sí los tengan.

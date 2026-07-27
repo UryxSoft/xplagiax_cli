@@ -3,6 +3,7 @@ Gestión de Instituciones Académicas (F3): CRUD, logo automático/manual,
 asociación con usuarios del plan Institutes. Mismo patrón que adminx_users.
 """
 import os
+import re
 from datetime import datetime
 
 from flask import Blueprint, jsonify, render_template, request, current_app
@@ -17,6 +18,8 @@ from core.security import require_role, get_csrf_token
 from core.audit import log_action
 
 adminx_institutions_bp = Blueprint('adminx_institutions', __name__)
+
+_HEX_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
 
 
 @adminx_institutions_bp.before_request
@@ -70,6 +73,18 @@ def lookup_institutions():
                                      for i in rows]})
 
 
+@adminx_institutions_bp.route('/api/institutions/<int:iid>', methods=['GET'])
+@login_required
+def get_institution(iid):
+    """Detalle de una institución — usado por el módulo de alta masiva
+    (modules/adminx_bulk_users.py) para mostrar logo/colores/estado antes de
+    confirmar la carga."""
+    inst = Institution.query.filter(Institution.id == iid, Institution.deleted_at.is_(None)).first_or_404()
+    counts = dict(db.session.query(Users.institution_id, func.count(Users.id))
+                  .filter(Users.institution_id == iid).group_by(Users.institution_id).all())
+    return jsonify({'institution': inst.to_dict(user_count=counts.get(iid, 0))})
+
+
 @adminx_institutions_bp.route('/api/options', methods=['GET'])
 @login_required
 def options():
@@ -100,6 +115,12 @@ def _apply_fields(inst, data):
         inst.domain = (str(data['domain']).strip().lower() or None)
     if 'status' in data and data['status'] in ('active', 'inactive'):
         inst.status = data['status']
+    for field in ('primary_color', 'secondary_color'):
+        if field in data:
+            val = (str(data[field]).strip() or None)
+            if val and not _HEX_RE.match(val):
+                return f'{field.replace("_", " ").capitalize()} must be a hex color like #064CDB.'
+            setattr(inst, field, val)
     return None
 
 

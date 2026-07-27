@@ -1,0 +1,40 @@
+# docker-compose.yml — xplagiax_adm
+#
+# Uso:
+#   development: docker compose up --build
+#   production:  docker compose -f docker-compose.yml up -d --build
+#                (variables reales via --env-file /ruta/segura/.env, nunca
+#                 el .env de ejemplo)
+#
+# Asume una red externa donde ya vive 'mysql-container' (la misma DB que usa
+# xplagiax_appcli2) — ajustar el nombre de la red al del despliegue real.
+
+services:
+  xplagiax_adm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: xplagiax_adm:latest
+    env_file:
+      - .env
+    ports:
+      - "5001:5001"
+    restart: unless-stopped
+    read_only: false  # Werkzeug/Flask no escriben en disco en runtime normal;
+                       # cambiar a true si se retira UPLOAD_FOLDER local.
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5001/healthz', timeout=2).status == 200 else 1)"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+    networks:
+      - xplagiax_net
+
+networks:
+  xplagiax_net:
+    external: true
+    name: xplagiax_net

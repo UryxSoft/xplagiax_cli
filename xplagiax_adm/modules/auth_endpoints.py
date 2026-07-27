@@ -20,6 +20,12 @@ auth_bp = Blueprint('auth_bp', __name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+@auth_bp.before_request
+def _ensure_master_admin():
+    from core.bootstrap_admin import ensure_master_admin
+    ensure_master_admin()
+
 def validate_email(email):
     """Valida formato de email"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'

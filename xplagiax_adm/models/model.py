@@ -2,7 +2,6 @@
 Copyright (c) 2024 - present URYX TECHNOLOGIES SRL
 """
 from utils.connections import db
-import bcrypt
 from flask_login import UserMixin
 from datetime import datetime
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -447,6 +446,11 @@ class Institution(db.Model):
     verified_at       = db.Column(db.DateTime, nullable=True)
     updated_at        = db.Column(db.DateTime, nullable=True, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at        = db.Column(db.DateTime, nullable=True)  # soft delete
+    # Marca institucional para el correo de bienvenida de alta masiva (ver
+    # modules/adminx_bulk_users.py) — opcionales, caen al azul XplagiaX
+    # default si la institución no definió los suyos.
+    primary_color     = db.Column(db.String(7), nullable=True)   # '#064CDB'
+    secondary_color   = db.Column(db.String(7), nullable=True)
 
     country = db.relationship('Country', foreign_keys=[country_id])
     city = db.relationship('City', foreign_keys=[city_id])
@@ -469,6 +473,7 @@ class Institution(db.Model):
             'institution_type_id': self.institution_type,
             'institution_type': self.type_.institution_type if self.type_ else None,
             'logo_path': self.logo_path, 'website': self.website, 'domain': self.domain,
+            'primary_color': self.primary_color, 'secondary_color': self.secondary_color,
             'status': self.status or 'active',
             'verified_at': self.verified_at.isoformat() if self.verified_at else None,
             'created_date': self.created_date.strftime('%Y-%m-%d') if self.created_date else None,

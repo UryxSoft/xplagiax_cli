@@ -2,118 +2,276 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#064CDB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#070c16" media="(prefers-color-scheme: dark)">
 <title>{% block title %}XplagiaX Admin{% endblock %}</title>
-<style>
-/* Mismo sistema visual que xplagiax_appcli2 (analysis_smartinput.css):
-   primary #064CDB · ink #0f172a · muted #64748b · bg #f8fafc · line #e2e8f0 */
-:root{--primary:#064CDB;--ink:#0f172a;--muted:#64748b;--body:#334155;--bg:#f8fafc;
---line:#e2e8f0;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;--orig:#a78bfa}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Open Sans',-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
-background:#eef2f7;color:var(--body);font-size:14px;line-height:1.5}
-a{color:var(--primary);text-decoration:none}
-.layout{display:flex;min-height:100vh}
-.sidebar{width:230px;background:#fff;border-right:1px solid var(--line);padding:18px 14px;
-display:flex;flex-direction:column;gap:4px;flex-shrink:0}
-.brand{font-size:18px;font-weight:800;color:var(--ink);letter-spacing:.02em;padding:4px 10px 16px}
-.brand span{color:var(--primary)}
-.brand small{display:block;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em}
-.nav-link{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;
-color:var(--body);font-weight:600;font-size:13px}
-.nav-link:hover{background:var(--bg)}
-.nav-link.active{background:#064CDB12;color:var(--primary)}
-.nav-sep{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.08em;
-text-transform:uppercase;padding:14px 12px 4px}
-.sidebar .foot{margin-top:auto;padding:10px 12px;font-size:11px;color:var(--muted)}
-.main{flex:1;min-width:0;padding:22px 26px}
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
-.topbar h1{font-size:19px;color:var(--ink);letter-spacing:-.01em}
-.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;
-box-shadow:0 1px 2px rgba(15,23,42,.04)}
-.grid{display:grid;gap:14px}
-.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;
-color:var(--body);font-weight:700;font-size:12.5px;padding:8px 14px;border-radius:10px;cursor:pointer}
-.btn:hover{background:var(--bg)}
-.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
-.btn-primary:hover{background:#0540b8}
-.btn-danger{color:var(--danger);border-color:#fecaca}
-.btn-sm{padding:5px 10px;font-size:11.5px;border-radius:8px}
-.chip{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;padding:3px 9px;
-border-radius:20px;letter-spacing:.02em}
-.chip-ok{background:#ecfdf5;color:#047857}.chip-off{background:#fef2f2;color:#b91c1c}
-.chip-warn{background:#fffbeb;color:#b45309}.chip-info{background:#eff6ff;color:#1d4ed8}
-.chip-muted{background:var(--bg);color:var(--muted)}
-input,select{font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:10px;
-background:#fff;color:var(--ink);outline:none}
-input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px #064CDB1a}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
-th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;
-padding:9px 10px;background:var(--bg);border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:9px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
-tr:hover td{background:#fafbfe}
-.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.tab{padding:8px 15px;border-radius:10px;border:1px solid var(--line);background:#fff;
-font-weight:700;font-size:12.5px;color:var(--body);cursor:pointer}
-.tab.active{background:var(--primary);border-color:var(--primary);color:#fff}
-.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;
-align-items:center;justify-content:center;z-index:1000;padding:16px}
-.modal-bg.open{display:flex}
-.modal{background:#fff;border-radius:16px;padding:22px 24px;width:100%;max-width:480px;
-max-height:90vh;overflow-y:auto}
-.modal h3{font-size:16px;color:var(--ink);margin-bottom:14px}
-.field{margin-bottom:12px}
-.field label{display:block;font-size:11px;font-weight:700;color:var(--muted);
-text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
-.field input,.field select{width:100%}
-.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2000;
-background:#fff;border:1px solid var(--line);border-left:3px solid var(--primary);
-border-radius:10px;padding:11px 16px;font-size:13px;font-weight:600;color:var(--ink);
-box-shadow:0 4px 14px rgba(15,23,42,.12);display:none}
-.toast.err{border-left-color:var(--danger)}
-@media(max-width:860px){
-  .layout{flex-direction:column}
-  .sidebar{width:100%;flex-direction:row;flex-wrap:wrap;align-items:center;border-right:0;
-  border-bottom:1px solid var(--line);padding:10px}
-  .brand{padding:4px 10px}.nav-sep,.sidebar .foot{display:none}
-  .main{padding:14px}
-  .table-wrap{overflow-x:auto}
-}
-.table-wrap{overflow-x:auto}
-</style>
+<script>
+/* Applied before first paint so there's no flash of the wrong theme.
+   Only an explicit stored choice sets data-theme — otherwise the CSS
+   @media(prefers-color-scheme) branch drives it, i.e. "System". */
+(function(){try{var t=localStorage.getItem('adminx-theme');
+if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/adminx.css') }}">
 {% block head %}{% endblock %}
 </head>
 <body>
+<svg style="display:none" aria-hidden="true">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect>
+    <rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect>
+  </symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="9" cy="8" r="3.2"></circle><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"></path>
+    <circle cx="17" cy="8" r="2.6"></circle><path d="M15.5 14.3c2.5.3 4.5 2.2 4.5 4.7"></path>
+  </symbol>
+  <symbol id="ic-institution" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 21h16"></path><path d="M5 21V10l7-5 7 5v11"></path><path d="M9 21v-6h6v6"></path>
+  </symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"></path><path d="M9 12l2 2 4-4"></path>
+  </symbol>
+  <symbol id="ic-audit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 3h9l4 4v14H6z"></path><path d="M15 3v4h4"></path><path d="M8.5 12h7M8.5 15.5h7M8.5 8.5h4"></path>
+  </symbol>
+  <symbol id="ic-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3"></path><path d="M10 8l-4 4 4 4"></path><path d="M6 12h11"></path>
+  </symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18M3 12h18M3 18h18"></path>
+  </symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 5l14 14M19 5L5 19"></path>
+  </symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path>
+  </symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 12h4l2-7 4 14 2-7h6"></path>
+  </symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 5v14M5 12h14"></path>
+  </symbol>
+  <symbol id="ic-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 12h14"></path>
+  </symbol>
+  <symbol id="ic-pause" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect>
+  </symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <path d="M7 4l13 8-13 8V4z"></path>
+  </symbol>
+  <symbol id="ic-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path>
+  </symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 2h9l5 5v15H6z"></path><path d="M15 2v5h5"></path>
+  </symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 7h16"></path><path d="M6 7l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13"></path><path d="M9 7V4h6v3"></path>
+  </symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M20 20l-4.5-4.5"></path>
+  </symbol>
+  <symbol id="ic-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"></path>
+  </symbol>
+  <symbol id="ic-more" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <circle cx="5" cy="12" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="19" cy="12" r="1.6"></circle>
+  </symbol>
+  <symbol id="ic-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 5l-7 7 7 7"></path>
+  </symbol>
+  <symbol id="ic-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 5l7 7-7 7"></path>
+  </symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 13l4 4L19 7"></path>
+  </symbol>
+  <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4.5"></circle>
+    <path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"></path>
+  </symbol>
+  <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4 6.8 6.8 0 0 0 20 14.5z"></path>
+  </symbol>
+  <symbol id="ic-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 000 18z" fill="currentColor" stroke="none"></path>
+  </symbol>
+</svg>
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
 <div class="layout">
-  <aside class="sidebar">
+  <div class="mobile-topbar">
+    <button class="icon-btn" id="drawerToggle" aria-label="Open menu" type="button">
+      <svg width="20" height="20" aria-hidden="true"><use href="#ic-menu"></use></svg>
+    </button>
+    <div class="brand" style="padding:0;font-size:16px"><span>&times;</span>plagia<span>&times;</span></div>
+  </div>
+  <aside class="sidebar" id="sidebar">
     <div class="brand"><span>&times;</span>plagia<span>&times;</span><small>ADMIN PANEL</small></div>
     <div class="nav-sep">General</div>
-    <a class="nav-link {% block nav_dash %}{% endblock %}" href="/adminx/">📊 Dashboard</a>
-    <a class="nav-link {% block nav_users %}{% endblock %}" href="/adminx/users/">👥 Users</a>
-    <a class="nav-link {% block nav_institutions %}{% endblock %}" href="/adminx/institutions/">🏛 Institutions</a>
+    <a class="nav-link {% block nav_dash %}{% endblock %}" href="/adminx/">
+      <svg class="icon" width="17" height="17" aria-hidden="true"><use href="#ic-dashboard"></use></svg> Dashboard</a>
+    <a class="nav-link {% block nav_users %}{% endblock %}" href="/adminx/users/">
+      <svg class="icon" width="17" height="17" aria-hidden="true"><use href="#ic-users"></use></svg> Users</a>
+    <a class="nav-link {% block nav_institutions %}{% endblock %}" href="/adminx/institutions/">
+      <svg class="icon" width="17" height="17" aria-hidden="true"><use href="#ic-institution"></use></svg> Institutions</a>
+    <a class="nav-link {% block nav_bulk_users %}{% endblock %}" href="/adminx/bulk-users/">
+      <svg class="icon" width="17" height="17" aria-hidden="true"><use href="#ic-upload"></use></svg> Bulk user creation</a>
     <div class="nav-sep">Administration</div>
-    <a class="nav-link {% block nav_admins %}{% endblock %}" href="/adminx/admins/">🛡 Admins</a>
-    <a class="nav-link {% block nav_audit %}{% endblock %}" href="/adminx/audit/">📜 Audit log</a>
-    <div class="nav-sep">Legacy</div>
-    <a class="nav-link" href="/">🗂 Classic panel</a>
+    <a class="nav-link {% block nav_admins %}{% endblock %}" href="/adminx/admins/">
+      <svg class="icon" width="17" height="17" aria-hidden="true"><use href="#ic-shield"></use></svg> Admins</a>
+    <a class="nav-link {% block nav_audit %}{% endblock %}" href="/adminx/audit/">
+      <svg class="icon" width="17" height="17" aria-hidden="true"><use href="#ic-audit"></use></svg> Audit log</a>
     <div class="foot">XplagiaX Admin · {{ current_user.email if current_user.is_authenticated else '' }}<br>
-      <a href="#" onclick="doSignOut(event)">Sign out</a></div>
+      <a href="#" onclick="doSignOut(event)">
+        <svg width="11" height="11" style="vertical-align:-1px" aria-hidden="true"><use href="#ic-logout"></use></svg> Sign out</a>
+      <button class="theme-toggle" id="themeToggle" type="button">
+        <svg class="icon" width="13" height="13" aria-hidden="true"><use id="themeToggleIcon" href="#ic-auto"></use></svg>
+        <span id="themeToggleLabel">System</span>
+      </button>
+    </div>
   </aside>
   <main class="main">
-    {% block content %}{% endblock %}
+    <div class="content-max">
+      {% block content %}{% endblock %}
+    </div>
   </main>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
 const CSRF = {{ csrf_token | tojson }};
-function toast(msg, err){const t=document.getElementById('toast');t.textContent=msg;
-t.classList.toggle('err', !!err);t.style.display='block';
-clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none', 4200);}
+/* opts.celebrate marks a genuine completion moment (account/institution/
+   admin created) with a small checkmark — reserved for that, not routine
+   saves, so it stays meaningful instead of becoming wallpaper. */
+function toast(msg, err, opts){
+  opts = opts || {};
+  const t=document.getElementById('toast');
+  t.innerHTML = (opts.celebrate && !err)
+    ? `<svg class="icon toast-check" width="14" height="14" aria-hidden="true"><use href="#ic-check"></use></svg> ${esc(msg)}`
+    : esc(msg);
+  t.classList.toggle('err', !!err);t.classList.add('show');
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'), 4200);}
 async function api(url, opts){opts=opts||{};opts.headers=Object.assign(
 {'Content-Type':'application/json','X-CSRF-Token':CSRF}, opts.headers||{});
 const r=await fetch(url, opts);const d=await r.json().catch(()=>({}));
 if(!r.ok){throw new Error(d.error||('HTTP '+r.status));}return d;}
 function esc(s){const d=document.createElement('div');d.textContent=String(s==null?'':s);return d.innerHTML;}
+
+/* ── Shared modal: focus management + ARIA + Escape + Tab trap ──────────
+   Every screen used to define its own showModal()/closeModal() — none of
+   them moved focus in, trapped Tab, or closed on Escape (design critique
+   P1: modals had no dialog semantics anywhere). Centralized once here so
+   every screen gets it for free; showModal() stays as the call signature
+   templates already use. */
+let _modalTrigger = null;
+let _modalKeyHandler = null;
+function _focusable(container){
+  return Array.from(container.querySelectorAll(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+  )).filter(el => !el.disabled && el.offsetParent !== null);
+}
+function _renderModal(html, opts, bg, body){
+  body.innerHTML = html;
+  body.classList.toggle('modal-wide', !!opts.wide);
+  body.setAttribute('role', 'dialog');
+  body.setAttribute('aria-modal', 'true');
+  body.setAttribute('tabindex', '-1');
+  if (opts.label) body.setAttribute('aria-label', opts.label);
+  bg.classList.add('open');
+  const items = _focusable(body);
+  (items[0] || body).focus();
+}
+function openModal(html, opts){
+  opts = opts || {};
+  const bg = document.getElementById('modalBg');
+  const body = document.getElementById('modalBody');
+  const wasOpen = bg.classList.contains('open');
+  _modalTrigger = document.activeElement;
+  /* Morph the modal from the button that opened it via the View Transitions
+     API (Chrome/Edge/Safari — no-op elsewhere, falls back to the existing
+     CSS scale+fade transition on .modal-bg/.modal). Only for a genuine
+     page → modal open with a real trigger element outside the modal —
+     NOT for a modal-already-open case (e.g. a confirm dialog opened from
+     inside another modal), where morphing from the inner button produced a
+     confusing size/shape mismatch. That case just gets a plain cross-fade. */
+  const trigger = (!wasOpen && _modalTrigger && _modalTrigger !== document.body) ? _modalTrigger : null;
+  if (typeof document.startViewTransition === 'function' && trigger){
+    trigger.style.viewTransitionName = 'modal-morph';
+    const t = document.startViewTransition(() => {
+      trigger.style.viewTransitionName = '';
+      _renderModal(html, opts, bg, body);
+      body.style.viewTransitionName = 'modal-morph';
+    });
+    t.finished.catch(()=>{}).finally(() => { body.style.viewTransitionName = ''; });
+  } else if (typeof document.startViewTransition === 'function' && wasOpen){
+    document.startViewTransition(() => _renderModal(html, opts, bg, body));
+  } else {
+    _renderModal(html, opts, bg, body);
+  }
+  _modalKeyHandler = function(e){
+    if (e.key === 'Escape'){ e.preventDefault(); closeModal(); return; }
+    if (e.key === 'Tab'){
+      const cur = _focusable(body);
+      if (!cur.length) return;
+      const first = cur[0], last = cur[cur.length - 1];
+      if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+    }
+  };
+  document.addEventListener('keydown', _modalKeyHandler);
+}
+function closeModal(){
+  const bg = document.getElementById('modalBg');
+  const body = document.getElementById('modalBody');
+  const trigger = _modalTrigger;
+  const finish = () => {
+    bg.classList.remove('open');
+    body.removeAttribute('role');
+    body.removeAttribute('aria-modal');
+    body.removeAttribute('aria-label');
+  };
+  if (typeof document.startViewTransition === 'function'){
+    document.startViewTransition(finish);
+  } else {
+    finish();
+  }
+  if (_modalKeyHandler){ document.removeEventListener('keydown', _modalKeyHandler); _modalKeyHandler = null; }
+  if (trigger && document.contains(trigger)) trigger.focus();
+  _modalTrigger = null;
+}
+function showModal(html, wide){ openModal(html, {wide: wide}); }
+
+/* Styled in-system confirmation — replaces the native confirm() popup that
+   looked disconnected from the rest of the product (design critique P2),
+   and gives every consequential action (not just "delete") a deliberate
+   confirm step. Returns a Promise<boolean>. */
+let _confirmResolve = null;
+function confirmDialog(message, opts){
+  opts = opts || {};
+  return new Promise(resolve => {
+    _confirmResolve = resolve;
+    /* Inline onclick (not getElementById().onclick right after render): the
+       View Transition path can defer the actual DOM mutation, so code that
+       assumes the new buttons exist synchronously right after openModal()
+       can grab a null element. Inline attributes resolve naturally
+       whenever the browser actually parses this HTML, regardless of when
+       that is — same pattern the rest of the app already relies on. */
+    openModal(`
+      <h3>${esc(opts.title || 'Please confirm')}</h3>
+      <p style="font-size:13px;color:var(--body);line-height:1.55;margin-bottom:18px">${esc(message)}</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" onclick="_resolveConfirm(false)">Cancel</button>
+        <button class="btn ${opts.danger ? 'btn-danger' : 'btn-primary'}" onclick="_resolveConfirm(true)">${esc(opts.confirmLabel || 'Confirm')}</button>
+      </div>`, {label: opts.title || 'Confirm action'});
+  });
+}
+function _resolveConfirm(val){
+  closeModal();
+  const r = _confirmResolve; _confirmResolve = null;
+  if (r) r(val);
+}
 async function doSignOut(e){
   e.preventDefault();
   try{
@@ -122,6 +280,44 @@ async function doSignOut(e){
     window.location.href = d.redirect_url || '/auth_bp/login';
   }catch(_){ window.location.href = '/auth_bp/login'; }
 }
+document.querySelectorAll('.nav-link.active').forEach(a => a.setAttribute('aria-current', 'page'));
+(function(){
+  const ICONS = {light:'#ic-sun', dark:'#ic-moon', system:'#ic-auto'};
+  const LABELS = {light:'Light', dark:'Dark', system:'System'};
+  const btn = document.getElementById('themeToggle');
+  const icon = document.getElementById('themeToggleIcon');
+  const label = document.getElementById('themeToggleLabel');
+  function current(){
+    const stored = localStorage.getItem('adminx-theme');
+    return (stored === 'light' || stored === 'dark') ? stored : 'system';
+  }
+  function apply(mode){
+    if (mode === 'system'){
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.removeItem('adminx-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', mode);
+      localStorage.setItem('adminx-theme', mode);
+    }
+    icon.setAttribute('href', ICONS[mode]);
+    label.textContent = LABELS[mode];
+  }
+  apply(current());
+  btn.addEventListener('click', () => {
+    const order = ['system', 'light', 'dark'];
+    apply(order[(order.indexOf(current()) + 1) % order.length]);
+  });
+})();
+(function(){
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('drawerBackdrop');
+  const toggle = document.getElementById('drawerToggle');
+  function openDrawer(){ sidebar.classList.add('open'); backdrop.classList.add('open'); }
+  function closeDrawer(){ sidebar.classList.remove('open'); backdrop.classList.remove('open'); }
+  toggle.addEventListener('click', openDrawer);
+  backdrop.addEventListener('click', closeDrawer);
+  sidebar.querySelectorAll('.nav-link').forEach(a => a.addEventListener('click', closeDrawer));
+})();
 </script>
 {% block scripts %}{% endblock %}
 </body>

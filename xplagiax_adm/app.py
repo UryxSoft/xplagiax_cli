@@ -60,19 +60,29 @@ from modules.adminx_users import adminx_users_bp
 from modules.adminx_institutions import adminx_institutions_bp
 from modules.adminx_admins import adminx_admins_bp
 from modules.adminx_audit import adminx_audit_bp
+from modules.adminx_bulk_users import adminx_bulk_users_bp
 
 csrf_protect_blueprint(adminx_dashboard_bp)
 csrf_protect_blueprint(adminx_users_bp)
 csrf_protect_blueprint(adminx_institutions_bp)
 csrf_protect_blueprint(adminx_admins_bp)
 csrf_protect_blueprint(adminx_audit_bp)
+csrf_protect_blueprint(adminx_bulk_users_bp)
 app.register_blueprint(adminx_dashboard_bp, url_prefix='/adminx')
 app.register_blueprint(adminx_users_bp, url_prefix='/adminx/users')
 app.register_blueprint(adminx_institutions_bp, url_prefix='/adminx/institutions')
 app.register_blueprint(adminx_admins_bp, url_prefix='/adminx/admins')
 app.register_blueprint(adminx_audit_bp, url_prefix='/adminx/audit')
+app.register_blueprint(adminx_bulk_users_bp, url_prefix='/adminx/bulk-users')
 
 apply_security_headers(app)
+
+
+@app.route('/healthz')
+def healthz():
+    """Liveness check para HEALTHCHECK/orquestador — sin auth, sin DB."""
+    return {'status': 'ok'}, 200
+
 
 if __name__ == '__main__':
     #app.run(debug=True,host='127.0.0.1',port=5001)

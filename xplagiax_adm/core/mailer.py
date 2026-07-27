@@ -88,30 +88,54 @@ def password_reset_email_html(name, reset_url, expires_hours=24):
 </div>"""
 
 
-def activation_email_html(name, activation_url, plan, trial_days=None, expires_hours=72):
+def activation_email_html(name, activation_url, plan, trial_days=None, expires_hours=72,
+                          institution=None):
+    """institution (opcional): dict {'name','logo_url','primary_color'} — usado
+    por la alta masiva institucional (modules/adminx_bulk_users.py) para
+    reemplazar el acento de color y sumar el logo/nombre de la institución.
+    Con institution=None el HTML es idéntico al de antes (alta individual en
+    adminx_users.py._send_activation, sin tocar)."""
     B = _B
     first = (name or '').strip() or 'there'
+    inst_name = None
+    accent = B['primary']
+    logo_html = ''
+    header_sub = 'Academic Integrity Platform — AI TestPro · FinderX'
+    inst_line = ''
+    if institution:
+        inst_name = (institution.get('name') or '').strip() or None
+        accent = institution.get('primary_color') or B['primary']
+        logo_url = institution.get('logo_url')
+        if logo_url:
+            logo_html = (f'<img src="{logo_url}" alt="{inst_name or "Institution"} logo" '
+                        f'style="max-height:28px;max-width:160px;display:block;margin-bottom:8px;">')
+        if inst_name:
+            header_sub = f'{inst_name} · XplagiaX'
+            inst_line = (f'<p style="margin:0 0 6px;font-size:13.5px;line-height:1.6;color:#334155;">'
+                        f'You were invited by <b>{inst_name}</b>.</p>')
     trial_line = (f'<p style="margin:0 0 6px;font-size:13.5px;color:#334155;">Your account starts with a '
                   f'<b>{int(trial_days)}-day trial</b> of the {plan} plan.</p>') if trial_days else ''
     return f"""
 <div style="margin:0;padding:24px;background:#eef2f7;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;">
   <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
-    <div style="background:{B['primary']};padding:22px 26px;">
+    <div style="background:{accent};padding:22px 26px;">
+      {logo_html}
       <div style="color:#ffffff;font-size:18px;font-weight:800;letter-spacing:.02em;">
         <span style="opacity:.85;">&times;</span>plagia<span style="opacity:.85;">&times;</span></div>
-      <div style="color:rgba(255,255,255,.78);font-size:12px;margin-top:2px;">Academic Integrity Platform — AI TestPro · FinderX</div>
+      <div style="color:rgba(255,255,255,.78);font-size:12px;margin-top:2px;">{header_sub}</div>
     </div>
     <div style="padding:26px;">
       <h2 style="margin:0 0 10px;font-size:18px;color:{B['ink']};">Welcome, {first}!</h2>
       <p style="margin:0 0 6px;font-size:13.5px;line-height:1.6;color:#334155;">
         An account has been created for you on <b>XplagiaX</b> — the platform for AI-content
         detection, plagiarism search and citation validation ({plan} plan).</p>
+      {inst_line}
       {trial_line}
       <p style="margin:0 0 18px;font-size:13.5px;line-height:1.6;color:#334155;">
         To activate it, confirm your email and set your own password:</p>
       <div style="text-align:center;margin:22px 0;">
         <a href="{activation_url}"
-           style="display:inline-block;background:{B['primary']};color:#ffffff;text-decoration:none;
+           style="display:inline-block;background:{accent};color:#ffffff;text-decoration:none;
                   font-size:14px;font-weight:700;padding:13px 30px;border-radius:10px;">
           Activate my account</a>
       </div>

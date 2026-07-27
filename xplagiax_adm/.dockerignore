@@ -1,0 +1,45 @@
+# Nunca debe viajar dentro de la imagen: dump SQL con datos reales
+# (párrafos de análisis, texto de usuarios) — ver Dockerfile.
+xplagiax_db.sql
+
+# Git / control de versiones
+.git
+.gitignore
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# Entornos virtuales (nunca se copian; el venv se construye en la imagen)
+venv/
+.venv/
+env/
+
+# Secretos / configuración local
+.env
+.env.*
+!.env.example
+
+# Datos de runtime
+uploads/
+instance/
+tmp/
+temp/
+*.log
+logs/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store

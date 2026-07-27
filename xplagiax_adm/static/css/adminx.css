@@ -1,0 +1,527 @@
+/*
+ * xplagiax_adm — AdminX design system.
+ * Extraído y ampliado del <style> que vivía inline en adminx/base.html.
+ * Mismo lenguaje visual que xplagiax_appcli2 (primary #064CDB), pensado para
+ * verse bien en móvil, tablet, laptop y monitores ultrawide sin build step
+ * (CSS puro, sin Bootstrap/Tailwind — ver plan de modernización).
+ */
+
+:root {
+  --primary: #064CDB;
+  --primary-dark: #0540b8;
+  --primary-soft: #064CDB12;
+  --primary-ring: #064CDB1a;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --body: #334155;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --line: #e2e8f0;
+  --ok: #10b981;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --danger-ink: #b91c1c;
+  --orig: #a78bfa;
+
+  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
+  --shadow-md: 0 4px 14px rgba(15, 23, 42, .08);
+  --shadow-lg: 0 10px 30px rgba(15, 23, 42, .12);
+
+  --sidebar-w: 240px;
+  --content-max: 1600px;
+  --z-drawer: 900;
+  --z-modal: 1000;
+  --z-toast: 2000;
+
+  --page-bg: #eef2f7;
+  color-scheme: light;
+}
+
+/* ── Dark mode: system preference by default, explicit [data-theme]
+   overrides in either direction. Colors re-tuned for dark backgrounds
+   (brighter primary, translucent chip tints) rather than a flat invert. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --primary: #3b82f6; --primary-dark: #2563eb;
+    --primary-soft: rgba(59, 130, 246, .18); --primary-ring: rgba(59, 130, 246, .28);
+    --ink: #f1f5f9; --muted: #94a3b8; --body: #cbd5e1;
+    --bg: #131c2e; --surface: #111827; --line: #263449;
+    --ok: #34d399; --warn: #fbbf24; --danger: #f87171; --danger-ink: #fca5a5;
+    --orig: #c4b5fd;
+    --page-bg: #070c16;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --primary: #3b82f6; --primary-dark: #2563eb;
+  --primary-soft: rgba(59, 130, 246, .18); --primary-ring: rgba(59, 130, 246, .28);
+  --ink: #f1f5f9; --muted: #94a3b8; --body: #cbd5e1;
+  --bg: #131c2e; --surface: #111827; --line: #263449;
+  --ok: #34d399; --warn: #fbbf24; --danger: #f87171; --danger-ink: #fca5a5;
+  --orig: #c4b5fd;
+  --page-bg: #070c16;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: 'Open Sans', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  background: var(--page-bg);
+  color: var(--body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .15s ease, color .15s ease;
+}
+
+a { color: var(--primary); text-decoration: none; }
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+
+.layout { display: flex; min-height: 100vh; }
+
+.mobile-topbar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  padding-top: max(10px, env(safe-area-inset-top));
+  padding-left: max(14px, env(safe-area-inset-left));
+  padding-right: max(14px, env(safe-area-inset-right));
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: calc(var(--z-drawer) - 1);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.icon-btn:hover { background: var(--bg); }
+
+.drawer-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .45);
+  z-index: var(--z-drawer);
+}
+.drawer-backdrop.open { display: block; }
+
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.brand { font-size: clamp(16px, 3vw, 18px); font-weight: 800; color: var(--ink); letter-spacing: .02em; padding: 4px 10px 16px; }
+.brand span { color: var(--primary); }
+.brand small { display: block; font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .1em; }
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  color: var(--body);
+  font-weight: 600;
+  font-size: 13px;
+}
+.nav-link:hover { background: var(--bg); }
+.nav-link.active { background: var(--primary-soft); color: var(--primary); }
+.nav-link .icon { flex-shrink: 0; opacity: .85; }
+.nav-link.active .icon { opacity: 1; }
+
+.nav-sep {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 14px 12px 4px;
+}
+
+.sidebar .foot { margin-top: auto; padding: 10px 12px; font-size: 11px; color: var(--muted); }
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 22px 26px;
+  padding-bottom: max(22px, env(safe-area-inset-bottom));
+  padding-left: max(26px, env(safe-area-inset-left));
+  padding-right: max(26px, env(safe-area-inset-right));
+}
+.main > .content-max { max-width: var(--content-max); margin: 0 auto; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.topbar h1 { font-size: clamp(17px, 2.2vw + 12px, 20px); color: var(--ink); letter-spacing: -.01em; }
+
+/* ── Components ─────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.grid { display: grid; gap: 14px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--body);
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-height: 36px;
+  transition: background .12s ease, border-color .12s ease;
+}
+.btn:hover { background: var(--bg); }
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-danger { color: var(--danger); border-color: #fecaca; }
+.btn-danger:hover { background: #fef2f2; }
+.btn-sm { padding: 6px 10px; font-size: 11.5px; border-radius: var(--radius-sm); min-height: 34px; }
+.btn[disabled] { opacity: .55; cursor: default; }
+.btn[disabled]:hover { background: var(--surface); }
+
+/* Consistent branded focus ring for every interactive element — inputs and
+   selects already had one; buttons/links/tabs fell back to the bare UA
+   outline (flagged by design critique — visible but visually disconnected). */
+.btn:focus-visible, .tab:focus-visible, .nav-link:focus-visible,
+.icon-btn:focus-visible, a:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+.chip-ok { background: #ecfdf5; color: #047857; }
+.chip-off { background: #fef2f2; color: var(--danger-ink); }
+.chip-warn { background: #fffbeb; color: #b45309; }
+.chip-info { background: #eff6ff; color: #1d4ed8; }
+.chip-muted { background: var(--bg); color: var(--muted); }
+
+/* Barra de progreso indeterminada — envío por lotes (alta masiva), o
+   cualquier otra operación de duración desconocida sin avance por-fila. */
+.progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  width: 40%;
+  border-radius: 999px;
+  background: var(--primary);
+}
+.progress.indeterminate > span {
+  animation: progress-slide 1.1s ease-in-out infinite;
+}
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress.indeterminate > span { animation: none; width: 100%; }
+}
+
+input, select {
+  font: inherit;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+  min-height: 38px;
+}
+input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-ring); }
+
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+  text-align: left;
+  padding: 9px 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+tr:hover td { background: #fafbfe; }
+.table-wrap { overflow-x: auto; }
+
+/* Responsive stacked-card fallback for data tables — below 640px a plain
+   scrolling table hid its own action buttons off-screen with no visual cue
+   (design critique P0). Rows become cards; each cell's column name comes
+   from its data-label attribute, populated by the row-rendering JS. */
+@media (max-width: 640px) {
+  table.responsive-stack thead { display: none; }
+  table.responsive-stack, table.responsive-stack tbody,
+  table.responsive-stack tr, table.responsive-stack td { display: block; width: 100%; }
+  table.responsive-stack tr {
+    border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 10px;
+    padding: 4px 12px; background: var(--surface);
+  }
+  table.responsive-stack tr:hover { background: var(--surface); }
+  table.responsive-stack td {
+    border-bottom: 1px solid #f1f5f9; padding: 8px 0;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: right;
+  }
+  table.responsive-stack td:last-child { border-bottom: none; }
+  table.responsive-stack td[data-label]::before {
+    content: attr(data-label); font-size: 10px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .05em; flex-shrink: 0; text-align: left;
+  }
+  table.responsive-stack td:not([data-label]) { justify-content: center; }
+}
+
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.tab {
+  padding: 8px 15px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--body);
+  cursor: pointer;
+  min-height: 36px;
+}
+.tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: 16px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .18s ease, visibility .18s;
+}
+.modal-bg.open { opacity: 1; visibility: visible; pointer-events: auto; }
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: 22px 24px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  transform: scale(.97) translateY(6px);
+  transition: transform .2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal-bg.open .modal { transform: scale(1) translateY(0); }
+.modal:focus { outline: none; }
+.modal.modal-wide { max-width: 720px; }
+.modal h3 { font-size: 16px; color: var(--ink); margin-bottom: 14px; }
+
+.field { margin-bottom: 12px; }
+.field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 4px;
+}
+.field input, .field select { width: 100%; }
+
+.toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  z-index: var(--z-toast);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 11px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  max-width: calc(100vw - 32px);
+  transition: opacity .16s ease, transform .16s ease, visibility .16s;
+}
+.toast.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+.toast.err { border-left-color: var(--danger); }
+.toast-check { display: inline-block; vertical-align: -2px; color: var(--ok); animation: toastCheckPop .3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes toastCheckPop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .toast-check { animation: none; } }
+
+/* ── Charts (SVG, sin dependencias) ────────────────────────────────────── */
+
+.chart-card h3 { font-size: 14px; color: var(--ink); margin-bottom: 10px; }
+.sparkline { display: block; width: 100%; height: 64px; }
+.sparkline polyline { fill: none; stroke: var(--primary); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.sparkline .fill { fill: var(--primary-soft); stroke: none; }
+.sparkline .axis { stroke: var(--line); stroke-width: 1; }
+.spark-dot { fill: var(--primary); opacity: 0; cursor: default; transition: opacity .12s ease, r .12s ease; }
+.spark-dot:hover { opacity: 1; r: 2.4; }
+.donut-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.legend { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; }
+
+/* ── Empty/loading state ──────────────────────────────────────────────── */
+.empty-note { color: var(--muted); font-size: 12.5px; padding: 6px 2px; display: flex; align-items: center; gap: 8px; }
+.empty-note .icon { opacity: .55; flex-shrink: 0; }
+.empty-note a { font-weight: 700; }
+
+/* Screen-reader-only label — visually hidden, still announced. Used for
+   inputs whose visible placeholder isn't a substitute for a real label. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────
+   mobile: <640px · tablet: 640-1023px · desktop/laptop: 1024-1439px ·
+   ultrawide: ≥1440px (content capped via --content-max) */
+
+@media (max-width: 1023px) {
+  /* Without this, .mobile-topbar and .main sat side-by-side as row siblings
+     inside .layout (the sidebar doesn't count, it's position:fixed here) —
+     real horizontal-overflow bug caught by testing 320-375px directly
+     rather than eyeballing a full-page screenshot. */
+  .layout { flex-direction: column; }
+  .mobile-topbar { display: flex; }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: var(--z-drawer);
+    transform: translateX(-100%);
+    transition: transform .18s ease;
+    box-shadow: var(--shadow-lg);
+    width: min(var(--sidebar-w), 82vw);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar { padding-top: max(18px, env(safe-area-inset-top)); padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+  .main {
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+
+@media (max-width: 640px) {
+  .card { padding: 14px 16px; }
+  .modal { padding: 18px; }
+}
+
+/* View Transitions morph (modal opening from its trigger button) — timing
+   tuned to the same easing/duration used elsewhere; the browser's default
+   already handles the position/size interpolation, this just paces it. */
+::view-transition-group(modal-morph) {
+  animation-duration: .32s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
+
+/* Dark-mode overrides for the handful of hardcoded (non-token) colors —
+   chip tints, table hover, danger button hover — re-tuned as translucent
+   fills rather than the same pastel-on-white values, which would read as a
+   bright patch against a dark card. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .chip-ok { background: rgba(52, 211, 153, .14); color: #6ee7b7; }
+  :root:not([data-theme="light"]) .chip-off { background: rgba(248, 113, 113, .14); color: #fca5a5; }
+  :root:not([data-theme="light"]) .chip-warn { background: rgba(251, 191, 36, .14); color: #fcd34d; }
+  :root:not([data-theme="light"]) .chip-info { background: rgba(59, 130, 246, .16); color: #93c5fd; }
+  :root:not([data-theme="light"]) .btn-danger { border-color: rgba(248, 113, 113, .35); }
+  :root:not([data-theme="light"]) .btn-danger:hover { background: rgba(248, 113, 113, .1); }
+  :root:not([data-theme="light"]) td { border-bottom-color: rgba(255, 255, 255, .06); }
+  :root:not([data-theme="light"]) tr:hover td { background: rgba(255, 255, 255, .03); }
+  :root:not([data-theme="light"]) table.responsive-stack td { border-bottom-color: rgba(255, 255, 255, .06); }
+}
+:root[data-theme="dark"] .chip-ok { background: rgba(52, 211, 153, .14); color: #6ee7b7; }
+:root[data-theme="dark"] .chip-off { background: rgba(248, 113, 113, .14); color: #fca5a5; }
+:root[data-theme="dark"] .chip-warn { background: rgba(251, 191, 36, .14); color: #fcd34d; }
+:root[data-theme="dark"] .chip-info { background: rgba(59, 130, 246, .16); color: #93c5fd; }
+:root[data-theme="dark"] .btn-danger { border-color: rgba(248, 113, 113, .35); }
+:root[data-theme="dark"] .btn-danger:hover { background: rgba(248, 113, 113, .1); }
+:root[data-theme="dark"] td { border-bottom-color: rgba(255, 255, 255, .06); }
+:root[data-theme="dark"] tr:hover td { background: rgba(255, 255, 255, .03); }
+:root[data-theme="dark"] table.responsive-stack td { border-bottom-color: rgba(255, 255, 255, .06); }
+
+/* ── Theme toggle ─────────────────────────────────────────────────────── */
+.theme-toggle {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 8px;
+  padding: 6px 10px; font-size: 11px; font-weight: 700; color: var(--muted);
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface);
+  cursor: pointer; min-height: 30px;
+}
+.theme-toggle:hover { background: var(--bg); }
+.theme-toggle .icon { flex-shrink: 0; }

@@ -40,15 +40,26 @@ class Config:
     SQLALCHEMY_COMMIT_ON_OPTIONS = True
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Correo (activación / bienvenida). Mismos nombres MAIL_* estándar.
-    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT', '465'))
-    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', '1') not in ('0', 'false', 'False')
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', '0') in ('1', 'true', 'True')
-    MAIL_USERNAME = _env('MAIL_USERNAME', 'xplagiax@gmail.com')
-    MAIL_PASSWORD = _env('MAIL_PASSWORD', 'akkv bxvl nmui sbws')
+    # Correo (activación / bienvenida) — MISMA cuenta que xplagiax_appcli2
+    # (settings/config.py: MAIL_SERVER/MAIL_USERNAME) para que ambas apps
+    # envíen desde la misma dirección no-reply.
+    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.ionos.com')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
+    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', '0') in ('1', 'true', 'True')
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', '1') not in ('0', 'false', 'False')
+    MAIL_USERNAME = _env('MAIL_USERNAME', 'no-reply@xplagiax.ca')
+    MAIL_PASSWORD = _env('MAIL_PASSWORD', 'xyk.zaw*qtm6wjb0YVP')
     MAIL_DEFAULT_SENDER = (os.environ.get('MAIL_SENDER_NAME', 'XplagiaX'),
-                           os.environ.get('MAIL_SENDER_ADDR', 'xplagiax@gmail.com'))
+                           os.environ.get('MAIL_SENDER_ADDR', 'no-reply@xplagiax.ca'))
+
+    # Superadmin de arranque (core/bootstrap_admin.py): se crea SOLO si
+    # 'users_admin' está vacía, así un despliegue nuevo tiene forma de
+    # entrar sin acceso directo a la base de datos. Igual que el resto de
+    # los fallbacks de este archivo, ROTAR la contraseña por ADMIN_MASTER_*
+    # (env) es obligatorio — nunca queda en texto plano en la DB (se
+    # guarda con Users_admin.set_password, hash de Werkzeug).
+    ADMIN_MASTER_EMAIL = _env('ADMIN_MASTER_EMAIL', 'no-reply@xplagiax.ca')
+    ADMIN_MASTER_PASSWORD = _env('ADMIN_MASTER_PASSWORD', 'xyk.zaw*qtm6wjb0YVP')
 
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
