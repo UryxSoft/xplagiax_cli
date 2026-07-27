@@ -60,6 +60,28 @@ csrf.init_app(app)
 limiter.init_app(app)
 migrate = Migrate(app, db)
 
+# ── Cache-busting for static assets ───────────────────────────────────────
+# nginx (and browsers) cache /static/ aggressively; a bare
+# url_for('static', ...) keeps the exact same URL forever, so shipping a fix
+# to a .js/.css file doesn't reach anyone whose browser already cached the
+# old copy — they'd need to manually clear their cache. This bit the
+# email-OTP 2FA rollout: enhanced_signin.js had the fix, but cached browsers
+# kept running the pre-fix version until a hard refresh. A hand-written
+# version string (?v=otp1) is fragile — it silently stops protecting the
+# next time someone edits the file and forgets to bump it. static_url()
+# appends ?v=<mtime> instead, so the URL itself changes automatically
+# whenever the file's contents actually change — no manual bookkeeping,
+# works the same way for every static file forever.
+@app.template_global()
+def static_url(filename):
+    from flask import url_for
+    path = os.path.join(app.static_folder, filename)
+    try:
+        v = int(os.path.getmtime(path))
+    except OSError:
+        v = 0
+    return url_for('static', filename=filename) + f'?v={v}'
+
 #  USER LOADER OPTIMIZADO Y ROBUSTO
 @login_manager.user_loader
 def load_user(user_id):
@@ -210,6 +232,14 @@ with app.app_context():
         ('files', 'archive_cycle_reset_at', "DATETIME NULL DEFAULT NULL"),
         ('files', 'auto_archived_at', "DATETIME NULL DEFAULT NULL"),
         ('files', 'auto_archive_delete_at', "DATETIME NULL DEFAULT NULL"),
+        # ai_task_id lo declara el modelo AnalysisHistory (unique+index) para
+        # el análisis de IA asíncrono, pero su columna nunca se migraba: el
+        # helper _ensure_ai_task_id_column() de doc_routes quedó definido y
+        # sin llamarse. Como es columna del modelo, el ORM la incluye en TODO
+        # SELECT * de analysis_history (history_get, etc.), así que sin ella
+        # esas rutas tiraban 500 "Unknown column ...ai_task_id". Migrarla acá,
+        # una vez al arranque, la garantiza antes de cualquier request.
+        ('analysis_history', 'ai_task_id', "VARCHAR(64) NULL UNIQUE"),
     ]:
         try:
             col_exists = db.session.execute(db.text(

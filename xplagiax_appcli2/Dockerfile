@@ -92,17 +92,7 @@ EXPOSE 5003
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5003/test_alive', timeout=4)" || exit 1
 
-# Servidor WSGI de producción (NUNCA app.run()).
-#  --timeout 120        : mata cualquier worker colgado (auto-recuperación)
-#  --graceful-timeout 30: drenaje limpio al reiniciar/parar
-#  --max-requests       : recicla workers periódicamente (evita fugas/estados zombis)
-CMD ["gunicorn", \
-     "--bind", "0.0.0.0:5003", \
-     "--worker-class", "sync", \
-     "--timeout", "120", \
-     "--graceful-timeout", "30", \
-     "--max-requests", "1000", \
-     "--max-requests-jitter", "100", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "app:app"]
+# Servidor WSGI de producción (NUNCA app.run()). Config completa en
+# gunicorn.conf.py — un CMD exec-array no expande WEB_CONCURRENCY/env vars,
+# así que --workers tiene que venir de un archivo de config, no de flags acá.
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "app:app"]

@@ -7,6 +7,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <title>Activate your account — XplagiaX</title>
 <style>
 :root{--primary:#064CDB;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--bg:#f8fafc}
@@ -84,8 +85,9 @@ frm.addEventListener('submit',async e=>{
   if(p1!==p2){msg.className='msg err';msg.textContent='Passwords do not match.';return;}
   btn.disabled=true;btn.textContent='Activating…';
   try{
+    const csrfMeta=document.querySelector('meta[name="csrf-token"]');
     const r=await fetch(location.pathname,{method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','X-CSRFToken':csrfMeta?csrfMeta.content:''},
       body:JSON.stringify({email_confirm:document.getElementById('email_confirm').value,password:p1})});
     const d=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(d.error||('HTTP '+r.status));

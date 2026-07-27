@@ -64,7 +64,12 @@ class GoogleOAuth:
             'scope': ' '.join(self.scopes),
             'response_type': 'code',
             'state': state,
-            'access_type': 'offline'
+            'access_type': 'offline',
+            # Sin esto Google resuelve el login en silencio contra la sesión
+            # activa (responde con prompt=none) y el usuario con varias cuentas
+            # nunca llega a ver el selector: siempre entra con la principal.
+            # Mismo criterio que microsoft_oauth.py, que ya lo pide explícito.
+            'prompt': 'select_account'
         }
         
         return f"{self.auth_url}?{urllib.parse.urlencode(params)}"

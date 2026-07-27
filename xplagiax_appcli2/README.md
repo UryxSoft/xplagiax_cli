@@ -326,7 +326,7 @@ flowchart LR
 | **`sync` (default)** | `xota:5006/analyze_document` — processes inline, returns `{results}` | **No** |
 | `async` | `xota:5006/analyze_document_async` → `task_id` → poll `/analyze_status/{id}` | **Yes** (xota worker) |
 
-> The current xota deployment has **no Celery worker**, so `async` stays `pending` forever (affects all clients, marktrack included). appcli2 defaults to **`sync`** to work without it. FinderX **does** have a worker (`xplagiax_finderx_worker`), so its async + polling flow works.
+> The current xota deployment has **no Celery worker**, so `async` stays `pending` forever (affects all clients, marktrack included). appcli2 defaults to **`sync`** to work without it — but that only covers text below `AI_ASYNC_THRESHOLD_WORDS` (1500 words, see `_ai_async_urls()` in `doc_routes.py`). Above that threshold, appcli2 forces `async` regardless of `AI_SERVICE_MODE` (a large document processed inline can exceed nginx's `proxy_read_timeout` before xota responds), so for long documents (theses, 15k+ words) the `pending` issue can't be worked around from this side. The real fix lives on **xota's** deployment: set `GUNICORN_SPAWN_CELERY=1` (+ `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND`) on the `xplagiax-xota` container and restart it — see the `xplagiax_xota` repo's README (`Docker` / `GUNICORN_SPAWN_CELERY`). FinderX **does** have a worker (`xplagiax_finderx_worker`), so its async + polling flow works.
 
 ### How results are processed (JS, in `AdvancedInputComponent`)
 
@@ -582,7 +582,8 @@ pytest --cov=modules --cov-report=term-missing   # coverage
 | Worker fails to boot — DB error | Wrong `DATABASE_URL` / MySQL not on `xplagiax-net` | Use container name `mysql-container`, not `localhost` |
 | FinderX returns `504` | Upstream slow / timeout | Increase `FINDERX_POLL_TIMEOUT` |
 | AI/Source analysis `502` | Sibling service down | Check `xplagiax-xota` / `xplagiax_finderx_api` containers |
-| AI analysis stuck — status `pending` forever | xota has no Celery worker; `async` jobs never run | Use `AI_SERVICE_MODE=sync` (default) — uses the inline `/analyze_document` endpoint |
+| AI analysis stuck — status `pending` forever (short/medium text, ≤1500 words) | xota has no Celery worker; `async` jobs never run | `AI_SERVICE_MODE=sync` (default) works around it — uses the inline `/analyze_document` endpoint |
+| AI analysis stuck — status `pending` forever (long documents / theses, 15k+ words) | Same root cause, but `AI_ASYNC_THRESHOLD_WORDS` forces `async` regardless of `AI_SERVICE_MODE` past 1500 words, so the sync workaround above doesn't apply | Fix it on **xota's** side: add `-e GUNICORN_SPAWN_CELERY=1` (+ `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND`) to the `xplagiax-xota` `docker run` and restart the container (see `xplagiax_xota` README) |
 | Google login loops back to `/login` | Shared OAuth client; `app.xplagiax.ca` redirect URI not registered, **or** session `state` lost | Register the redirect URI in Google Cloud Console; keep `SECRET_KEY` fixed; temp bypass via `OAUTH_RELAX_STATE=true` |
 | Logout redirects to `127.0.0.1:5000` | Stale cached `logout.js` / missing ProxyFix | Hard-refresh (`/static` is cached 1y); ProxyFix is enabled in `app.py` |
 | Healthcheck unhealthy | `curl` missing or wrong port | Image ships `curl`; ensure probe hits `:5003/test_alive` |

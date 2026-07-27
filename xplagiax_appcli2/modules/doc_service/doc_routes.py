@@ -1279,7 +1279,14 @@ def convert_images_to_urls(images, user_id):
     
     return images_urls
 
-@x_doc.route('/uploadanalysis_', methods=['POST'])   
+# ══════════════════════════════════════════════════════════════════════════
+# MUERTO — sin clientes (verificado sobre templates/ y static/). Su búsqueda de
+# similitud usa db_batch_search(), que postea al blueprint x_search borrado del
+# repo → 404 siempre. El análisis VIVO es la pantalla "analysiss", que va por
+# /x_doc/extract_text + /x_doc/finderx_check contra el microservicio FinderX.
+# Pendiente de borrado en un commit propio.
+# ══════════════════════════════════════════════════════════════════════════
+@x_doc.route('/uploadanalysis_', methods=['POST'])
 def upload_analysis_():
     """
     Endpoint para cargar, procesar y guardar un documento en múltiples sistemas:
@@ -1617,7 +1624,15 @@ def upload_analysis_():
     else:
         return jsonify({'error': 'Unsupported file type'}), 400
 
-@x_doc.route('/uploadanalysis', methods=['POST'])   
+# ══════════════════════════════════════════════════════════════════════════
+# MUERTO — sin clientes (verificado sobre templates/ y static/). Usa
+# qdrant_search_fulltext(), que lee la colección essays_index con vectores
+# nombrados (semantic/paraphrase) de modelos MiniLM: un espacio vectorial
+# DISTINTO al E5 de FinderX, y una colección que ningún código escribe hoy.
+# El análisis VIVO es la pantalla "analysiss" (extract_text + finderx_check).
+# Pendiente de borrado en un commit propio.
+# ══════════════════════════════════════════════════════════════════════════
+@x_doc.route('/uploadanalysis', methods=['POST'])
 def upload_analysis():
     """
     Endpoint completo y optimizado para análisis de documentos.
@@ -2137,7 +2152,15 @@ def convert_images_to_urls(images_list, user_id=None):
     
     return converted_images
 
-@x_doc.route('/uploadsave_', methods=['POST'])   
+# ══════════════════════════════════════════════════════════════════════════
+# MUERTO — no lo llama ningún cliente (verificado sobre templates/ y static/).
+# Conserva el patrón roto que se arregló en /uploadsave: exige el doc_id al
+# blueprint x_search (comentado en app.py, módulo borrado del repo) y corta con
+# 500 si no responde, así que NINGUNA subida por acá puede funcionar.
+# El endpoint VIVO es /uploadsave (usado por static/js/test/filepond_upload_js.js).
+# Pendiente de borrado en un commit propio, separado del arreglo del 500.
+# ══════════════════════════════════════════════════════════════════════════
+@x_doc.route('/uploadsave_', methods=['POST'])
 def upload_save_():
     """
     Endpoint optimizado para cargar, procesar y guardar un documento en múltiples sistemas:
@@ -2537,46 +2560,17 @@ def upload_save():
     logger.info(f"   Image count: {extracted_image_count}\n")
     
     # =================== FUNCIONES PARA REQUESTS PARALELOS ===================
-    
-    def elasticsearch_request():
-        """
-        Request a Qdrant - Debe ejecutarse primero para obtener doc_id
-        """
-        #try:
-        logger.info("🔍 Indexando en Qdrant (Search Service)...")
-        
-        response = session_pool.post(
-            'http://localhost:5000/x_search/api/documents/essays_index',
-            json=es_document, 
-            headers={'Content-Type': 'application/json'},
-            timeout=30
-        )
-        
-        success = response.status_code == 200
-        
-        if success:
-            data = response.json()
-            doc_id = data.get('id')
-            logger.info(f"✅ Qdrant: Documento indexado (ID: {doc_id})")
-        else:
-            logger.error(f"❌ Qdrant: Error {response.status_code}")
-            logger.error(f"   Response: {response.text[:200]}")
-        
-        return {
-            'success': success,
-            'response': response,
-            'data': data if success else None,
-            'error': response.text if not success else None
-        }
-        #except Exception as e:
-        #    logger.error(f"❌ Qdrant: Excepción - {str(e)}")
-        #    return {
-        #        'success': False,
-        #        'response': None,
-        #        'data': None,
-        #        'error': str(e)
-        #    }
-    
+
+    # NOTA: aquí vivía elasticsearch_request(), que posteaba a
+    # localhost:5000/x_search/api/documents/essays_index para obtener el doc_id
+    # ANTES de guardar el archivo. Ese blueprint (x_search) está comentado en
+    # app.py y su módulo (modules/finderx_service/) ya no existe en el repo, así
+    # que la llamada devolvía 404 SIEMPRE y el chequeo de más abajo cortaba con
+    # un 500 — ninguna subida de documento llegaba nunca a guardarse, ni en
+    # SeaweedFS. El doc_id ahora se genera localmente (ver PASO 1) y la
+    # indexación para búsqueda de plagio pasa a ser un paso posterior,
+    # NO BLOQUEANTE, contra el endpoint de corpus de FinderX.
+
     def seaweedfs_request(doc_id, file_content):
         """
         Request a SeaweedFS - Ejecutar en paralelo con Milvus
@@ -2653,46 +2647,16 @@ def upload_save():
     
     # =================== EJECUTAR REQUESTS ===================
     
-    # PASO 1: Qdrant (obligatorio primero para obtener doc_id)
-    logger.info(f"\n{'='*70}")
-    logger.info("PASO 1: INDEXACIÓN EN QDRANT / SEARCH SERVICE")
-    logger.info(f"{'='*70}\n")
-    
-    elastic_start = time.time()
-    elastic_result = elasticsearch_request()
-    elastic_time = time.time() - elastic_start
-    
-    if not elastic_result['success']:
-        logger.error(f"\n{'='*70}")
-        logger.error("❌ FALLO CRÍTICO: Error en Qdrant")
-        logger.error(f"{'='*70}")
-        logger.error(f"   Error: {elastic_result['error']}")
-        logger.error(f"   Tiempo: {elastic_time:.2f}s")
-        logger.error(f"{'='*70}\n")
-        
-        return jsonify({
-            'error': 'Error indexing document in Qdrant',
-            'details': elastic_result['error'],
-            'processing_time': f"{time.time() - start_time:.2f}s"
-        }), 500
-    
-    doc_id = elastic_result['data'].get('id')
-    if not doc_id:
-        logger.error(f"\n{'='*70}")
-        logger.error("❌ ERROR: No se obtuvo document_id de Qdrant")
-        logger.error(f"{'='*70}")
-        logger.error(f"   Response: {elastic_result['data']}")
-        logger.error(f"{'='*70}\n")
-        
-        return jsonify({
-            'error': 'Could not get the indexed document ID',
-            'elastic_response': elastic_result['data'],
-            'processing_time': f"{time.time() - start_time:.2f}s"
-        }), 500
-    
-    logger.info(f"✅ Qdrant completado en {elastic_time:.2f}s")
-    logger.info(f"   Document ID: {doc_id}\n")
-    
+    # PASO 1: doc_id local — ya NO depende de ningún servicio externo.
+    # Antes el id lo devolvía el índice de búsqueda, lo que ataba el guardado del
+    # documento a que ese servicio estuviera vivo (y como no lo está, nada se
+    # guardaba). Un uuid4 local cumple el mismo rol: identificar el documento en
+    # SeaweedFS y en las tablas propias. La indexación para plagio se hace
+    # después y usa este mismo id, así el documento queda referenciable en el
+    # corpus sin invertir la dependencia.
+    doc_id = str(uuid.uuid4())
+    logger.info(f"🆔 Document ID generado localmente: {doc_id}\n")
+
     # PASO 2: SeaweedFS y Milvus EN PARALELO
     logger.info(f"{'='*70}")
     logger.info("PASO 2: ALMACENAMIENTO PARALELO (SeaweedFS + Milvus)")
@@ -2768,22 +2732,37 @@ def upload_save():
         logger.error("❌ ERROR CRÍTICO: Fallo en SeaweedFS")
         logger.error(f"{'='*70}")
         logger.error(f"   Error: {seaweedfs_result.get('error')}")
-        logger.error(f"   Qdrant ID: {doc_id} (documento indexado)")
+        logger.error(f"   Document ID: {doc_id}")
         logger.error(f"   Milvus status: {milvus_status}")
         logger.error(f"{'='*70}\n")
         
         return jsonify({
             'error': 'Error saving file in SeaweedFS',
-            'elastic_id': doc_id,
+            'document_id': doc_id,
             'details': seaweedfs_result.get('error'),
             'qdrant_images_status': qdrant_imgs_status,
             'processing_time': f"{time.time() - start_time:.2f}s"
         }), 500
     
     logger.info(f"✅ SeaweedFS: Archivo guardado exitosamente\n")
-    
+
+    # =================== CORPUS DE PLAGIO (no bloqueante) ===================
+    # Recién acá, con el archivo YA guardado: el corpus es un servicio auxiliar
+    # y su estado no puede decidir si la subida tiene éxito. _corpus_index_document
+    # se traga cualquier fallo y solo loguea.
+    corpus_queued = _corpus_index_document(
+        doc_id, content,
+        user_id=user_id,
+        title=title,
+        language=language,
+        theme=theme,
+        source_file=file.filename,
+        institution=user_data.get('institute'),
+        country=user_data.get('country'),
+    )
+
     # =================== RESPUESTA EXITOSA ===================
-    
+
     total_time = time.time() - start_time
     
     logger.info(f"{'='*70}")
@@ -2797,9 +2776,7 @@ def upload_save():
     logger.info(f"\n   MÉTRICAS DE RENDIMIENTO:")
     logger.info(f"   • Tiempo total: {total_time:.2f}s")
     logger.info(f"   • Extracción: {extraction_time:.2f}s")
-    logger.info(f"   • Qdrant: {elastic_time:.2f}s")
     logger.info(f"   • Operaciones paralelas: {parallel_time:.2f}s")
-    logger.info(f"   • Qdrant status: ✅ success")
     logger.info(f"   • SeaweedFS status: ✅ success")
     logger.info(f"   • Qdrant Images status: {'✅ success' if qdrant_imgs_result.get('success') else '⚠️  warning'}")
     logger.info(f"{'='*70}\n")
@@ -2808,9 +2785,11 @@ def upload_save():
         'success': True,
         'message': 'Document processed and saved successfully',
         'document_id': doc_id,
-        'elasticsearch_id': doc_id,
         'seaweed_status': 'success',
         'qdrant_images_status': qdrant_imgs_status,
+        # 'queued' = FinderX aceptó indexarlo; 'skipped' = no se pudo encolar
+        # (servicio caído, texto insuficiente). La subida es exitosa igual.
+        'corpus_status': 'queued' if corpus_queued else 'skipped',
         'document_info': {
             'title': title,
             'author': author,
@@ -2823,9 +2802,7 @@ def upload_save():
         'performance_metrics': {
             'total_time': f"{total_time:.2f}s",
             'extraction_time': f"{extraction_time:.2f}s",
-            'qdrant_time': f"{elastic_time:.2f}s",
-            'parallel_operations_time': f"{parallel_time:.2f}s",
-            'speedup_factor': f"{(elastic_time + parallel_time) / total_time:.2f}x"
+            'parallel_operations_time': f"{parallel_time:.2f}s"
         }
     }), 200
         
@@ -2866,12 +2843,20 @@ def delete_save(document_id):
         except requests.RequestException as e:
             return service_name, str(e)
 
-    # Endpoints de borrado
+    # Endpoints de borrado.
+    # La entrada "qdrant" apuntaba a /x_search/api/documents/essays_index/<id>,
+    # el mismo blueprint borrado del repo que rompía la subida — devolvía 404 y
+    # el documento nunca se quitaba de ningún índice. Reemplazado por la llamada
+    # al corpus de FinderX (abajo), que sí existe.
     urls = [
         ("bucket", f'http://localhost:5000/x_buck/api/documents/{document_id}/{user_id}'),
-        ("qdrant", f'http://localhost:5000/x_search/api/documents/essays_index/{document_id}'),
         ("qdrant_images", f'http://localhost:5000/x_image/delete_by_group/{document_id}')
     ]
+
+    # Quitar del corpus de plagio. Va aparte del pool de arriba porque necesita
+    # la cabecera X-API-Key que safe_delete() no envía. Best-effort: si falla,
+    # se loguea, pero el borrado del documento sigue adelante.
+    corpus_deleted = _corpus_delete_document(document_id)
 
     results = {}
     
@@ -2905,6 +2890,12 @@ def delete_save(document_id):
                         "details": resp_json, 
                         "code": resp.status_code
                     }
+
+    # El corpus se reporta pero NO cuenta como error bloqueante: es un servicio
+    # auxiliar y su caída no debe hacer fallar el borrado del documento (el
+    # archivo y las imágenes sí se borraron). Queda registrado para poder
+    # detectar deriva entre el almacenamiento y el índice de plagio.
+    results["corpus"] = {"status": "success" if corpus_deleted else "warning"}
 
     # Verificar si hubo algún error
     errors = {k: v for k, v in results.items() if v['status'] == 'error'}
@@ -3777,8 +3768,13 @@ AI_POLL_TIMEOUT = float(os.environ.get('AI_POLL_TIMEOUT', '120'))
 # 'pending' para siempre. El síncrono procesa en la misma petición.
 AI_SERVICE_MODE = os.environ.get('AI_SERVICE_MODE', 'sync').strip().lower()
 
-# Plugins por defecto: idénticos a marktrack (el resultado de ai_detection se usa igual).
-AI_DEFAULT_PLUGINS = ['ai_detection', 'citation_check', 'stylometric_analysis']
+# Plugins por defecto. 'citation_check' se sacó de la lista: no existe como
+# plugin en xota (ver app/plugins/ en xplagiax_xota — no hay citation_check.py),
+# así que se pedía y fallaba con "Plugin 'citation_check' not found" en el 100%
+# de los análisis, en todo tamaño de documento. La validación de citas real de
+# esta pantalla es un servicio aparte (FinderX /api/v1/citation-validation, ver
+# citation_validation() más abajo), no un plugin de xota.
+AI_DEFAULT_PLUGINS = ['ai_detection', 'stylometric_analysis']
 
 # El endpoint corto del servicio (POST /analyze) admite textos limitados; por
 # encima de este umbral (palabras) se usa /analyze_document, que procesa el
@@ -3796,18 +3792,27 @@ AI_ANALYZE_MAX_WORDS = int(os.environ.get('AI_ANALYZE_MAX_WORDS', '600'))
 # quedarían en 'pending' para siempre. Poner en 0 (o un número muy alto)
 # desactiva la promoción a async y vuelve al comportamiento previo.
 #
-# Derivado del propio código de xota (app/routes.py), no a ojo:
-#   - adaptive_timeout(word_count) ≈ base(30s) + per_kwords(15s) * (words/1000),
-#     tope _SYNC_TIMEOUT_CAP=100s en los endpoints síncronos.
-#   - En 2000 palabras ese presupuesto YA iguala los 60s de nginx (30+15*2=60)
-#     con margen cero — y esto es por UN plugin; analyze_text() pide 3
-#     (ai_detection + citation_check + stylometric_analysis) por defecto, y no
-#     tenemos visibilidad de si registry.run() los corre secuencial o en
-#     paralelo. Por eso el default queda bien por debajo de ese cruce (1500,
-#     ~52.5s de presupuesto para 1 plugin) en vez de pegado al límite.
-#   - Ajustar con los logs de 'AI submit finished in Xs' que se agregan más
-#     abajo en analyze_text() una vez haya tráfico real.
-AI_ASYNC_THRESHOLD_WORDS = int(os.environ.get('AI_ASYNC_THRESHOLD_WORDS', '1500'))
+# El default anterior (1500) se derivó del presupuesto TEÓRICO de xota
+# (adaptive_timeout ≈ 30s + 15s por cada 1000 palabras, tope 100s en los
+# endpoints síncronos), estimando que el cruce con los 60s de nginx caía cerca
+# de las 2000 palabras. El tráfico real lo desmintió: un texto de 1261 palabras
+# —muy por debajo de 1500— se fue por la vía síncrona y murió con 504 Gateway
+# Timeout en nginx. El presupuesto teórico no era el tiempo real de pared: es
+# por plugin, analyze_text() pide varios, y el trabajo pesado de ai_detection
+# escala con el número de chunks, no linealmente con las palabras.
+#
+# Ahora el umbral se alinea con AI_ANALYZE_MAX_WORDS (600): por encima de ese
+# tamaño el texto ya deja de ir al endpoint corto /analyze, y es exactamente
+# donde el trabajo empieza a ser lo bastante pesado como para arriesgar el
+# límite de nginx. Por debajo sigue yendo síncrono (respuesta inmediata, sin el
+# ida y vuelta del polling); por encima va async, que es inmune al
+# proxy_read_timeout porque el submit devuelve 202 al instante y cada poll es
+# una petición corta.
+#
+# Requiere un worker Celery vivo en xota (GUNICORN_SPAWN_CELERY=1); sin él
+# estos jobs quedan 'pending' para siempre. Poner en 0 (o un número muy alto)
+# desactiva la promoción a async y vuelve al comportamiento previo.
+AI_ASYNC_THRESHOLD_WORDS = int(os.environ.get('AI_ASYNC_THRESHOLD_WORDS', '600'))
 
 
 def _user_ai_plugins():
@@ -3989,6 +3994,27 @@ def analyze_text():
     # Token firmado sin estado (evita la carrera de la cookie con analisis en paralelo).
     token = _sign_job('ai', task_id)
 
+    # Registrar el trabajo del lado servidor — sobrevive si el navegador se cierra
+    # antes de que termine (ver AiAnalysisJob). Best-effort: si falla, el análisis
+    # sigue funcionando igual que antes (solo se pierde la recuperación en
+    # background para ESTE trabajo puntual), así que un error acá no debe romper
+    # la respuesta al usuario.
+    try:
+        from modules.models.model import AiAnalysisJob
+        _ensure_ai_analysis_job_table()
+        db.session.add(AiAnalysisJob(
+            user_id=current_user.id,
+            task_id=str(task_id),
+            text=text[:15000],
+            word_count=word_count,
+            plugins=plugins,
+            status='pending',
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.warning('Could not create AiAnalysisJob for task %s', task_id, exc_info=True)
+
     return jsonify({'done': False, 'task_id': token}), 202
 
 
@@ -4031,6 +4057,108 @@ FINDERX_SERVICE_API_KEY = (
     or os.environ.get('FINDERX_API_KEY')
     or 'xpx-3Td8C2oecnAXRT0-VioypUjMWTtSTQVj3k2kE8Q-5tc'
 )
+
+# ── Corpus de plagio compartido entre apps del ecosistema ────────────────────
+# Los documentos que un usuario guarda en "Documents" se indexan en el corpus de
+# FinderX para que después puedan detectarse copias literales entre usuarios de
+# CUALQUIER app del ecosistema (appcli2, marktrack, futuras).
+#
+# Identificador de esta app dentro del corpus. Sumar una app nueva al ecosistema
+# es mandar otro valor acá — el esquema no cambia.
+CORPUS_APP_NAME = os.environ.get('CORPUS_APP_NAME', 'appcli2')
+
+
+def _corpus_index_document(doc_id, text, *, user_id, title=None, language=None,
+                            theme=None, source_file=None, institution=None,
+                            country=None):
+    """Encola el documento en el corpus de plagio de FinderX. Best-effort.
+
+    NUNCA propaga la excepción: indexar es un servicio auxiliar y su caída no
+    puede impedir que alguien guarde su documento — ese fue exactamente el bug
+    que dejó la subida rota (ver el comentario en upload_save()). El endpoint
+    responde 202 y hace el trabajo pesado en background, así que esta llamada
+    es corta aunque el documento sea una tesis.
+    """
+    if not text or len(text.split()) < 10:
+        return False
+    try:
+        resp = session_pool.post(
+            f'{FINDERX_SERVICE_BASE}/api/v1/corpus/documents',
+            headers={'Content-Type': 'application/json',
+                     'X-API-Key': FINDERX_SERVICE_API_KEY},
+            json={
+                'app': CORPUS_APP_NAME,
+                'doc_id': str(doc_id),
+                'owner_user_id': int(user_id),
+                'text': text[:500000],
+                'title': title,
+                'language': language,
+                'theme': theme,
+                'source_file': source_file,
+                'institution': institution,
+                'country': country,
+            },
+            timeout=(5, 15),
+        )
+        if resp.ok:
+            logger.info('Corpus: documento %s encolado para indexación', doc_id)
+            return True
+        logger.warning('Corpus: indexación rechazada para %s (HTTP %s): %s',
+                       doc_id, resp.status_code, resp.text[:200])
+    except Exception:
+        logger.warning('Corpus: no se pudo indexar %s', doc_id, exc_info=True)
+    return False
+
+
+def _corpus_delete_all_for_user(user_id):
+    """Quita del corpus TODOS los documentos de un usuario. Best-effort.
+
+    Se borra por dueño y no documento por documento porque los doc_id del corpus
+    (uuid4 generados al subir) no son los File.id que enumera purge_all_user_documents:
+    un bucle por id dejaría atrás justamente lo que no pudo enumerar. Acá los
+    restos no son datos viejos inofensivos — son trabajos que el usuario borró
+    y seguirían apareciendo como fuente de plagio.
+    """
+    try:
+        resp = session_pool.delete(
+            f'{FINDERX_SERVICE_BASE}/api/v1/corpus/documents/'
+            f'{CORPUS_APP_NAME}/by-owner/{int(user_id)}',
+            headers={'X-API-Key': FINDERX_SERVICE_API_KEY},
+            timeout=(5, 30),
+        )
+        if resp.ok:
+            logger.info('Corpus: documentos del usuario %s purgados', user_id)
+            return True
+        logger.warning('Corpus: purga de usuario %s rechazada (HTTP %s)',
+                       user_id, resp.status_code)
+    except Exception:
+        logger.warning('Corpus: no se pudo purgar al usuario %s', user_id,
+                       exc_info=True)
+    return False
+
+
+def _corpus_delete_document(doc_id):
+    """Quita un documento del corpus de plagio. Best-effort.
+
+    Obligatorio en TODO flujo de borrado: un documento que el usuario eliminó y
+    sigue apareciendo como fuente de plagio es un problema de privacidad, no de
+    datos viejos. El endpoint es idempotente, así que llamarlo para algo que
+    nunca llegó a indexarse es inofensivo.
+    """
+    try:
+        resp = session_pool.delete(
+            f'{FINDERX_SERVICE_BASE}/api/v1/corpus/documents/'
+            f'{CORPUS_APP_NAME}/{doc_id}',
+            headers={'X-API-Key': FINDERX_SERVICE_API_KEY},
+            timeout=(5, 15),
+        )
+        if resp.ok:
+            return True
+        logger.warning('Corpus: borrado rechazado para %s (HTTP %s)',
+                       doc_id, resp.status_code)
+    except Exception:
+        logger.warning('Corpus: no se pudo borrar %s', doc_id, exc_info=True)
+    return False
 
 # ── marktrack: misma identidad de usuario (users compartida), servicio hermano.
 # Usado SOLO para el borrado interno servidor-a-servidor (Delete All Documents) —
@@ -4112,15 +4240,22 @@ def finderx_check():
     # Cache hit de FinderX: el submit devuelve el reporte completo directamente
     # ({'cached': True, 'report': {...}}) en vez de un task_id — sin este manejo
     # un texto repetido fallaba con "did not return a job id".
-    if inner.get('cached') and isinstance(inner.get('report'), dict):
-        rep = inner['report']
+    rep = inner['report'] if isinstance(inner.get('report'), dict) else None
+    if inner.get('cached') and rep:
         res = rep.get('result') if isinstance(rep.get('result'), dict) else (
             rep if 'scores' in rep else None)
         if res:
             return jsonify({'done': True, 'status': 'completed', 'result': res}), 200
 
+    # Un cache hit cuyo 'report' trae metadatos (job_id/text_hash/keywords…)
+    # pero todavía no los 'scores' embebidos: el id vive DENTRO de 'report',
+    # no al nivel de 'inner'. Sin este fallback caía en el 502 de abajo y el
+    # análisis de plagio se perdía entero (las otras pestañas sí respondían).
+    # Con el id, el front-end hace el poll normal a /finderx_report/<job_id>,
+    # que ya desenvuelve result/scores igual que en el camino no cacheado.
     job_id = (inner.get('task_id') or inner.get('job_id')
-              or inner.get('id') or inner.get('taskId'))
+              or inner.get('id') or inner.get('taskId')
+              or (rep or {}).get('job_id') or (rep or {}).get('task_id'))
     if not job_id:
         logger.error('FinderX submit missing task_id: %s', str(sd)[:300])
         return jsonify({'error': 'FinderX did not return a job id.'}), 502
@@ -4333,6 +4468,64 @@ def _ensure_result_view_column():
         logger.warning('Could not ensure analysis_history.result_view column', exc_info=True)
 
 
+_AI_TASK_ID_COL_READY = False
+_AI_ANALYSIS_JOB_TABLE_READY = False
+
+
+def _ensure_ai_task_id_column():
+    """Auto-migración idempotente: añade `ai_task_id` a analysis_history si falta.
+    Mismo patrón que _ensure_result_view_column() — ver ese docstring."""
+    global _AI_TASK_ID_COL_READY
+    if _AI_TASK_ID_COL_READY:
+        return
+    try:
+        from sqlalchemy import inspect as _sa_inspect, text as _sa_text
+        cols = [c['name'] for c in _sa_inspect(db.engine).get_columns('analysis_history')]
+        if 'ai_task_id' not in cols:
+            db.session.execute(_sa_text(
+                "ALTER TABLE analysis_history ADD COLUMN ai_task_id VARCHAR(64) NULL UNIQUE"))
+            db.session.commit()
+        _AI_TASK_ID_COL_READY = True
+    except Exception:
+        db.session.rollback()
+        logger.warning('Could not ensure analysis_history.ai_task_id column', exc_info=True)
+
+
+def _ensure_ai_analysis_job_table():
+    """Auto-migración idempotente: crea `ai_analysis_job` si falta (ver el modelo
+    AiAnalysisJob). CREATE TABLE IF NOT EXISTS en vez de un inspect() de columnas
+    porque la tabla entera es nueva, no una columna sobre una tabla existente."""
+    global _AI_ANALYSIS_JOB_TABLE_READY
+    if _AI_ANALYSIS_JOB_TABLE_READY:
+        return
+    try:
+        from sqlalchemy import text as _sa_text
+        db.session.execute(_sa_text("""
+            CREATE TABLE IF NOT EXISTS ai_analysis_job (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                task_id VARCHAR(64) NOT NULL UNIQUE,
+                text TEXT,
+                word_count INT,
+                plugins JSON,
+                status VARCHAR(16) NOT NULL DEFAULT 'pending',
+                result JSON,
+                credited TINYINT(1) NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL,
+                resolved_at DATETIME NULL,
+                INDEX ix_ai_analysis_job_user_id (user_id),
+                INDEX ix_ai_analysis_job_status (status),
+                INDEX ix_ai_analysis_job_credited (credited),
+                INDEX ix_ai_analysis_job_created_at (created_at)
+            )
+        """))
+        db.session.commit()
+        _AI_ANALYSIS_JOB_TABLE_READY = True
+    except Exception:
+        db.session.rollback()
+        logger.warning('Could not ensure ai_analysis_job table', exc_info=True)
+
+
 def _sanitize_result_view(value):
     """Solo se persiste una URL relativa de nuestra propia ruta de servido
     (/x_doc/serve_analysis/...). Evita almacenar rutas absolutas del servidor,
@@ -4351,15 +4544,33 @@ def _trim_history_result(r):
         return r
     import copy
     c = copy.deepcopy(r)
-    for key in ('academic_matches', 'internet_matches'):
-        arr = c.get(key)
-        if isinstance(arr, list):
-            arr = arr[:12]
-            for m in arr:
-                if isinstance(m, dict):
-                    m.pop('full_text', None)
-                    m.pop('abstract', None)
-            c[key] = arr
+
+    def _slim(arr, limit):
+        arr = arr[:limit]
+        for m in arr:
+            if isinstance(m, dict):
+                m.pop('full_text', None)
+                m.pop('abstract', None)
+        return arr
+
+    def _is_web(m):
+        return isinstance(m, dict) and str(m.get('source_type') or '').lower() == 'internet'
+
+    # academic_matches llega fusionado desde el front (_normalizeFinderxResult
+    # concatena al final las fuentes web, marcadas con source_type "internet")
+    # y es esa lista la que se re-renderiza al reabrir del historial. Recortar
+    # la lista plana descartaba todas las web cuando había 12+ académicas, así
+    # que cada grupo se recorta por separado. Mismos límites que _trimResult()
+    # en analysis_smartinput.html.
+    arr = c.get('academic_matches')
+    if isinstance(arr, list):
+        c['academic_matches'] = (_slim([m for m in arr if not _is_web(m)], 12)
+                                 + _slim([m for m in arr if _is_web(m)], 8))
+
+    arr = c.get('internet_matches')
+    if isinstance(arr, list):
+        c['internet_matches'] = _slim(arr, 8)
+
     return c
 
 
@@ -4398,13 +4609,21 @@ def history_save():
     try:
         db.session.add(entry)
         db.session.flush()
-        # Conservar solo las últimas N por usuario.
-        stale = (AnalysisHistory.query
-                 .filter_by(user_id=current_user.id)
-                 .order_by(AnalysisHistory.created_at.desc())
-                 .offset(HISTORY_MAX_PER_USER).all())
-        for s in stale:
-            db.session.delete(s)
+        # Conservar solo las últimas N por usuario. Bounded top-N (.limit() real
+        # en la subquery) en vez de .offset(N).all() sin .limit(): SQLAlchemy
+        # traduce ese offset-sin-limit a LIMIT 18446744073709551615 OFFSET N,
+        # forzando a MySQL a hacer filesort de TODA la tabla del usuario en vez
+        # de un top-N acotado — con suficientes filas, agota sort_buffer_size
+        # (error 1038) y tira 500 aunque el análisis ya se haya guardado bien.
+        keep_ids = (db.session.query(AnalysisHistory.id)
+                    .filter_by(user_id=current_user.id)
+                    .order_by(AnalysisHistory.created_at.desc())
+                    .limit(HISTORY_MAX_PER_USER)
+                    .subquery())
+        (AnalysisHistory.query
+         .filter_by(user_id=current_user.id)
+         .filter(~AnalysisHistory.id.in_(db.session.query(keep_ids.c.id)))
+         .delete(synchronize_session=False))
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
@@ -4419,44 +4638,65 @@ def history_list():
     if not _history_allowed():
         return jsonify({'items': [], 'allowed': False}), 200
     from modules.models.model import AnalysisHistory, AnalysisShare, Users
+    from sqlalchemy import func as _sa_func
     _ensure_analysis_shares_table()
-    rows = (AnalysisHistory.query
-            .filter_by(user_id=current_user.id)
+
+    # Solo las columnas que to_summary() necesita — nunca ai/source/citation
+    # (JSON de cientos de KB cada uno: un reporte de FinderX ronda los 470 KB).
+    # Con SELECT * el ORDER BY created_at obligaba a MySQL a arrastrar esos
+    # blobs por el filesort y reventaba el sort buffer (error 1038 → 500 en
+    # todo el historial). 'text' se recorta en el propio SQL a los 160 chars
+    # que to_summary() usa de preview, así que la fila que se ordena pasa de
+    # centenares de KB a unos pocos cientos de bytes.
+    _PREVIEW = _sa_func.substr(AnalysisHistory.text, 1, 160)
+    _SUMMARY_COLS = (
+        AnalysisHistory.id, AnalysisHistory.history_id, AnalysisHistory.created_at,
+        AnalysisHistory.title, _PREVIEW, AnalysisHistory.ai_pct,
+        AnalysisHistory.overall, AnalysisHistory.cit_score, AnalysisHistory.result_view,
+    )
+
+    def _summary(row):
+        # row: (id, history_id, created_at, title, preview, ai_pct, overall,
+        #       cit_score, result_view) — mismo orden que _SUMMARY_COLS.
+        return AnalysisHistory.summary_from_parts(*row[1:])
+
+    rows = (db.session.query(*_SUMMARY_COLS)
+            .filter(AnalysisHistory.user_id == current_user.id)
             .order_by(AnalysisHistory.created_at.desc())
             .limit(HISTORY_MAX_PER_USER).all())
     items = []
     try:
-        own_ids = [r.id for r in rows]
+        own_ids = [r[0] for r in rows]
         shares_by_analysis = {}
         if own_ids:
             for s in AnalysisShare.query.filter(AnalysisShare.analysis_id.in_(own_ids)).all():
                 shares_by_analysis.setdefault(s.analysis_id, []).append(s.to_dict())
         for r in rows:
-            d = r.to_summary()
-            if shares_by_analysis.get(r.id):
-                d['sharedWith'] = shares_by_analysis[r.id]
+            d = _summary(r)
+            if shares_by_analysis.get(r[0]):
+                d['sharedWith'] = shares_by_analysis[r[0]]
             items.append(d)
 
         # Análisis que OTROS usuarios compartieron conmigo (siguen viviendo en la
         # fila del dueño: si él la borra, el join deja de devolverla — cascade real).
-        incoming = (db.session.query(AnalysisShare, AnalysisHistory)
-                    .join(AnalysisHistory, AnalysisShare.analysis_id == AnalysisHistory.id)
+        incoming = (db.session.query(AnalysisHistory.user_id, *_SUMMARY_COLS)
+                    .join(AnalysisShare, AnalysisShare.analysis_id == AnalysisHistory.id)
                     .filter(AnalysisShare.shared_with_id == current_user.id)
                     .order_by(AnalysisHistory.created_at.desc())
                     .limit(HISTORY_MAX_PER_USER).all())
-        owner_ids = {h.user_id for _, h in incoming}
+        owner_ids = {r[0] for r in incoming}
         owners = {u.id: u.email for u in Users.query.filter(Users.id.in_(owner_ids)).all()} if owner_ids else {}
-        for s, h in incoming:
-            d = h.to_summary()
+        for r in incoming:
+            d = _summary(r[1:])
             d['shared'] = True
-            d['sharedBy'] = owners.get(h.user_id, 'another user')
+            d['sharedBy'] = owners.get(r[0], 'another user')
             items.append(d)
         items.sort(key=lambda x: x.get('ts') or 0, reverse=True)
     except Exception:
         # Si la tabla de shares aún no existe (primer despliegue), el historial
         # propio sigue funcionando sin la capa de compartidos.
         logger.warning('history_list: shares layer unavailable', exc_info=True)
-        items = [r.to_summary() for r in rows]
+        items = [_summary(r) for r in rows]
     return jsonify({'items': items, 'allowed': True}), 200
 
 
@@ -4961,6 +5201,8 @@ def purge_all_user_documents(user_id):
     storage_files_deleted = _purge_seaweedfs(user_id, minio_urls)
     embeddings_deleted = _purge_qdrant_images(candidate_group_ids)
     _purge_local_storage(user_id)
+    # Corpus de plagio: por dueño, no por id (ver _corpus_delete_all_for_user).
+    _corpus_delete_all_for_user(user_id)
 
     # 3) Borrado SQL — hijos antes que padres (bulk .delete() NO dispara cascade
     #    de relación ORM, solo el de FK a nivel de BD — hay que ser explícitos).

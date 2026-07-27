@@ -231,6 +231,49 @@
     margin-right: 4px;
 }
 
+/* Verbo anclado: el contenedor por defecto mide 200px con text-align:center y
+   white-space:nowrap, así que la línea entera se recentraba (y se recortaba)
+   cada vez que cambiaba el largo del proveedor — por eso "Searching" saltaba
+   de posición. Con la caja centrada sobre el loader (left:50% + translateX)
+   y dos columnas 1fr, la frontera entre columnas cae SIEMPRE en el centro
+   horizontal del loader, sea cual sea el ancho de la caja o del contenido:
+   el verbo termina siempre en el mismo punto y sólo varía el icono + nombre.
+   Sólo aplica con .pft-ready (la pone buildTickerDom), así que el "Loading..."
+   plano conserva su layout original. */
+.page-flip-loader-text.pft-ready {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 460px;
+    max-width: 88vw;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 6px;
+    align-items: center;
+    text-align: initial;
+}
+
+.page-flip-loader-text.pft-ready .pft-verb {
+    justify-self: end;
+    margin-right: 0;
+}
+
+.page-flip-loader-text.pft-ready .pft-tick {
+    justify-self: start;
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* Nombres largos ("PubMed Central (PMC OA)") se recortan con puntos suspensivos
+   en vez de empujar el layout. */
+.page-flip-loader-text.pft-ready .pft-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .pft-tick {
     display: inline-flex;
     align-items: center;

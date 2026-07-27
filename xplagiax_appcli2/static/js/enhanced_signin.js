@@ -27,6 +27,14 @@
     let tfaRememberMe = false;
     let tfaMethods = ['totp'];
     let tfaActiveMethod = 'totp'; // cuál de los dos está mostrando el input ahora mismo
+    let tfaNextUrl = null;
+
+    // Flask-Login's login_manager puts ?next=<original url> on this page's own
+    // URL when it redirects an unauthenticated user here. Neither the password
+    // POST nor the Google/Microsoft links used to forward it anywhere, so every
+    // login — 2FA or not — always landed on the generic analysis page instead
+    // of wherever the user actually came from.
+    const nextUrlFromPage = new URLSearchParams(window.location.search).get('next');
 
     const tfaLoginForm = document.getElementById('tfaLoginForm');
     const tfaBackLink = document.getElementById('tfaBackToLoginLink');
@@ -58,10 +66,11 @@
         }
     }
 
-    function showTfaStep(pendingToken, rememberMe, methods) {
+    function showTfaStep(pendingToken, rememberMe, methods, nextUrl) {
         tfaPendingToken = pendingToken;
         tfaRememberMe = rememberMe;
         tfaMethods = Array.isArray(methods) && methods.length ? methods : ['totp'];
+        tfaNextUrl = nextUrl || null;
         loginForm.style.display = 'none';
         if (tfaLoginForm) {
             tfaLoginForm.style.display = 'block';
@@ -137,7 +146,8 @@
                     body: JSON.stringify({
                         pending_token: tfaPendingToken,
                         code: code,
-                        remember_me: tfaRememberMe
+                        remember_me: tfaRememberMe,
+                        next: tfaNextUrl
                     })
                 });
                 const data = await response.json();
@@ -178,28 +188,35 @@
     // ── OAuth → 2FA bridge ────────────────────────────────────────────────
     // google_callbackx()/microsoft_callback() are plain GET redirects, not
     // fetch() calls — they can't hand the pending_token back the way login()
-    // does. Instead they stash it server-side (Flask session) and redirect
-    // here with ?oauth_2fa=1; this reads it once via a dedicated endpoint
-    // and drops straight into the same #tfaLoginForm used for password
-    // login. remember_me defaults true for OAuth, matching login_user
-    // (remember=True) in both OAuth callbacks.
+    // does. Previously this went through a Flask-session round trip (stash
+    // server-side, fetch it back on load), but production logs showed the
+    // session cookie set right before the redirect to Google doesn't survive
+    // the round trip back — modern browsers' anti-bounce-tracking cookie
+    // heuristics clear a site's storage when it looks like a third-party
+    // redirect waypoint, which is exactly this shape (confirmed: oauth_state,
+    // set the same way, was independently lost the same way). So the
+    // callback now puts pending_token/methods/next directly in this
+    // redirect's URL instead — no cookie dependency for this handoff at all.
+    // Stripped from the address bar immediately either way. remember_me
+    // defaults true for OAuth, matching login_user(remember=True) in both
+    // OAuth callbacks.
     (function bootstrapOAuthTfaIfPending() {
         const params = new URLSearchParams(window.location.search);
         if (params.get('oauth_2fa') !== '1') return;
-        // Strip the marker immediately so a refresh/back-navigation doesn't
-        // re-trigger this against an already-consumed (or absent) token.
-        params.delete('oauth_2fa');
+        const pendingToken = params.get('pt');
+        const methodsRaw = params.get('m');
+        const oauthNext = params.get('next');
+        // Strip everything immediately — a refresh/back-navigation shouldn't
+        // resurrect a stale (or already-submitted) token, and it doesn't need
+        // to linger in the address bar or browser history.
+        params.delete('oauth_2fa'); params.delete('pt'); params.delete('m'); params.delete('next');
         const cleanQs = params.toString();
         history.replaceState(null, '', window.location.pathname + (cleanQs ? '?' + cleanQs : ''));
 
-        fetch('/auth_bp/2fa/oauth-pending', { credentials: 'include' })
-            .then(r => r.json())
-            .then(data => {
-                if (data && data.pending && data.pending_token) {
-                    showTfaStep(data.pending_token, true, data.methods);
-                }
-            })
-            .catch(() => { /* best-effort — user can just sign in again */ });
+        if (pendingToken) {
+            const methods = methodsRaw ? methodsRaw.split(',').filter(Boolean) : [];
+            showTfaStep(pendingToken, true, methods, oauthNext);
+        }
     })();
 
     loginForm.addEventListener('submit', async function (e) {
@@ -243,7 +260,8 @@
             const formData = {
                 email: email,
                 password: password,
-                remember_me: rememberMe
+                remember_me: rememberMe,
+                next: nextUrlFromPage
             };
 
             const response = await fetch('/auth_bp/login', {
@@ -268,7 +286,7 @@
                 submitBtn.disabled = false;
                 btnText.textContent = 'Sign In';
                 inputs.forEach(input => { input.disabled = false; });
-                showTfaStep(data.pending_token, rememberMe, data.methods);
+                showTfaStep(data.pending_token, rememberMe, data.methods, nextUrlFromPage);
                 return;
             }
 

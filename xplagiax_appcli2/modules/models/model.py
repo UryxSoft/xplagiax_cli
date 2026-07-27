@@ -1313,30 +1313,77 @@ class AnalysisHistory(db.Model):
     overall     = db.Column(db.Integer)       # % similitud
     cit_score   = db.Column(db.Integer)       # calidad de citas /100
     result_view = db.Column(db.String(512))   # URL del result.html (vista documento) para reabrir
+    # Identificador (sin firmar) del trabajo async de IA que originó esta fila —
+    # UNIQUE para que el barrido de fondo (AiAnalysisJob) nunca pueda crear una
+    # fila duplicada para un análisis que el navegador ya guardó: el navegador
+    # manda este id al guardar, y el barrido lo usa para saber "esto ya se
+    # guardó, no hacer nada" en vez de reinsertar y recobrar el crédito. NULL
+    # en todas las filas anteriores a esta feature y en análisis sin leg de IA
+    # (MySQL no cuenta NULL contra la unicidad).
+    ai_task_id  = db.Column(db.String(64), unique=True, nullable=True, index=True)
     created_at  = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
 
     def _ts_ms(self):
         import calendar
         return int(calendar.timegm(self.created_at.utctimetuple()) * 1000) if self.created_at else 0
 
-    def to_summary(self):
+    @staticmethod
+    def summary_from_parts(history_id, created_at, title, preview,
+                           ai_pct, overall, cit_score, result_view):
+        """Shape of a history list entry, built from plain values instead of a
+        loaded row. The list endpoint selects only these few columns (never the
+        ai/source/citation JSON blobs, which run to hundreds of KB each) so
+        MySQL doesn't have to carry them through the ORDER BY filesort — doing
+        so blew the sort buffer (error 1038) once a user had a handful of large
+        analyses. to_summary() below feeds this from a real row."""
+        import calendar
         return {
-            'id': self.history_id,
-            'ts': self._ts_ms(),
-            'title': self.title or 'Untitled analysis',
-            'preview': (self.text or '')[:160],
-            'aiPct': self.ai_pct, 'overall': self.overall, 'cit': self.cit_score,
+            'id': history_id,
+            'ts': int(calendar.timegm(created_at.utctimetuple()) * 1000) if created_at else 0,
+            'title': title or 'Untitled analysis',
+            'preview': (preview or '')[:160],
+            'aiPct': ai_pct, 'overall': overall, 'cit': cit_score,
             # result_view is only ever set for the uploaded-document flow (the
             # server-rendered result.html to reopen) — its presence is already
             # a reliable document-vs-pasted-text signal, no new column needed.
-            'isDocument': bool(self.result_view),
+            'isDocument': bool(result_view),
         }
+
+    def to_summary(self):
+        return self.summary_from_parts(
+            self.history_id, self.created_at, self.title, self.text,
+            self.ai_pct, self.overall, self.cit_score, self.result_view)
 
     def to_full(self):
         d = self.to_summary()
         d.update({'text': self.text or '', 'ai': self.ai, 'source': self.source,
                   'citation': self.citation, 'result_view': self.result_view})
         return d
+
+
+# ── Seguimiento de análisis de IA async — sobrevive el cierre del navegador ──
+# El navegador es hoy el único que sabe qué trabajos de IA quedaron pendientes
+# (vive en un token firmado que nunca se persiste). Esta tabla es la memoria del
+# lado servidor: se crea una fila al lanzar el análisis (analyze_text), se
+# marca 'done'/'failed' apenas /analyze_status observa que terminó (sea el
+# navegador el que pregunta, o el barrido de fondo si el navegador ya no está),
+# y el barrido de fondo (routes_analysis_counter.py) usa `credited` + el UNIQUE
+# de AnalysisHistory.ai_task_id para completar el historial y cobrar el
+# crédito EXACTAMENTE UNA VEZ, sin importar si el navegador seguía abierto o no.
+class AiAnalysisJob(db.Model):
+    __tablename__ = 'ai_analysis_job'
+
+    id          = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id     = db.Column(db.Integer, nullable=False, index=True)
+    task_id     = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    text        = db.Column(db.Text)                      # para crear el historial si el navegador no vuelve
+    word_count  = db.Column(db.Integer)
+    plugins     = db.Column(db.JSON)
+    status      = db.Column(db.String(16), nullable=False, default='pending', index=True)  # pending|done|failed
+    result      = db.Column(db.JSON)                       # payload crudo de xota una vez 'done'
+    credited    = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    created_at  = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    resolved_at = db.Column(db.DateTime, nullable=True)
 
 
 # ── Análisis compartidos entre usuarios (pantalla "analysiss" / historial) ──
