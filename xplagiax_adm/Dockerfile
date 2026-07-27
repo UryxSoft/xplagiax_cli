@@ -13,11 +13,17 @@
 #   - `xplagiax_db.sql` (766 KB) contiene INSERTs con datos reales
 #     (párrafos de análisis, texto de usuarios) — nunca debe viajar dentro
 #     de una imagen; se excluye vía .dockerignore.
-#   - CMD usa gunicorn con worker eventlet (no `python app.py` / dev
-#     server): es el patrón de despliegue documentado de Flask-SocketIO.
-#     1 solo worker porque SocketIO mantiene el estado de sockets en
-#     memoria de proceso — escalar a N workers necesitaría un message
-#     queue (Redis) para el pub/sub entre procesos, fuera de alcance aquí.
+#   - CMD usa gunicorn con worker gthread (no `python app.py` / dev server,
+#     y NO worker eventlet). Se probó eventlet primero (patrón recomendado
+#     por Flask-SocketIO) pero su greendns quedó incompatible con la
+#     versión de dnspython que se resuelve hoy: monkey-parcha
+#     socket.getaddrinfo globalmente y esa incompatibilidad rompía TODA
+#     resolución DNS del contenedor (ni siquiera llegaba a conectar a
+#     MySQL — "Name or service not known"/"unexpected keyword argument
+#     'ignore_errors'" ambos share el mismo origen). No hay un solo
+#     @socketio.on(...) real en el código (SocketIO se instancia pero no se
+#     usa) — sin eso que justifique el riesgo, gthread es la opción sin
+#     monkey-patching, estable y suficiente para I/O bloqueante (DB/SMTP).
 
 # ─────────────────────────────────────────────────────────────────────────
 # Stage 1/2 — builder: resuelve e instala dependencias en un venv aislado.
@@ -76,7 +82,7 @@ sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5001/healthz', timeout=2)
 # Dockerfile anterior exponía 5000 mientras el código escuchaba en 5001,
 # un mismatch que nunca llegó a notarse porque nada lo probó end-to-end.
 CMD ["gunicorn", \
-     "--worker-class", "eventlet", "--workers", "1", \
+     "--worker-class", "gthread", "--workers", "2", "--threads", "4", \
      "--bind", "0.0.0.0:5001", "--timeout", "60", \
      "--access-logfile", "-", "--error-logfile", "-", \
      "app:app"]

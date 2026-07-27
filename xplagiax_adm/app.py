@@ -4,7 +4,7 @@ from flask_migrate import Migrate
 from utils.connections import db
 from flask_login import LoginManager, UserMixin
 from flask_socketio import SocketIO,emit  # Importar SocketIO
-from flask import Flask,url_for
+from flask import Flask,url_for,redirect
 from flask_talisman import Talisman
 import os
 app = Flask(__name__)
@@ -20,7 +20,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")  # Ajusta CORS según necesit
 # Inicializar extensiones
 db.init_app(app)
 
-Talisman(app, content_security_policy=None)
+talisman = Talisman(app, content_security_policy=None)
 # Configurar Flask-Login
 login_manager = LoginManager()
 login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
@@ -79,9 +79,23 @@ apply_security_headers(app)
 
 
 @app.route('/healthz')
+@talisman(force_https=False)
 def healthz():
-    """Liveness check para HEALTHCHECK/orquestador — sin auth, sin DB."""
+    """Liveness check para HEALTHCHECK/orquestador — sin auth, sin DB.
+    force_https=False: el HEALTHCHECK del Dockerfile pega por loopback en
+    http:// puro (gunicorn no sirve TLS — eso lo termina el proxy de
+    delante); sin esta excepción Talisman lo redirigía siempre a https y el
+    check nunca podía completarse (no hay TLS escuchando en este puerto)."""
     return {'status': 'ok'}, 200
+
+
+@app.route('/')
+def root():
+    """Sin esto, la URL más obvia para un despliegue nuevo (el dominio
+    pelado) daba 404 — no había ninguna ruta en '/'. adminx_dashboard.page
+    ya maneja tanto el caso autenticado (dashboard) como el no autenticado
+    (Flask-Login redirige solo a login_view)."""
+    return redirect(url_for('adminx_dashboard.page'))
 
 
 if __name__ == '__main__':
