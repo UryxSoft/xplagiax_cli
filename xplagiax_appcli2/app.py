@@ -232,6 +232,14 @@ with app.app_context():
         ('files', 'archive_cycle_reset_at', "DATETIME NULL DEFAULT NULL"),
         ('files', 'auto_archived_at', "DATETIME NULL DEFAULT NULL"),
         ('files', 'auto_archive_delete_at', "DATETIME NULL DEFAULT NULL"),
+        # ai_task_id lo declara el modelo AnalysisHistory (unique+index) para
+        # el análisis de IA asíncrono, pero su columna nunca se migraba: el
+        # helper _ensure_ai_task_id_column() de doc_routes quedó definido y
+        # sin llamarse. Como es columna del modelo, el ORM la incluye en TODO
+        # SELECT * de analysis_history (history_get, etc.), así que sin ella
+        # esas rutas tiraban 500 "Unknown column ...ai_task_id". Migrarla acá,
+        # una vez al arranque, la garantiza antes de cualquier request.
+        ('analysis_history', 'ai_task_id', "VARCHAR(64) NULL UNIQUE"),
     ]:
         try:
             col_exists = db.session.execute(db.text(
