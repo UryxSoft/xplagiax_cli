@@ -996,20 +996,37 @@ def get_sidebar_counts():
         FROM files WHERE user_id = :uid
     """), {'uid': uid, 'week_ago': week_ago}).fetchone()
 
+    # new_folders = TODAS las carpetas que el usuario tiene en Documents (no
+    # sólo las de la última semana). Las carpetas no tienen estado 'Archivado'
+    # como los archivos — sólo is_trash — así que "en Documents" = is_trash = 0.
     folder_row = db.session.execute(text("""
         SELECT
-          SUM(CASE WHEN is_trash = 1                         THEN 1 ELSE 0 END) AS trash_folders,
-          SUM(CASE WHEN is_trash = 0 AND created_at >= :week_ago THEN 1 ELSE 0 END) AS new_folders
+          SUM(CASE WHEN is_trash = 1 THEN 1 ELSE 0 END) AS trash_folders,
+          SUM(CASE WHEN is_trash = 0 THEN 1 ELSE 0 END) AS new_folders
         FROM folders WHERE user_id = :uid
-    """), {'uid': uid, 'week_ago': week_ago}).fetchone()
+    """), {'uid': uid}).fetchone()
 
-    shared_to_me = db.session.execute(text(
-        "SELECT COUNT(*) FROM item_shares WHERE shared_with_id = :uid"
-    ), {'uid': uid}).scalar() or 0
+    # "Shared with me" / "Shared by me" en el sidebar abren el modal de
+    # historial de análisis (ver base_page.js), no el compartir de archivos,
+    # así que los badges cuentan ANÁLISIS compartidos (analysis_shares), no
+    # item_shares. Se cuenta DISTINCT analysis_id para coincidir con lo que
+    # muestra el modal: un análisis compartido con N personas es UNA fila con
+    # un stack de avatares, no N entradas.
+    # La tabla analysis_shares se crea de forma perezosa en doc_routes
+    # (_ensure_analysis_shares_table); si aún no existe en este deploy, el
+    # try/except evita tumbar todo el endpoint de counts — badge en 0.
+    try:
+        shared_to_me = db.session.execute(text(
+            "SELECT COUNT(DISTINCT analysis_id) FROM analysis_shares WHERE shared_with_id = :uid"
+        ), {'uid': uid}).scalar() or 0
 
-    shared_by_me = db.session.execute(text(
-        "SELECT COUNT(*) FROM item_shares WHERE owner_id = :uid"
-    ), {'uid': uid}).scalar() or 0
+        shared_by_me = db.session.execute(text(
+            "SELECT COUNT(DISTINCT analysis_id) FROM analysis_shares WHERE owner_id = :uid"
+        ), {'uid': uid}).scalar() or 0
+    except Exception:
+        db.session.rollback()  # una query fallida aborta la transacción
+        shared_to_me = 0
+        shared_by_me = 0
 
     data = {
         'total':        int(file_row.total        or 0),

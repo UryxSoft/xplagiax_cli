@@ -21,18 +21,18 @@ class EmailService:
                 'MAIL_PORT': 587,
                 'MAIL_USE_SSL': False,
                 'MAIL_USE_TLS': True,
-                'MAIL_USERNAME': 'noreply@XplagiaX.ca',
-                'MAIL_PASSWORD': 'MYR1xkd2kqc_gat2hem',
-                'MAIL_DEFAULT_SENDER': ('XplagiaX', 'noreply@XplagiaX.ca')
+                'MAIL_USERNAME': 'no-reply@xplagiax.ca',
+                'MAIL_PASSWORD': 'xyk.zaw*qtm6wjb0YVP',
+                'MAIL_DEFAULT_SENDER': ('XplagiaX', 'no-reply@xplagiax.ca')
             },
             'billing': {
                 'MAIL_SERVER': 'smtp.ionos.com',
                 'MAIL_PORT': 587,
                 'MAIL_USE_SSL': False,
                 'MAIL_USE_TLS': True,
-                'MAIL_USERNAME': 'billing@XplagiaX.com',
+                'MAIL_USERNAME': 'support@xplagiax.ca',
                 'MAIL_PASSWORD': 'VNZ-twu!jgt5xwk1ybd',
-                'MAIL_DEFAULT_SENDER': ('XplagiaX Billing', 'billing@XplagiaX.com')
+                'MAIL_DEFAULT_SENDER': ('XplagiaX Billing', 'support@xplagiax.ca')
             },
             'gmail': {
                 'MAIL_SERVER': 'smtp.gmail.com',

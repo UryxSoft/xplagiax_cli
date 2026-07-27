@@ -2745,9 +2745,24 @@ def upload_save():
         }), 500
     
     logger.info(f"✅ SeaweedFS: Archivo guardado exitosamente\n")
-    
+
+    # =================== CORPUS DE PLAGIO (no bloqueante) ===================
+    # Recién acá, con el archivo YA guardado: el corpus es un servicio auxiliar
+    # y su estado no puede decidir si la subida tiene éxito. _corpus_index_document
+    # se traga cualquier fallo y solo loguea.
+    corpus_queued = _corpus_index_document(
+        doc_id, content,
+        user_id=user_id,
+        title=title,
+        language=language,
+        theme=theme,
+        source_file=file.filename,
+        institution=user_data.get('institute'),
+        country=user_data.get('country'),
+    )
+
     # =================== RESPUESTA EXITOSA ===================
-    
+
     total_time = time.time() - start_time
     
     logger.info(f"{'='*70}")
@@ -2772,6 +2787,9 @@ def upload_save():
         'document_id': doc_id,
         'seaweed_status': 'success',
         'qdrant_images_status': qdrant_imgs_status,
+        # 'queued' = FinderX aceptó indexarlo; 'skipped' = no se pudo encolar
+        # (servicio caído, texto insuficiente). La subida es exitosa igual.
+        'corpus_status': 'queued' if corpus_queued else 'skipped',
         'document_info': {
             'title': title,
             'author': author,
@@ -2825,12 +2843,20 @@ def delete_save(document_id):
         except requests.RequestException as e:
             return service_name, str(e)
 
-    # Endpoints de borrado
+    # Endpoints de borrado.
+    # La entrada "qdrant" apuntaba a /x_search/api/documents/essays_index/<id>,
+    # el mismo blueprint borrado del repo que rompía la subida — devolvía 404 y
+    # el documento nunca se quitaba de ningún índice. Reemplazado por la llamada
+    # al corpus de FinderX (abajo), que sí existe.
     urls = [
         ("bucket", f'http://localhost:5000/x_buck/api/documents/{document_id}/{user_id}'),
-        ("qdrant", f'http://localhost:5000/x_search/api/documents/essays_index/{document_id}'),
         ("qdrant_images", f'http://localhost:5000/x_image/delete_by_group/{document_id}')
     ]
+
+    # Quitar del corpus de plagio. Va aparte del pool de arriba porque necesita
+    # la cabecera X-API-Key que safe_delete() no envía. Best-effort: si falla,
+    # se loguea, pero el borrado del documento sigue adelante.
+    corpus_deleted = _corpus_delete_document(document_id)
 
     results = {}
     
@@ -2864,6 +2890,12 @@ def delete_save(document_id):
                         "details": resp_json, 
                         "code": resp.status_code
                     }
+
+    # El corpus se reporta pero NO cuenta como error bloqueante: es un servicio
+    # auxiliar y su caída no debe hacer fallar el borrado del documento (el
+    # archivo y las imágenes sí se borraron). Queda registrado para poder
+    # detectar deriva entre el almacenamiento y el índice de plagio.
+    results["corpus"] = {"status": "success" if corpus_deleted else "warning"}
 
     # Verificar si hubo algún error
     errors = {k: v for k, v in results.items() if v['status'] == 'error'}
@@ -4026,6 +4058,108 @@ FINDERX_SERVICE_API_KEY = (
     or 'xpx-3Td8C2oecnAXRT0-VioypUjMWTtSTQVj3k2kE8Q-5tc'
 )
 
+# ── Corpus de plagio compartido entre apps del ecosistema ────────────────────
+# Los documentos que un usuario guarda en "Documents" se indexan en el corpus de
+# FinderX para que después puedan detectarse copias literales entre usuarios de
+# CUALQUIER app del ecosistema (appcli2, marktrack, futuras).
+#
+# Identificador de esta app dentro del corpus. Sumar una app nueva al ecosistema
+# es mandar otro valor acá — el esquema no cambia.
+CORPUS_APP_NAME = os.environ.get('CORPUS_APP_NAME', 'appcli2')
+
+
+def _corpus_index_document(doc_id, text, *, user_id, title=None, language=None,
+                            theme=None, source_file=None, institution=None,
+                            country=None):
+    """Encola el documento en el corpus de plagio de FinderX. Best-effort.
+
+    NUNCA propaga la excepción: indexar es un servicio auxiliar y su caída no
+    puede impedir que alguien guarde su documento — ese fue exactamente el bug
+    que dejó la subida rota (ver el comentario en upload_save()). El endpoint
+    responde 202 y hace el trabajo pesado en background, así que esta llamada
+    es corta aunque el documento sea una tesis.
+    """
+    if not text or len(text.split()) < 10:
+        return False
+    try:
+        resp = session_pool.post(
+            f'{FINDERX_SERVICE_BASE}/api/v1/corpus/documents',
+            headers={'Content-Type': 'application/json',
+                     'X-API-Key': FINDERX_SERVICE_API_KEY},
+            json={
+                'app': CORPUS_APP_NAME,
+                'doc_id': str(doc_id),
+                'owner_user_id': int(user_id),
+                'text': text[:500000],
+                'title': title,
+                'language': language,
+                'theme': theme,
+                'source_file': source_file,
+                'institution': institution,
+                'country': country,
+            },
+            timeout=(5, 15),
+        )
+        if resp.ok:
+            logger.info('Corpus: documento %s encolado para indexación', doc_id)
+            return True
+        logger.warning('Corpus: indexación rechazada para %s (HTTP %s): %s',
+                       doc_id, resp.status_code, resp.text[:200])
+    except Exception:
+        logger.warning('Corpus: no se pudo indexar %s', doc_id, exc_info=True)
+    return False
+
+
+def _corpus_delete_all_for_user(user_id):
+    """Quita del corpus TODOS los documentos de un usuario. Best-effort.
+
+    Se borra por dueño y no documento por documento porque los doc_id del corpus
+    (uuid4 generados al subir) no son los File.id que enumera purge_all_user_documents:
+    un bucle por id dejaría atrás justamente lo que no pudo enumerar. Acá los
+    restos no son datos viejos inofensivos — son trabajos que el usuario borró
+    y seguirían apareciendo como fuente de plagio.
+    """
+    try:
+        resp = session_pool.delete(
+            f'{FINDERX_SERVICE_BASE}/api/v1/corpus/documents/'
+            f'{CORPUS_APP_NAME}/by-owner/{int(user_id)}',
+            headers={'X-API-Key': FINDERX_SERVICE_API_KEY},
+            timeout=(5, 30),
+        )
+        if resp.ok:
+            logger.info('Corpus: documentos del usuario %s purgados', user_id)
+            return True
+        logger.warning('Corpus: purga de usuario %s rechazada (HTTP %s)',
+                       user_id, resp.status_code)
+    except Exception:
+        logger.warning('Corpus: no se pudo purgar al usuario %s', user_id,
+                       exc_info=True)
+    return False
+
+
+def _corpus_delete_document(doc_id):
+    """Quita un documento del corpus de plagio. Best-effort.
+
+    Obligatorio en TODO flujo de borrado: un documento que el usuario eliminó y
+    sigue apareciendo como fuente de plagio es un problema de privacidad, no de
+    datos viejos. El endpoint es idempotente, así que llamarlo para algo que
+    nunca llegó a indexarse es inofensivo.
+    """
+    try:
+        resp = session_pool.delete(
+            f'{FINDERX_SERVICE_BASE}/api/v1/corpus/documents/'
+            f'{CORPUS_APP_NAME}/{doc_id}',
+            headers={'X-API-Key': FINDERX_SERVICE_API_KEY},
+            timeout=(5, 15),
+        )
+        if resp.ok:
+            return True
+        logger.warning('Corpus: borrado rechazado para %s (HTTP %s)',
+                       doc_id, resp.status_code)
+    except Exception:
+        logger.warning('Corpus: no se pudo borrar %s', doc_id, exc_info=True)
+    return False
+
 # ── marktrack: misma identidad de usuario (users compartida), servicio hermano.
 # Usado SOLO para el borrado interno servidor-a-servidor (Delete All Documents) —
 # nunca invocado desde el navegador. Clave compartida con marktrack's
@@ -5067,6 +5201,8 @@ def purge_all_user_documents(user_id):
     storage_files_deleted = _purge_seaweedfs(user_id, minio_urls)
     embeddings_deleted = _purge_qdrant_images(candidate_group_ids)
     _purge_local_storage(user_id)
+    # Corpus de plagio: por dueño, no por id (ver _corpus_delete_all_for_user).
+    _corpus_delete_all_for_user(user_id)
 
     # 3) Borrado SQL — hijos antes que padres (bulk .delete() NO dispara cascade
     #    de relación ORM, solo el de FK a nivel de BD — hay que ser explícitos).
