@@ -795,6 +795,8 @@ body {
   border-radius: 0.5rem;
   cursor: pointer;
   transition: background var(--transition-fast);
+  text-decoration: none;
+  color: inherit;
 }
 
 .white2-action-item:hover {
@@ -811,6 +813,22 @@ body {
   justify-content: center;
   flex-shrink: 0;
   color: var(--primary);
+}
+
+.white2-action-item .icon-container.marktrack-icon {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #007AFF 0%, #0051D5 100%);
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #fff;
+}
+
+.white2-action-item .icon-container.marktrack-icon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, transparent 60%);
+  border-radius: inherit;
 }
 
 .white2-action-item .content {

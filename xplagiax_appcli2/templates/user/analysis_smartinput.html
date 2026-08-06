@@ -6375,6 +6375,18 @@ body.xp-file-preview .mode-switch-container {
             _hide(mainContainer.querySelector('.header-section'));
             _hide('inputWrapper'); _hide('optionsPanel'); _hide('statusMessage'); _hide('metrics');
 
+            // Analizar un documento subido deja 'xp-file-preview' en <body> (se quita
+            // solo al cambiar de modo o resetear, nunca al terminar el análisis). Esa
+            // clase fija `.main-container{min-height:auto!important}` (línea ~611),
+            // que por orden de cascada GANA sobre `body.xp-split-active .main-container
+            // {min-height:0!important}` de aquí abajo (misma especificidad, regla
+            // posterior en la hoja de estilos) — .main-container deja de poder encogerse
+            // y toda la cadena flex de los dos paneles pierde su alto acotado: el
+            // overflow-y:auto de .ai-split-text-content/.tab-content ya no tiene nada
+            // que desbordar y el scroll (rueda del mouse o trackpad) deja de funcionar.
+            // Quitarla aquí evita el conflicto de raíz.
+            document.body.classList.remove('xp-file-preview');
+
             document.body.classList.add('xp-split-active');
             mainContainer.appendChild(overlay);
             this._wireMtTabs(overlay);

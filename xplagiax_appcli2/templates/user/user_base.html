@@ -336,6 +336,7 @@
             </button>
 
             <!-- App modules dropdown -->
+            {% if user_data.user_type != 'Starter' %}
             <div class="white2-actions-dropdown">
               <button class="white2-actions-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -346,27 +347,25 @@
                 </svg>
               </button>
               <div class="white2-actions-menu">
-                <div class="white2-action-item">
-                  <div class="icon-container">
+                {% if user_data.user_type == 'Institutes' %}
+                <a class="white2-action-item" href="https://marktrack.xplagiax.ca" target="_blank" rel="noopener">
+                  <div class="icon-container marktrack-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
-                      class="bi bi-bookmark-check" viewBox="0 0 16 16">
-                      <path fill-rule="evenodd"
-                        d="M10.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0" />
+                      class="icon-svg bi bi-pencil-square" viewBox="0 0 16 16">
                       <path
-                        d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1z" />
+                        d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+                      <path fill-rule="evenodd"
+                        d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z" />
                     </svg>
                   </div>
                   <div class="content">
                     <span class="link">MarkTrack</span>
-                    <span class="description">Real-time assisted writing
-                      <a href="https://xplagiax.ca/marktrack" target="_blank"
-                        style="margin-left:5px;text-decoration:none;">
-                        Soon <i class="bi bi-question-circle-fill" style="color:#007bff;"></i>
-                      </a>
-                    </span>
+                    <span class="description">Real-time visibility into how a paper is written — MarkTrack follows every keystroke as students draft, turning the writing process itself into verifiable evidence of original work.</span>
                   </div>
-                </div>
-                <div class="white2-action-item">
+                </a>
+                {% endif %}
+                {# Oculto por el momento (no eliminado, por si se reactiva). Quitar display:none para reactivarlo. #}
+                <div class="white2-action-item" style="display:none" aria-hidden="true">
                   <div class="icon-container">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
                       class="bi bi-card-checklist" viewBox="0 0 16 16">
@@ -386,7 +385,8 @@
                     </span>
                   </div>
                 </div>
-                <div class="white2-action-item">
+                {# Oculto por el momento (no eliminado, por si se reactiva). Quitar display:none para reactivarlo. #}
+                <div class="white2-action-item" style="display:none" aria-hidden="true">
                   <div class="icon-container">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
                       class="bi bi-check2-all" viewBox="0 0 16 16">
@@ -407,6 +407,7 @@
                 </div>
               </div>
             </div>
+            {% endif %}
 
             <!-- Profile button + dropdown -->
             <div class="navigation__group">

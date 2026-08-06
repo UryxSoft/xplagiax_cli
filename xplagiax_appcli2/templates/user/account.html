@@ -189,6 +189,7 @@
                 <label class="sm-label">Email Address</label>
                 <input class="sm-input" type="email" value="{{ user_data.email }}" readonly>
               </div>
+              {% if user_data.user_type == 'Institutes' %}
               <div class="sm-field">
                 <label class="sm-label">Country</label>
                 <input class="sm-input" type="text" value="{{ user_data.country or '—' }}" readonly>
@@ -197,6 +198,7 @@
                 <label class="sm-label">Institution</label>
                 <input class="sm-input" type="text" value="{{ user_data.institute or '—' }}" readonly>
               </div>
+              {% endif %}
               <div class="sm-field">
                 <label class="sm-label">User Type</label>
                 <input class="sm-input" type="text" value="{{ user_data.user_type }}" readonly>
@@ -284,6 +286,7 @@
                 <label class="sm-label">Email</label>
                 <input class="sm-input" type="email" value="{{ user_data.email }}" readonly>
               </div>
+              {% if user_data.user_type == 'Institutes' %}
               <div class="sm-field">
                 <label class="sm-label">Institution</label>
                 <input class="sm-input" type="text" value="{{ user_data.institute or '' }}" readonly>
@@ -292,6 +295,7 @@
                 <label class="sm-label">Country</label>
                 <input class="sm-input" type="text" value="{{ user_data.country or '' }}" readonly>
               </div>
+              {% endif %}
             </div>
           </div>
           <div class="sm-card-foot">
