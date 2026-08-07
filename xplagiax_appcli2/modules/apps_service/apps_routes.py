@@ -58,12 +58,6 @@ def unauthorized(_):
 def forbidden(_):
     return render_template("/error_page/403_error.html"), 403
 
-
-# Error 403 - Forbidden
-@x_apps.errorhandler(403)
-def forbidden(_):
-    return render_template("/error_page/403_error.html"), 403
-
 # Error 500 - Internal Server Error
 @x_apps.errorhandler(500)
 def internal_server_error(_):

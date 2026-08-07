@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XplagiaX - Error pages</title>
-    <link href="{{ url_for('static', filename='css/error_page.css')}}">
 </head>
 <body>
     <div class="particles"></div>
@@ -40,8 +39,7 @@
             Intentar de Nuevo
         </button>
     </div>
-    {% block body %}    
+    {% block body %}
     {% endblock %}
-    <script src="{{ url_for('static', filename='js/error_pages.js')}}"></script>
 </body>
 </html>

@@ -152,27 +152,6 @@ def home():
         flash("Error interno. Reinicia tu sesión.", "error")
         return redirect(url_for('x_apps.login'))
 
-@x_users.route('/analysis_original')
-@login_required
-def analysis_original():
-    """Ruta analysis mejorada"""
-    if not verify_user_authenticated():
-        return redirect(url_for('x_apps.login'))
-    
-    try:
-        user_data = get_user_data()
-        if not user_data or not user_data.get('id'):
-            flash("Error al cargar datos de usuario", "error")
-            return redirect(url_for('x_apps.login'))
-        
-        update_user_activity()
-        return render_template('/user/analysis.html', user_data=user_data, module='analysis')
-        
-    except Exception as e:
-        #print(f"💥 Error en /analysis: {e}")
-        flash("Error interno. Reinicia tu sesión.", "error")
-        return redirect(url_for('x_apps.login'))
-
 @x_users.route('/analysiss')
 @login_required
 def analysis():
@@ -373,43 +352,7 @@ def settings():
         flash("Error interno. Reinicia tu sesión.", "error")
         return redirect(url_for('x_apps.login'))
 
-@x_users.route('/helpcenter')
-@login_required  #  AGREGAR login_required
-def helpcenter():
-    """Ruta helpcenter corregida - USAR FLASK-LOGIN EN LUGAR DE TOKEN"""
-    if not verify_user_authenticated():
-        return redirect(url_for('x_apps.login'))
-    
-    try:
-        user_data = get_user_data()
-        if not user_data or not user_data.get('id'):
-            flash("Error al cargar datos de usuario", "error")
-            return redirect(url_for('x_apps.login'))
-        
-        update_user_activity()
-        return render_template('/user/helpcenter.html', user_data=user_data)
-        
-    except Exception as e:
-        print(f"💥 Error en /helpcenter: {e}")
-        flash("Error interno. Reinicia tu sesión.", "error")
-        return redirect(url_for('x_apps.login'))
-
 #  RUTAS API CORREGIDAS CON MANEJO ROBUSTO
-
-@x_users.route('/historial')
-@block_starter
-@login_required
-def historial():
-    """Renderiza la página principal del historial"""
-    if not verify_user_authenticated():
-        return redirect(url_for('x_apps.login'))
-    
-    try:
-        user_data = get_user_data()
-        return render_template('historial.html', user_data=user_data)
-    except Exception as e:
-        print(f" Error en /historial: {e}")
-        return redirect(url_for('x_apps.login'))
 
 @x_users.route('/api/historial/data')
 @login_required

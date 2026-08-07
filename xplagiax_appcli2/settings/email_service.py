@@ -285,28 +285,6 @@ class EmailTemplates:
             }
 
     @staticmethod
-    def send_welcome_email(user_email, user_name=None):
-        """Envía email de bienvenida después de la confirmación"""
-        try:
-            html_content = render_template('emails/welcome.html', 
-                                         user_name=user_name or user_email)
-            
-            return EmailService.send_email(
-                subject='Welcome to XplagiaX!',
-                recipients=[user_email],
-                html_content=html_content,
-                provider='noreply',
-                fallback_provider='gmail'
-            )
-        except Exception as e:
-            logger.error(f"Error in send_welcome_email: {str(e)}")
-            return {
-                'success': False,
-                'message': f'Welcome email template error: {str(e)}',
-                'provider_used': None
-            }
-
-    @staticmethod
     def send_notification_email(user_email, notification_type, data, user_name=None):
         """Envía emails de notificación general"""
         try:

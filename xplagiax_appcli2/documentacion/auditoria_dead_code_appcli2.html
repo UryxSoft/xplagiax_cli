@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XplagiaX AppCLI2 — Dead Code Audit</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --surface:#ffffff; --surface-2:#eef0f4;
+    --ink:#161b26; --ink-muted:#5b6472; --ink-faint:#8890a0;
+    --border:#dfe3e9; --border-strong:#c7ccd6;
+    --accent:#33418f; --accent-soft:#eef0fb; --accent-ink:#242f73;
+    --ok:#1a7f4b; --ok-soft:#e7f5ee;
+    --warn:#a3690a; --warn-soft:#fbf0dd;
+    --danger:#b23b3b; --danger-soft:#fbe9e8;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", "Menlo", monospace;
+    --serif: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --radius: 8px;
+    --shadow: 0 1px 2px rgba(20,25,40,.04), 0 8px 24px -12px rgba(20,25,40,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#10131a; --surface:#171b24; --surface-2:#1f2430;
+      --ink:#e7e9ee; --ink-muted:#9aa3b2; --ink-faint:#6b7383;
+      --border:#2a3040; --border-strong:#39415a;
+      --accent:#8b96e6; --accent-soft:#232849; --accent-ink:#c3cafc;
+      --ok:#4bbf85; --ok-soft:#153027;
+      --warn:#d9a441; --warn-soft:#332a13;
+      --danger:#e0685f; --danger-soft:#3a1f1e;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 30px -14px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#10131a; --surface:#171b24; --surface-2:#1f2430;
+    --ink:#e7e9ee; --ink-muted:#9aa3b2; --ink-faint:#6b7383;
+    --border:#2a3040; --border-strong:#39415a;
+    --accent:#8b96e6; --accent-soft:#232849; --accent-ink:#c3cafc;
+    --ok:#4bbf85; --ok-soft:#153027;
+    --warn:#d9a441; --warn-soft:#332a13;
+    --danger:#e0685f; --danger-soft:#3a1f1e;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 30px -14px rgba(0,0,0,.55);
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f6f8; --surface:#ffffff; --surface-2:#eef0f4;
+    --ink:#161b26; --ink-muted:#5b6472; --ink-faint:#8890a0;
+    --border:#dfe3e9; --border-strong:#c7ccd6;
+    --accent:#33418f; --accent-soft:#eef0fb; --accent-ink:#242f73;
+    --ok:#1a7f4b; --ok-soft:#e7f5ee;
+    --warn:#a3690a; --warn-soft:#fbf0dd;
+    --danger:#b23b3b; --danger-soft:#fbe9e8;
+    --shadow: 0 1px 2px rgba(20,25,40,.04), 0 8px 24px -12px rgba(20,25,40,.10);
+  }
+
+  *{box-sizing:border-box}
+  html{background:var(--bg)}
+  body{
+    margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{font-family:var(--serif); font-weight:600; text-wrap:balance; color:var(--ink); letter-spacing:-.01em}
+  a{color:var(--accent)}
+  code, .mono{font-family:var(--mono); font-size:.88em}
+  ::selection{background:var(--accent-soft)}
+
+  /* ── Top bar ── */
+  .topbar{
+    position:sticky; top:0; z-index:40; background:var(--surface);
+    border-bottom:1px solid var(--border); padding:14px 28px;
+    display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .topbar .title{font-family:var(--serif); font-size:1.05rem; font-weight:600}
+  .topbar .title .dim{color:var(--ink-muted); font-weight:400; font-family:var(--sans); font-size:.85rem; margin-left:10px}
+  .topbar .meta{font-size:.78rem; color:var(--ink-faint); font-family:var(--mono)}
+
+  /* ── Shell ── */
+  .shell{display:grid; grid-template-columns:248px minmax(0,1fr); max-width:1320px; margin:0 auto; gap:0}
+  @media (max-width:900px){ .shell{grid-template-columns:1fr} .side{display:none} }
+
+  .side{
+    position:sticky; top:53px; align-self:start; height:calc(100vh - 53px);
+    overflow-y:auto; padding:26px 18px 40px 28px; border-right:1px solid var(--border);
+  }
+  .side nav{display:flex; flex-direction:column; gap:2px}
+  .side .grp{font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-faint); margin:16px 0 6px; font-weight:600}
+  .side .grp:first-child{margin-top:0}
+  .side a{
+    color:var(--ink-muted); text-decoration:none; font-size:.83rem; padding:5px 10px; border-radius:6px;
+    border-left:2px solid transparent;
+  }
+  .side a:hover{background:var(--surface-2); color:var(--ink)}
+
+  main{padding:36px 32px 100px; min-width:0}
+  .measure{max-width:760px}
+  section{margin-bottom:56px; scroll-margin-top:70px}
+  section > h2{font-size:1.5rem; margin:0 0 4px}
+  section > .h2-sub{color:var(--ink-muted); font-size:.92rem; margin:0 0 22px; max-width:700px}
+  h3{font-size:1.08rem; margin:28px 0 10px}
+  p{margin:0 0 14px; color:var(--ink)}
+  .measure p, .measure li{color:var(--ink)}
+
+  /* ── Hero / exec summary ── */
+  .hero{padding:44px 32px 8px}
+  .hero h1{font-size:2.15rem; margin:0 0 10px; max-width:720px}
+  .hero .lede{font-size:1.02rem; color:var(--ink-muted); max-width:680px; margin:0 0 28px}
+  .scope-note{
+    display:flex; gap:12px; align-items:flex-start; background:var(--accent-soft); border:1px solid var(--border);
+    border-radius:var(--radius); padding:14px 16px; max-width:720px; margin-bottom:34px; font-size:.87rem; color:var(--ink);
+  }
+  .scope-note .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:6px;flex-shrink:0}
+
+  .stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:12px; max-width:1040px; margin-bottom:8px}
+  .stat{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px 16px 14px; box-shadow:var(--shadow);
+  }
+  .stat .num{font-family:var(--serif); font-size:1.85rem; font-variant-numeric:tabular-nums; line-height:1; color:var(--ink)}
+  .stat .num.ok{color:var(--ok)} .stat .num.warn{color:var(--warn)} .stat .num.danger{color:var(--danger)}
+  .stat .lbl{font-size:.73rem; color:var(--ink-muted); margin-top:7px; line-height:1.35}
+
+  /* ── Risk chips ── */
+  .chip{
+    display:inline-flex; align-items:center; gap:5px; padding:2px 9px 2px 7px; border-radius:99px;
+    font-size:.72rem; font-weight:600; white-space:nowrap; letter-spacing:.01em;
+  }
+  .chip::before{content:''; width:6px; height:6px; border-radius:50%; background:currentColor}
+  .chip.ok{background:var(--ok-soft); color:var(--ok)}
+  .chip.warn{background:var(--warn-soft); color:var(--warn)}
+  .chip.danger{background:var(--danger-soft); color:var(--danger)}
+
+  /* ── Tables ── */
+  .twrap{overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); margin:0 0 20px}
+  table{width:100%; border-collapse:collapse; background:var(--surface); font-size:.84rem; min-width:560px}
+  thead th{
+    text-align:left; font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint);
+    padding:10px 14px; border-bottom:1px solid var(--border); white-space:nowrap; background:var(--surface-2);
+    position:sticky; top:0;
+  }
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top; color:var(--ink)}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--surface-2)}
+  td.path, td .path{font-family:var(--mono); font-size:.81rem; color:var(--ink)}
+  td.num, th.num{text-align:right; font-variant-numeric:tabular-nums}
+  .evid{font-family:var(--mono); font-size:.78rem; color:var(--ink-muted); display:block; margin-top:3px}
+
+  /* ── Callouts ── */
+  .callout{border-radius:var(--radius); border:1px solid var(--border); padding:14px 16px; margin:0 0 18px; font-size:.87rem}
+  .callout.bug{background:var(--danger-soft); border-color:transparent}
+  .callout.bug h4{margin:0 0 4px; font-size:.86rem; color:var(--danger); font-family:var(--sans); font-weight:700}
+  .callout.info{background:var(--surface-2)}
+  .callout p:last-child{margin-bottom:0}
+
+  /* ── Roadmap ── */
+  .phase{border-left:2px solid var(--border); padding:2px 0 26px 22px; position:relative}
+  .phase:last-child{padding-bottom:2px}
+  .phase::before{content:''; position:absolute; left:-6px; top:3px; width:10px; height:10px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 3px var(--surface)}
+  .phase h4{margin:0 0 4px; font-size:.98rem; font-family:var(--sans); font-weight:700}
+  .phase .meta{font-size:.74rem; color:var(--ink-faint); font-family:var(--mono); margin-bottom:8px}
+  .phase ul{margin:0; padding-left:18px; font-size:.87rem}
+  .phase li{margin-bottom:4px}
+
+  /* ── Coverage bars ── */
+  .cov-row{display:flex; align-items:center; gap:12px; margin-bottom:10px; font-size:.83rem}
+  .cov-row .name{width:150px; flex-shrink:0; font-family:var(--mono); font-size:.78rem}
+  .cov-bar{flex:1; height:8px; background:var(--surface-2); border-radius:99px; overflow:hidden; display:flex}
+  .cov-bar span{height:100%}
+  .cov-row .frac{width:64px; text-align:right; flex-shrink:0; font-variant-numeric:tabular-nums; color:var(--ink-muted); font-size:.78rem}
+
+  footer{padding:30px 32px 60px; color:var(--ink-faint); font-size:.78rem; border-top:1px solid var(--border); margin-top:20px}
+
+  @media (max-width:640px){
+    .hero{padding:30px 18px 4px} main{padding:20px 18px 80px} .topbar{padding:12px 16px}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="title">XplagiaX <span class="mono" style="opacity:.5">appcli2</span><span class="dim">Dead-code &amp; architecture audit</span></div>
+  <div class="meta">read-only · no changes applied · 2026-08-06</div>
+</div>
+
+<div class="shell">
+  <aside class="side">
+    <nav>
+      <div class="grp">Report</div>
+      <a href="#summary">1 · Executive Summary</a>
+      <a href="#endpoints">2 · Dead Endpoints</a>
+      <a href="#templates">3 · Dead Templates</a>
+      <a href="#css">4 · Dead CSS</a>
+      <a href="#js">5 · Dead JavaScript</a>
+      <a href="#python">6 · Dead Python</a>
+      <a href="#assets">7 · Dead Assets</a>
+      <a href="#deps">8 · Dependency Cleanup</a>
+      <a href="#dupes">9 · Duplicate Code</a>
+      <a href="#debt">10 · Technical Debt</a>
+      <a href="#roadmap">11 · Cleanup Roadmap</a>
+      <a href="#matrix">12 · Risk Matrix</a>
+      <a href="#impact">13 · Impact Analysis</a>
+      <div class="grp">Meta</div>
+      <a href="#coverage">Audit coverage</a>
+      <a href="#method">Methodology</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="hero">
+      <h1>What can safely come out of appcli2</h1>
+      <p class="lede">A read-only forensic audit of <code>xplagiax/xplagiax_appcli2</code> — every finding below is backed by a grep, a read, or a cross-reference you can re-run yourself. Nothing was deleted or modified.</p>
+
+      <div class="scope-note">
+        <div class="dot"></div>
+        <div><strong>Excluded from scope</strong> (per instructions): <code>documentacion/</code> and all <code>*.md</code> files anywhere in the repo. Everything else — Python, templates, CSS, JS, images, migrations, tests, config — was in scope.</div>
+      </div>
+
+      <div class="stat-row" id="summary">
+        <div class="stat"><div class="num danger">21</div><div class="lbl">confirmed-dead items — safe to remove, multi-source verified</div></div>
+        <div class="stat"><div class="num">~3,650</div><div class="lbl">lines of confirmed-dead Python / CSS / JS (7 largest files alone)</div></div>
+        <div class="stat"><div class="num warn">4</div><div class="lbl">live bugs found as a byproduct — broken template/CSS/JS references</div></div>
+        <div class="stat"><div class="num">12</div><div class="lbl">orphaned images in <code class="mono" style="font-size:.7em">static/img/</code></div></div>
+        <div class="stat"><div class="num ok">2</div><div class="lbl">dependencies flagged for review (Flask-SocketIO, psutil)</div></div>
+        <div class="stat"><div class="num warn">~179</div><div class="lbl">routes not individually verified — see coverage below</div></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ 1. EXECUTIVE SUMMARY ══════════════════ -->
+    <section id="exec" class="measure">
+      <h2>1 · Executive Summary</h2>
+      <p>appcli2 is a working, actively-developed Flask app with real production hardening (CSP headers, ProxyFix, idempotent startup migrations, session-security config). Its dead code is not random rot — almost all of it has a clean origin story: a route, file, or feature was <em>replaced</em> and the replacement shipped, but the original was never deleted. Three separate cases follow this exact pattern:</p>
+      <ul>
+        <li><strong>Auth was rewritten wholesale.</strong> <code>auth_routes.py</code> (1,501 lines) was superseded by <code>auth_routes_fixed.py</code> — the import is commented out in <code>app.py:124</code>, so the old file is 100% unreachable, dead weight.</li>
+        <li><strong>Spanish-named pages were rebuilt in English and left behind.</strong> <code>/historial</code>, <code>/helpcenter</code>, and <code>/analysis_original</code> are all superseded by <code>/history</code>, (no replacement needed), and <code>/analysiss</code> respectively — and two of the three point at templates that no longer exist on disk, so they'd 500 if anyone ever hit them.</li>
+        <li><strong>MarkTrack / Review Studio / Genuine graduated into separate products.</strong> The in-app <code>marktrack.html</code> and <code>genuine.html</code> templates are leftovers from before those became external apps at their own subdomains (confirmed this session — see <a href="#templates">§3</a>).</li>
+      </ul>
+      <p>The audit also surfaced <strong>four broken references in code that <em>is</em> live</strong> (a nav link that 500s, two missing CSS files, one missing JS file) — these aren't cleanup candidates, they're bugs worth a ticket regardless of this exercise.</p>
+      <p>The single largest open question is <strong>route-level coverage</strong> on the six pure-JSON-API blueprints (<code>x_buck</code>, <code>x_doc</code>, <code>x_integ</code>, <code>x_analysiscounter</code>, <code>x_cleanup</code>, <code>x_system_status</code>) plus the remainder of <code>x_users</code>, <code>auth_bp</code> and <code>billing_bp</code> — roughly 179 routes where blueprint-level "this is called from somewhere" is confirmed but per-route confirmation is not. See <a href="#coverage">Audit Coverage</a> for the honest breakdown before acting on anything not explicitly listed here.</p>
+    </section>
+
+    <!-- ══════════════════ 2. DEAD ENDPOINTS ══════════════════ -->
+    <section id="endpoints">
+      <h2>2 · Dead Endpoints Report</h2>
+      <p class="h2-sub">Every route below was checked for <code>url_for()</code> in all templates, hardcoded-path <code>fetch()</code>/form-action in all JS, and redirects from other Python routes. Zero hits on all three, for every row.</p>
+
+      <div class="twrap"><table>
+        <thead><tr><th>Route</th><th>Blueprint · function</th><th>Status</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td class="path">/analysis_original</td><td class="path">x_users.analysis_original</td><td><span class="chip danger">100% muerto</span></td><td>No <code>url_for</code>/link anywhere. Renders <code class="mono">/user/analysis.html</code>, which <strong>does not exist</strong> — would raise <code>TemplateNotFound</code> if ever hit. Superseded by <code>analysis()</code> at <code>/analysiss</code>.</td></tr>
+          <tr><td class="path">/helpcenter</td><td class="path">x_users.helpcenter</td><td><span class="chip danger">100% muerto</span></td><td>No references anywhere. Renders <code class="mono">/user/helpcenter.html</code> — <strong>does not exist</strong> on disk.</td></tr>
+          <tr><td class="path">/historial</td><td class="path">x_users.historial</td><td><span class="chip danger">100% muerto</span></td><td>No references anywhere. Renders bare <code class="mono">historial.html</code> (no folder) — <strong>does not exist</strong>. Superseded by <code>/history</code> → <code>history.html</code> (exists, live).</td></tr>
+          <tr><td class="path">/start-trial_NO</td><td class="path">auth_bp.start_trial_NO</td><td><span class="chip danger">100% muerto</span></td><td>No references anywhere. Function's own comment: <em>"SIN decorador login_required"</em> — a debug variant of <code>start_trial()</code> missing the auth check, left registered.</td></tr>
+          <tr><td class="path">/x_image/reverse_image_search</td><td class="path">x_image.reverse_image_search</td><td><span class="chip warn">Probablemente muerto</span></td><td>Zero references in templates/JS. <code>doc_routes.py:2637</code> comment confirms a sibling endpoint was already deliberately removed ("eliminado junto con los modelos") — signals the whole blueprint is being decommissioned.</td></tr>
+          <tr><td class="path">/x_image/get_image/&lt;id&gt;<br>/get_image_base64/&lt;id&gt;<br>/delete_image/&lt;id&gt;<br>/clear_collection<br>/list_items<br>/health</td><td class="path">x_image.*</td><td><span class="chip warn">Probablemente muerto</span></td><td>Same evidence as above — 6 more routes in the same orphaned blueprint. <code>/delete_by_group/&lt;id&gt;</code> is the one exception, called internally from <code>doc_routes.py:2853</code>.</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout bug">
+        <h4>Bug found, not dead code — fix, don't delete</h4>
+        <p><code class="mono">templates/base.html:221</code> calls <code>url_for('x_apps.register_test')</code> — no such endpoint exists in <code>apps_routes.py</code> (only <code>register</code> is defined). <code>base.html</code> is live (extended by <code>billing/success.html</code> and <code>billing/cancel.html</code>), so this throws a Jinja <code>BuildError</code> the moment a logged-out user's nav bar renders on either page.</p>
+      </div>
+
+      <h3>Webhooks / OAuth callbacks — no internal references is expected here</h3>
+      <p>These are called by third parties, not by the app's own code — absence of an internal <code>url_for</code> is the normal, healthy state, not a dead-code signal:</p>
+      <div class="twrap"><table>
+        <thead><tr><th>Route</th><th>Called by</th></tr></thead>
+        <tbody>
+          <tr><td class="path">billing_bp.stripe_webhook</td><td>Stripe, server-to-server</td></tr>
+          <tr><td class="path">billing_bp.paypal_webhook</td><td>PayPal IPN</td></tr>
+          <tr><td class="path">billing_bp.paypal_return</td><td>PayPal redirect-back after checkout</td></tr>
+          <tr><td class="path">auth_bp.google_callbackx</td><td>Google OAuth <code>redirect_uri</code></td></tr>
+          <tr><td class="path">auth_bp.microsoft_callback</td><td>Microsoft OAuth <code>redirect_uri</code></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══════════════════ 3. DEAD TEMPLATES ══════════════════ -->
+    <section id="templates">
+      <h2>3 · Dead Templates Report</h2>
+      <p class="h2-sub">Cross-referenced against every <code>{% extends %}</code>, <code>{% include %}</code>, and <code>render_template()</code> call in the repo (58 call sites, 27 <code>extends</code>, 1 <code>include</code> — full graph traced by hand, not sampled).</p>
+
+      <div class="twrap"><table>
+        <thead><tr><th>Template</th><th>Status</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td class="path">auth/base_auth.html</td><td><span class="chip danger">Muerto</span></td><td>Nothing extends, includes, or renders it. Looks like the old layout the two rows below used to extend.</td></tr>
+          <tr><td class="path">auth/templates_auth_login.html</td><td><span class="chip danger">Muerto</span></td><td>Zero references. <code>apps_routes.py</code> confirms in its own comment (line 22) that the real login page is <code>sign_users.html</code> — this file is the pre-consolidation login page.</td></tr>
+          <tr><td class="path">auth/validate_account.html</td><td><span class="chip danger">Muerto</span></td><td>Zero references. Superseded by the similarly-named but distinct, live <code>user/activate_account.html</code> (rendered from <code>auth_routes_fixed.py:1848</code>).</td></tr>
+          <tr><td class="path">error_page/error_pages_ai_platform.html</td><td><span class="chip danger">Muerto</span></td><td>Zero references, separate from <code>error_base.html</code> (which all 8 numbered error pages correctly extend and <em>is</em> live).</td></tr>
+          <tr><td class="path">emails/two_factor.html</td><td><span class="chip danger">Muerto</span></td><td>Zero <code>render_template</code> call anywhere. The live 2FA flow in <code>auth_routes_fixed.py</code> sends <code>emails/2fa_email_code.html</code> instead.</td></tr>
+          <tr><td class="path">user/marktrack.html</td><td><span class="chip danger">Muerto</span></td><td>Zero references. MarkTrack is now an external product (the app-switcher dropdown links to <code>marktrack.xplagiax.ca</code>, changed this session) — this in-app page predates that split.</td></tr>
+          <tr><td class="path">user/genuine.html</td><td><span class="chip danger">Muerto</span></td><td>Zero references, same story — Genuine now links externally to <code>xplagiax.ca/genuine</code>.</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout info">
+        <p><strong>Not dead, worth noting:</strong> <code class="mono">user/reviewstudio.html</code> looked like it might be part of the same "spun out to external product" family as marktrack/genuine — it isn't. <code>x_users.reviewstudio</code> (route <code>/reviewstudio</code>) is a real, live, <code>block_starter</code>-gated route with its own nav link in <code>user_base.html:88</code>. Included here to show the check was actually run, not assumed.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════ 4. DEAD CSS ══════════════════ -->
+    <section id="css">
+      <h2>4 · Dead CSS Report</h2>
+      <p class="h2-sub">All 28 files in <code>static/css/</code> checked against every <code>&lt;link&gt;</code> (via <code>url_for</code>/<code>static_url</code>) in all 46 templates, plus <code>@import</code> between CSS files. 25 of 28 are live; 3 are not.</p>
+
+      <div class="twrap"><table>
+        <thead><tr><th>File</th><th class="num">Lines</th><th>Status</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td class="path">css/nav_rail.css</td><td class="num">0</td><td><span class="chip danger">Muerto</span></td><td>Empty file (0 bytes). Zero references either way.</td></tr>
+          <tr><td class="path">css/settings.css</td><td class="num">701</td><td><span class="chip danger">Muerto</span></td><td><code>settings.html</code> extends <code>user_base.html</code> and declares no <code>&lt;link&gt;</code> of its own — confirmed orphaned.</td></tr>
+          <tr><td class="path">css/settings_trial.css</td><td class="num">263</td><td><span class="chip danger">Muerto</span></td><td>Same pattern as above, zero references found.</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout bug">
+        <h4>Bugs found, not dead code</h4>
+        <p><code class="mono">templates/user/results.html:4</code> links <code>css/analysis_results.css</code> — file does not exist, 404 on every page load. <code class="mono">templates/error_page/error_base.html:7</code> links <code>css/error_page.css</code> — also does not exist, 404 on <em>every error page</em> (400/401/403/500/501/502/503/504, all 8 extend this base).</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════ 5. DEAD JAVASCRIPT ══════════════════ -->
+    <section id="js">
+      <h2>5 · Dead JavaScript Report</h2>
+      <p class="h2-sub">All 25 files in <code>static/js/</code> checked against every <code>&lt;script src&gt;</code> in all templates. Confirmed first: this app has <strong>no dynamic script-loading mechanism</strong> anywhere (<code>createElement('script')</code> / runtime <code>.src=</code> assignment both return zero hits repo-wide) — so a missing <code>&lt;script&gt;</code> tag really does mean unreachable, not "loaded some other way."</p>
+
+      <div class="twrap"><table>
+        <thead><tr><th>File</th><th class="num">Lines</th><th>Status</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td class="path">js/trial_end_modal.js</td><td class="num">312</td><td><span class="chip danger">Muerto</span></td><td>No <code>&lt;script&gt;</code> tag anywhere. Its CSS twin and the <code>#trialModal</code> markup are still live in <code>user_base.html</code> — orphaned controller only. <code>trial_status.js</code> (live, 295 lines) implements very similar countdown logic; this looks like the file it replaced.</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout bug">
+        <h4>Bugs found, not dead code</h4>
+        <p><code class="mono">error_base.html:45</code> references <code>js/error_pages.js</code> — does not exist, 404 on every error page. <code class="mono">analysis_smartinput.html:8418</code> references <code>js/aitestpro_resultpdf.js</code> inside an HTML comment <em>and</em> the file doesn't exist — already fully dead, no action needed beyond deleting the stale comment.</p>
+      </div>
+
+      <h3>console.log / debugger left in shipped JS</h3>
+      <p>Not dead code — these files are live — but worth a lint pass. Counted per file, live files only:</p>
+      <div class="twrap"><table>
+        <thead><tr><th>File</th><th class="num">console.log / debugger</th></tr></thead>
+        <tbody>
+          <tr><td class="path">js/aitestpro_mobile_fix.js</td><td class="num">56</td></tr>
+          <tr><td class="path">js/test/storage_manager_js.js</td><td class="num">8</td></tr>
+          <tr><td class="path">js/analysis_tracker.js</td><td class="num">3</td></tr>
+          <tr><td class="path">js/analysis_toolbar.js</td><td class="num">3</td></tr>
+          <tr><td class="path">js/analysis_page_.js</td><td class="num">2</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══════════════════ 6. DEAD PYTHON ══════════════════ -->
+    <section id="python">
+      <h2>6 · Dead Python Report</h2>
+      <p class="h2-sub">44 Python files. <code>app.py</code>'s own commented-out imports (lines 124, 130-131, 134, 138-139, 146, 156, 160) name five modules/blueprints that were checked first since they're self-flagged by the codebase itself.</p>
+
+      <div class="twrap"><table>
+        <thead><tr><th>File / symbol</th><th class="num">Lines</th><th>Status</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td class="path">modules/auth_service/auth_routes.py</td><td class="num">1,501</td><td><span class="chip danger">Muerto</span></td><td>Import commented out at <code>app.py:124</code>, blueprint never registered. Superseded by <code>auth_routes_fixed.py</code> (2,484 lines, live). Only reference to the module name anywhere in the repo is that one dead comment.</td></tr>
+          <tr><td class="path">settings/email_service1.py</td><td class="num">227</td><td><span class="chip danger">Muerto</span></td><td>Zero imports anywhere. <code>settings/email_service.py</code> (no digit, 349 lines) is imported by <code>auth_routes_fixed.py</code> and <code>doc_routes.py</code> and is the live one.</td></tr>
+          <tr><td class="path">modules/doc_service/test/text_processor_optimized.py</td><td class="num">648</td><td><span class="chip danger">Muerto</span></td><td>Standalone module (<code>TextProcessor</code>, <code>run_tests()</code>), zero inbound imports anywhere in the repo. Sits alone in its own <code>test/</code> folder — not part of the pytest suite either.</td></tr>
+          <tr><td class="path">settings/email_service.py <code>send_welcome_email()</code></td><td class="num">—</td><td><span class="chip danger">Muerto</span></td><td>Zero callers anywhere. Also broken: renders <code>emails/welcome.html</code>, which doesn't exist on disk — would crash if it were ever called.</td></tr>
+          <tr><td class="path">modules/apps_service/apps_routes.py <code>forbidden()</code></td><td class="num">—</td><td><span class="chip danger">Duplicado</span></td><td><code>@x_apps.errorhandler(403)</code> is defined twice, verbatim, lines 56–59 and 62–65. The second silently shadows the first — 100% redundant, not harmful, just dead weight.</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout info">
+        <p><strong>Also self-flagged by <code>app.py</code>'s comments but not re-verified this pass</strong> (the modules themselves may not exist on disk — worth a 2-minute check before acting): <code>modules/finderx_service/search_routes.py</code>, <code>modules/genuine_service/genuine_routes.py</code>, <code>services/aitestprotext_service/optimized_routes_v6.py</code>, <code>modules/aitestproimg_service/routes_img.py</code>, <code>services/sourcex_service/routes_integrations.py</code> — all named in commented-out imports (<code>app.py:130,131,134,138,139</code>). If they're still on disk, same disposition as <code>auth_routes.py</code> applies.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════ 7. DEAD ASSETS ══════════════════ -->
+    <section id="assets">
+      <h2>7 · Dead Assets Report</h2>
+      <p class="h2-sub">116 files under <code>static/img/</code>, every basename grepped across all templates, CSS (<code>url(...)</code>), and JS string literals.</p>
+
+      <h3>Confirmed dead — 12 files, zero references anywhere</h3>
+      <div class="twrap"><table>
+        <thead><tr><th>File</th></tr></thead>
+        <tbody>
+          <tr><td class="path">static/img/Deepfake Detection.webp</td></tr>
+          <tr><td class="path">static/img/Gemini_Generated_Image_flh5fxflh5fxflh5.webp</td></tr>
+          <tr><td class="path">static/img/Gemini_Generated_Image_i0gnkvi0gnkvi0gn.webp</td></tr>
+          <tr><td class="path">static/img/Gemini_Generated_Image_uoflauoflauoflau.webp</td></tr>
+          <tr><td class="path">static/img/Gemini_Generated_Image_uyi9oguyi9oguyi9.webp</td></tr>
+          <tr><td class="path">static/img/YYBEOXSISWE2MNRZERUZADTN4E.webp</td></tr>
+          <tr><td class="path">static/img/academic_integrity_alt.webp</td></tr>
+          <tr><td class="path">static/img/ai-fake-news-feature.webp</td></tr>
+          <tr><td class="path">static/img/dataset-cover.jpg</td></tr>
+          <tr><td class="path">static/img/detect-AI.webp</td></tr>
+          <tr><td class="path">static/img/hero-image.webp</td></tr>
+          <tr><td class="path">static/img/uryx.png</td></tr>
+        </tbody>
+      </table></div>
+      <p>Naming pattern (stock-photo style, AI-generator default filenames) reads like leftovers from an earlier landing-page iteration. <code>academic_integrity_bg.webp</code> — easy to mistake for one of these — is <strong>live</strong> (<code>sign_users.html:53</code>), confirmed separately so it isn't in the list above.</p>
+
+      <h3>Requires review — referenced in code, but the feature they belong to looks removed</h3>
+      <div class="twrap"><table>
+        <thead><tr><th>File</th><th>Status</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td class="path">img/svg/mega.svg, pcloud.svg, yandex.svg</td><td><span class="chip warn">Revisar</span></td><td>Only referenced inside a JS provider-icon lookup table (<code>test/clean_javascript.js</code>, <code>test/upload_toast.js</code>) — but <code>integrations.html:35</code> has a developer comment stating pCloud/Mega/Yandex were removed for having "NO tienen flujo backend." The lookup entries are dead weight even though the strings technically match.</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout info">
+        <p><strong><code>static/img/imgsource/</code> (93 files) — not flagged, by design.</strong> Both the client (<code>analysis_smartinput.html</code>'s <code>_providerLogoHtml()</code>) and the server (<code>report_pdf.py</code>'s <code>_provider_logo_slug()</code>) build these paths at runtime from a search-provider name via a shared alias table. This is exactly the dynamic-construction case the audit brief warns against false-flagging — none of the 93 are claimed dead.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════ 8. DEPENDENCIES ══════════════════ -->
+    <section id="deps">
+      <h2>8 · Dependency Cleanup Report</h2>
+      <p class="h2-sub">Every package in <code>requirements.txt</code> (~35) resolved to its actual import name and grepped across all 44 <code>.py</code> files. Package-name ≠ import-name cases (Flask-Login → <code>flask_login</code>, PyJWT → <code>jwt</code>, Pillow → <code>PIL</code>, etc.) were resolved individually, not assumed.</p>
+
+      <div class="twrap"><table>
+        <thead><tr><th>Package</th><th>Status</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td class="path">Flask-SocketIO</td><td><span class="chip warn">Revisar</span></td><td>Zero live imports. Only trace: <code>doc_routes.py:35-37</code>, both lines commented out (<code>#socketio = SocketIO()</code>).</td></tr>
+          <tr><td class="path">psutil</td><td><span class="chip warn">Revisar</span></td><td>Zero references anywhere in <code>.py</code> source. Verify no external ops/monitoring script depends on it before removing.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Checked and cleared — flagged as suspicious, confirmed legitimate</h3>
+      <p>Shown deliberately, to demonstrate these were checked rather than assumed live:</p>
+      <div class="twrap"><table>
+        <thead><tr><th>Package</th><th>Why it looked dead</th><th>Why it isn't</th></tr></thead>
+        <tbody>
+          <tr><td class="path">PyMySQL</td><td>Zero direct <code>import pymysql</code></td><td>Loaded by SQLAlchemy at connect time via <code>mysql+pymysql://</code> in <code>settings/config.py:42,213</code></td></tr>
+          <tr><td class="path">gunicorn</td><td>Zero imports in source</td><td>Expected — invoked as the WSGI server binary (<code>gunicorn.conf.py</code>), not imported</td></tr>
+          <tr><td class="path">urllib3</td><td>Zero direct top-level import</td><td><code>routes_integrations.py:18</code> — <code>from requests.packages.urllib3.util.retry import Retry</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>No duplicate/overlapping libraries found — Stripe and PayPal both have confirmed-live routes and serve genuinely different payment providers, not redundant integrations.</p>
+    </section>
+
+    <!-- ══════════════════ 9. DUPLICATE CODE ══════════════════ -->
+    <section id="dupes">
+      <h2>9 · Duplicate Code Report</h2>
+      <div class="twrap"><table>
+        <thead><tr><th>Pair</th><th>Sizes</th><th>Relationship</th></tr></thead>
+        <tbody>
+          <tr><td class="path">auth_routes.py ↔ auth_routes_fixed.py</td><td class="num">1,501 / 2,484</td><td>Full-file lineage — <em>fixed</em> is the live rewrite, original is 100% dead (see §6).</td></tr>
+          <tr><td class="path">email_service.py ↔ email_service1.py</td><td class="num">349 / 227</td><td>Same pattern — no digit is live, <code>1</code>-suffixed is dead (see §6).</td></tr>
+          <tr><td class="path">start_trial() ↔ start_trial_NO()</td><td class="num">— / —</td><td>In-file duplicate inside <code>auth_routes_fixed.py</code> — a debug variant missing <code>@login_required</code>, still registered as a live route (see §2).</td></tr>
+          <tr><td class="path">forbidden() × 2</td><td class="num">— / —</td><td>Identical <code>@x_apps.errorhandler(403)</code> defined twice in the same file, back to back (see §6).</td></tr>
+          <tr><td class="path">trial_status.js ↔ trial_end_modal.js</td><td class="num">295 / 312</td><td>Not byte-identical, but overlapping <code>trialEndsAt</code> countdown logic reimplemented twice — one live (banner), one dead (modal).</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══════════════════ 10. TECHNICAL DEBT ══════════════════ -->
+    <section id="debt">
+      <h2>10 · Technical Debt Report</h2>
+
+      <h3>Bilingual route naming — not dead, but a maintainability smell</h3>
+      <p>Two separate pairs of Spanish/English-named routes exist for overlapping concepts. One pair is genuinely dead (§2); the other is <strong>both alive</strong> — worth flagging precisely because the naming makes that easy to get wrong:</p>
+      <div class="twrap"><table>
+        <thead><tr><th>Spanish</th><th>English</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr><td class="path">/historial</td><td class="path">/history</td><td><span class="chip danger">historial dead</span> — see §2</td></tr>
+          <tr><td class="path">/api/historial/data</td><td class="path">/api/history/analytics</td><td><span class="chip ok">both alive</span> — <code class="mono">/api/historial/data</code> is called from <code>static/js/dropdown_history.js:71</code>, <code class="mono">/api/history/analytics</code> from <code>static/js/history.js:47</code>. Confirmed by direct grep specifically <em>because</em> the naming looked like the same dead pattern as the page-level pair — it isn't. Different consumers, both real.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>TODO / FIXME concentration</h3>
+      <div class="twrap"><table>
+        <thead><tr><th>File</th><th class="num">Count</th></tr></thead>
+        <tbody>
+          <tr><td class="path">modules/doc_service/doc_routes.py</td><td class="num">7</td></tr>
+          <tr><td class="path">static/js/aitestpro_mobile_fix.js</td><td class="num">8</td></tr>
+          <tr><td class="path">templates/user/results.html</td><td class="num">4</td></tr>
+          <tr><td class="path">templates/user/analysis_smartinput.html</td><td class="num">3</td></tr>
+          <tr><td class="path">static/js/analysis_tracker.js</td><td class="num">3</td></tr>
+          <tr><td class="path">modules/doc_service/modules/doc_analysis_task.py</td><td class="num">2</td></tr>
+          <tr><td class="path">app.py, token_repository.py, report_pdf.py, routes_integrations.py, embed_base.html</td><td class="num">1 each</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══════════════════ 11. ROADMAP ══════════════════ -->
+    <section id="roadmap">
+      <h2>11 · Cleanup Roadmap</h2>
+      <p class="h2-sub">Ordered by blast radius — lowest risk and highest confidence first. Each phase is independently shippable; nothing later depends on an earlier phase going out first, but doing them in order keeps every PR small and reviewable.</p>
+
+      <div class="phase">
+        <h4>Phase 0 — Fix the 4 live bugs</h4>
+        <div class="meta">not cleanup, but found by this audit — ship first, separately</div>
+        <ul>
+          <li><code>base.html:221</code> — fix <code>url_for('x_apps.register_test')</code> → <code>x_apps.register</code></li>
+          <li><code>results.html:4</code> — remove or restore <code>css/analysis_results.css</code></li>
+          <li><code>error_base.html:7,45</code> — remove or restore <code>css/error_page.css</code> and <code>js/error_pages.js</code></li>
+        </ul>
+      </div>
+
+      <div class="phase">
+        <h4>Phase 1 — Zero-risk deletes</h4>
+        <div class="meta">no code path can reach these; deleting changes nothing observable</div>
+        <ul>
+          <li><code>static/css/nav_rail.css</code> (empty file)</li>
+          <li>12 orphaned images in <code>static/img/</code> (§7)</li>
+          <li>Stale HTML comment referencing <code>aitestpro_resultpdf.js</code> in <code>analysis_smartinput.html:8418</code></li>
+          <li>Duplicate <code>forbidden()</code> errorhandler in <code>apps_routes.py</code></li>
+        </ul>
+      </div>
+
+      <div class="phase">
+        <h4>Phase 2 — Dead files with a clear "replaced by X" story</h4>
+        <div class="meta">delete file, then run the auth + email + settings smoke tests once</div>
+        <ul>
+          <li><code>modules/auth_service/auth_routes.py</code> (1,501 lines)</li>
+          <li><code>settings/email_service1.py</code> (227 lines)</li>
+          <li><code>modules/doc_service/test/text_processor_optimized.py</code> (648 lines)</li>
+          <li><code>static/css/settings.css</code>, <code>static/css/settings_trial.css</code> (964 lines combined)</li>
+          <li><code>static/js/trial_end_modal.js</code> (312 lines) — confirm <code>trial_status.js</code> fully covers the banner UX first</li>
+          <li>7 orphaned templates (§3): <code>base_auth.html</code>, <code>templates_auth_login.html</code>, <code>validate_account.html</code>, <code>error_pages_ai_platform.html</code>, <code>emails/two_factor.html</code>, <code>marktrack.html</code>, <code>genuine.html</code></li>
+        </ul>
+      </div>
+
+      <div class="phase">
+        <h4>Phase 3 — Dead routes (remove the view function <em>and</em> its route)</h4>
+        <div class="meta">these already 500 if hit — removing them is a strict improvement, not just cleanup</div>
+        <ul>
+          <li><code>x_users.analysis_original</code>, <code>x_users.helpcenter</code>, <code>x_users.historial</code></li>
+          <li><code>auth_bp.start_trial_NO</code></li>
+          <li><code>settings/email_service.py::send_welcome_email()</code></li>
+        </ul>
+      </div>
+
+      <div class="phase">
+        <h4>Phase 4 — Product decision required</h4>
+        <div class="meta">technically dead, but this is a feature-area call, not a code-hygiene one</div>
+        <ul>
+          <li>8 of 9 routes in <code>modules/image_service/ai_image_routes.py</code> — confirm the reverse-image-search feature is actually being sunset before removing the blueprint</li>
+          <li><code>mega.svg</code>/<code>pcloud.svg</code>/<code>yandex.svg</code> + their JS lookup entries</li>
+          <li><code>Flask-SocketIO</code>, <code>psutil</code> from <code>requirements.txt</code></li>
+        </ul>
+      </div>
+
+      <div class="phase">
+        <h4>Phase 5 — Close the coverage gap</h4>
+        <div class="meta">before claiming the audit "done" — see §Coverage</div>
+        <ul>
+          <li>Route-by-route verification for the ~179 unclassified routes across <code>x_users</code>, <code>auth_bp</code>, <code>billing_bp</code> remainder, and all 6 pure-JSON-API blueprints</li>
+          <li><code>modules/models/model.py</code> — confirm every SQLAlchemy model is reachable via <code>.query</code>/relationship, not just by name</li>
+          <li>Full pairwise <code>diff</code> sweep for near-duplicate CSS/JS beyond the pairs already found</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ══════════════════ 12. RISK MATRIX ══════════════════ -->
+    <section id="matrix">
+      <h2>12 · Risk Matrix</h2>
+      <div class="twrap"><table>
+        <thead><tr><th>Risk</th><th>Meaning</th><th>Applies to</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip ok">Seguro eliminar</span></td><td>Zero references found across Python, Jinja, JS, and config; no dynamic-construction pattern exists that could reach it.</td><td>Phase 1 &amp; 2 items — 14 files/refs</td></tr>
+          <tr><td><span class="chip warn">Requiere revisión</span></td><td>Zero references found, but deletion should wait on a human/product call — either the "reference" is a whole feature area, or removing it touches a shared dependency.</td><td>Phase 4 items — x_image blueprint, 3 provider icons, 2 dependencies</td></tr>
+          <tr><td><span class="chip danger">No eliminar</span></td><td>Confirmed live, OR coverage was insufficient to make any claim.</td><td>Everything in §Coverage below the line, plus <code>config_example.py</code> and <code>test_paypal_plans.py</code> (documentation/tooling value despite zero code references — see note)</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout info">
+        <p><strong>Two files deliberately kept out of the delete list</strong> despite zero code references, because the audit brief explicitly forbids deleting on reference-count alone: <code class="mono">modules/billing_service/config_example.py</code> is Stripe/PayPal setup documentation written as a <code>.py</code> file, not executable config. <code class="mono">test_paypal_plans.py</code> (repo root) is a manual PayPal diagnostic CLI script — legitimate dev tooling, just misplaced outside <code>tests/</code>. Both are relocate-not-delete candidates.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════ 13. IMPACT ANALYSIS ══════════════════ -->
+    <section id="impact">
+      <h2>13 · Impact Analysis</h2>
+      <p class="h2-sub">Honest framing: this app's dead weight is concentrated in a handful of large files, not spread thin. That makes the win real but modest — this is a hygiene pass, not a performance initiative.</p>
+      <div class="twrap"><table>
+        <thead><tr><th>Dimension</th><th>Expected effect</th></tr></thead>
+        <tbody>
+          <tr><td>Project size</td><td>≈3,650 lines removed from the 7 largest confirmed-dead files alone, plus 7 templates, 12 images, 3 CSS/JS files, 1 dependency pin or two. Meaningful for anyone reading the tree, not a disk-space story.</td></tr>
+          <tr><td>Import / cold-start time</td><td>Marginal. <code>auth_routes.py</code> (1,501 lines) is never imported today since it's commented out — removing the file changes nothing at runtime, only for anyone grepping/reading the codebase.</td></tr>
+          <tr><td>Request latency</td><td>No measurable effect — none of the confirmed-dead code sits on any live request path by definition.</td></tr>
+          <tr><td>Memory</td><td>Negligible — Flask only loads registered blueprints' modules; the dead ones were never imported, so they were never in memory either.</td></tr>
+          <tr><td>Maintainability</td><td>The real payoff. Two fewer "which auth_routes file is the real one?" moments, two fewer 500s waiting to happen if someone relinks a dead route, one fewer place a new hire copies a stale pattern from.</td></tr>
+          <tr><td>Technical debt</td><td>Removes 3 of the 5 duplicate-file/duplicate-function pairs entirely; the other 2 (trial_status/trial_end_modal, the bilingual route naming) need a small follow-up decision, not just a delete.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══════════════════ COVERAGE ══════════════════ -->
+    <section id="coverage">
+      <h2>Audit Coverage</h2>
+      <p class="h2-sub">Every claim above is grep-backed. This section is the map of what wasn't fully covered — read it before treating any blueprint below as clean.</p>
+
+      <div class="cov-row"><div class="name">x_apps</div><div class="cov-bar"><span style="width:100%;background:var(--ok)"></span></div><div class="frac">6 / 6</div></div>
+      <div class="cov-row"><div class="name">x_autoarchive</div><div class="cov-bar"><span style="width:100%;background:var(--ok)"></span></div><div class="frac">3 / 3</div></div>
+      <div class="cov-row"><div class="name">x_image</div><div class="cov-bar"><span style="width:100%;background:var(--ok)"></span></div><div class="frac">9 / 9</div></div>
+      <div class="cov-row"><div class="name">billing_bp</div><div class="cov-bar"><span style="width:31%;background:var(--warn)"></span></div><div class="frac">5 / 16</div></div>
+      <div class="cov-row"><div class="name">x_users</div><div class="cov-bar"><span style="width:15%;background:var(--warn)"></span></div><div class="frac">4 / 27</div></div>
+      <div class="cov-row"><div class="name">auth_bp</div><div class="cov-bar"><span style="width:13%;background:var(--warn)"></span></div><div class="frac">5 / 38</div></div>
+      <div class="cov-row"><div class="name">x_buck / x_doc / x_integ / x_analysiscounter / x_cleanup / x_system_status</div><div class="cov-bar"><span style="width:6%;background:var(--danger)"></span></div><div class="frac">blueprint-level only</div></div>
+      <div class="cov-row"><div class="name">app.py bare routes</div><div class="cov-bar"><span style="width:0%;background:var(--danger)"></span></div><div class="frac">0 / 4</div></div>
+      <div class="cov-row"><div class="name">CSS files</div><div class="cov-bar"><span style="width:100%;background:var(--ok)"></span></div><div class="frac">28 / 28</div></div>
+      <div class="cov-row"><div class="name">JS files</div><div class="cov-bar"><span style="width:100%;background:var(--ok)"></span></div><div class="frac">25 / 25</div></div>
+      <div class="cov-row"><div class="name">Templates</div><div class="cov-bar"><span style="width:100%;background:var(--ok)"></span></div><div class="frac">46 / 46</div></div>
+      <div class="cov-row"><div class="name">Images</div><div class="cov-bar"><span style="width:100%;background:var(--ok)"></span></div><div class="frac">116 / 116</div></div>
+      <div class="cov-row"><div class="name">requirements.txt</div><div class="cov-bar"><span style="width:100%;background:var(--ok)"></span></div><div class="frac">~35 / ~35</div></div>
+      <div class="cov-row"><div class="name">SQLAlchemy models</div><div class="cov-bar"><span style="width:0%;background:var(--danger)"></span></div><div class="frac">not started</div></div>
+      <div class="cov-row"><div class="name">CSS selector / unused-variable level</div><div class="cov-bar"><span style="width:0%;background:var(--danger)"></span></div><div class="frac">out of scope — needs tooling (PurgeCSS-class), not hand review</div></div>
+
+      <p style="margin-top:18px">The six pure-JSON-API blueprints (bottom row group) show a real, load-bearing signal — every one of them is called from at least one live, template-linked JS file by URL prefix — but that confirms <em>the blueprint</em>, not each of its roughly 95 individual routes. Nothing in those six is listed as dead anywhere in this report; they're simply unclassified, which is different from clean.</p>
+    </section>
+
+    <section id="method" class="measure">
+      <h2 style="font-size:1.15rem">Methodology</h2>
+      <p>Direct <code>grep -rn</code>/<code>read</code> cross-referencing across the full source tree, run interactively — plus two background research passes (one Python-focused, one static-assets-focused) whose evidence was independently spot-checked before inclusion here. Every route/file/function named above as dead was checked for: <code>url_for()</code> in every template, hardcoded paths in every JS file, redirects from other Python routes, dynamic-construction patterns (f-strings, variable-built paths, JS loaders), and — where applicable — plausible external callers (OAuth providers, payment webhooks). Where a check wasn't completed, that's stated explicitly rather than left implied.</p>
+    </section>
+
+    <footer>Read-only audit · <code>xplagiax/xplagiax_appcli2</code> · <code>documentacion/</code> and <code>*.md</code> excluded per scope · no files were modified</footer>
+  </main>
+</div>
+</body>
+</html>
